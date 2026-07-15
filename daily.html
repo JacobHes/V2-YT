@@ -356,17 +356,22 @@ html, body {
   function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
   function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
 
+  // Dates are pinned to Prague rather than the device clock, so a phone left on
+  // another timezone still writes to the same day as the laptop.
+  const TZ = 'Europe/Prague';
+
   function dateKey(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   }
-  // Days roll over at 6am, matching getActiveDate() in health.html.
+  // The calendar day in Prague right now. Rolls over at midnight — unlike
+  // health.html, which treats anything before 6am as the previous day.
   function todayKey() {
-    const now = new Date();
-    if (now.getHours() < 6) now.setDate(now.getDate() - 1);
-    return dateKey(now);
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
   }
   function shiftKey(key, days) {
     const [y, m, d] = key.split('-').map(Number);
@@ -391,10 +396,17 @@ html, body {
     return out.sort().reverse();
   }
 
+  // Ordered to read down the day, morning to night.
   const HABITS = [
-    { key: 'macros',         name: 'Macros + sub 60 fat' },
+    { key: 'wakeUp6',        name: 'Wake Up 6 AM' },
+    { key: 'meditate1h',     name: 'Meditate 1h' },
+    { key: 'cleanDiet',      name: 'Clean Diet' },
+    { key: 'workout',        name: 'Workout' },
+    { key: 'studyingHabit',  name: 'Studying' },
     { key: 'eveningRoutine', name: 'Evening Routine' },
-    { key: 'prepped',        name: 'Prepped To-Do & Clothes' },
+    { key: 'warPlan',        name: 'War Plan Tomorrow' },
+    { key: 'prepClothes',    name: 'Prep Clothes' },
+    { key: 'sleepBy11',      name: 'Sleep By 11 PM' },
   ];
 
   let activeKey = todayKey();
