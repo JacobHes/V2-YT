@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="lock.js"></script>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0b">
+<title>Daily Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+:root {
+  --bg: #0a0a0b;
+  --bg-card: #111113;
+  --text-1: #ffffff;
+  --text-2: rgba(255,255,255,0.6);
+  --text-3: rgba(255,255,255,0.4);
+  --text-4: rgba(255,255,255,0.25);
+  --border: rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.14);
+  --good: #6ee7b7;
+  --warn: #fbbf24;
+  --bad: #ff8a8a;
+  --info: #7DD3FC;
+  --accent: #E07658;
+  --accent-glow: rgba(224,118,88,0.30);
+  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, #14141a 0%, #0a0a0b 60%);
+  color: var(--text-1);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+.shell { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+
+/* ----- Day nav pill ----- */
+.day-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.10em;
+  text-transform: uppercase; margin-bottom: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+.day-nav {
+  background: transparent; border: none; color: var(--text-3);
+  cursor: pointer; font-size: 14px; line-height: 1;
+  padding: 4px 8px; border-radius: 999px; font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.day-nav:hover:not(:disabled) { color: var(--text-1); background: rgba(255,255,255,0.06); }
+.day-nav:disabled { opacity: 0.25; cursor: not-allowed; }
+.day-label { padding: 0 6px; min-width: 108px; text-align: center; }
+.day-label.is-today { color: var(--good); }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.title { font-size: 22px; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+.saved-flag {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--good);
+  opacity: 0; transition: opacity 0.3s;
+}
+.saved-flag.show { opacity: 1; }
+
+/* ----- Eyebrow divider ----- */
+.divider { display: flex; align-items: center; gap: 16px; margin: 22px 0 14px; }
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.10);
+}
+.divider span {
+  font-size: 11px; letter-spacing: 0.22em; font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+
+/* ----- Card ----- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px 20px 18px;
+  margin-bottom: 14px;
+}
+
+/* ----- Form fields ----- */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.field label {
+  font-size: 11px; color: var(--text-3); font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.input-wrap { position: relative; display: flex; align-items: center; }
+.input-wrap input {
+  width: 100%;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  font-family: inherit; font-size: 14px;
+  padding: 10px 12px; border-radius: 10px; outline: none;
+  -moz-appearance: textfield;
+}
+.input-wrap input[type="number"] { font-variant-numeric: tabular-nums; padding-right: 44px; }
+.input-wrap input[type="number"]::-webkit-outer-spin-button,
+.input-wrap input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.input-wrap input[type="time"] { font-family: var(--font-mono); }
+.input-wrap input:focus {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+.input-wrap input::placeholder { color: var(--text-4); }
+.unit {
+  position: absolute; right: 12px; pointer-events: none;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--text-4); letter-spacing: 0.04em;
+}
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 520px) {
+  .field-row-3 { grid-template-columns: 1fr 1fr; }
+}
+
+/* ----- Sleep readout ----- */
+.sleep-readout {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-top: 4px; padding: 12px 14px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.sleep-readout .sleep-label {
+  font-size: 11px; color: var(--text-3); font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.sleep-readout .sleep-val {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+  color: var(--text-1); font-variant-numeric: tabular-nums;
+}
+.sleep-readout .sleep-val.empty { color: var(--text-4); }
+
+/* ----- Habit checks ----- */
+.habit {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.habit:last-child { border-bottom: none; }
+.habit-check {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  background: var(--bg-card);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: transparent;
+  transition: all 0.2s;
+  flex-shrink: 0; font-family: inherit; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.habit-check:hover { border-color: var(--accent); }
+.habit-check.checked {
+  background: var(--accent); border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.habit-name {
+  font-size: 14px; font-weight: 600; color: var(--text-1);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+
+/* ----- History ----- */
+.hist-row {
+  display: grid; grid-template-columns: 72px 1fr auto; gap: 10px;
+  padding: 11px 0; align-items: center;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  background: transparent; border-left: none; border-right: none; border-top: none;
+  width: 100%; text-align: left; font-family: inherit; color: inherit;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.hist-row:last-child { border-bottom: none; }
+.hist-row:hover .hist-date { color: var(--text-1); }
+.hist-date {
+  font-size: 11px; color: var(--text-3); font-family: var(--font-mono);
+  transition: color 0.18s;
+}
+.hist-stats {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.hist-stats .hist-stat { color: var(--text-3); }
+.hist-stats .hist-stat b { color: var(--text-2); font-weight: 700; }
+.hist-exec {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  color: var(--text-2); font-variant-numeric: tabular-nums;
+}
+.hist-empty {
+  color: var(--text-4); font-size: 13px; font-style: italic;
+  padding: 8px 0;
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="day-pill">
+    <button class="day-nav" id="dayPrev" type="button" aria-label="Previous day">‹</button>
+    <span class="day-label" id="dayLabel">—</span>
+    <button class="day-nav" id="dayNext" type="button" aria-label="Next day">›</button>
+  </div>
+
+  <div class="header">
+    <h1 class="title">Daily Tracker</h1>
+    <span class="saved-flag" id="savedFlag">Saved</span>
+  </div>
+
+  <!-- ===== Numbers ===== -->
+  <div class="card">
+    <div class="field">
+      <label for="f-cash">Cash collected</label>
+      <div class="input-wrap">
+        <input type="number" id="f-cash" data-field="cash" inputmode="decimal" step="1" placeholder="0">
+        <span class="unit">Kč</span>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="f-weight">Weight</label>
+        <div class="input-wrap">
+          <input type="number" id="f-weight" data-field="weight" inputmode="decimal" step="0.1" placeholder="0">
+          <span class="unit">kg</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-execution">Execution</label>
+        <div class="input-wrap">
+          <input type="number" id="f-execution" data-field="execution" inputmode="numeric" step="1" placeholder="0">
+          <span class="unit">%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row-3">
+      <div class="field">
+        <label for="f-meditation">Meditation</label>
+        <div class="input-wrap">
+          <input type="number" id="f-meditation" data-field="meditation" inputmode="numeric" step="1" placeholder="0">
+          <span class="unit">min</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-studying">Studying</label>
+        <div class="input-wrap">
+          <input type="number" id="f-studying" data-field="studying" inputmode="numeric" step="1" placeholder="0">
+          <span class="unit">min</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-gym">Gym</label>
+        <div class="input-wrap">
+          <input type="number" id="f-gym" data-field="gym" inputmode="numeric" step="1" placeholder="0">
+          <span class="unit">min</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="f-ig">IG</label>
+        <div class="input-wrap">
+          <input type="number" id="f-ig" data-field="ig" inputmode="numeric" step="1" placeholder="0">
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-x">X</label>
+        <div class="input-wrap">
+          <input type="number" id="f-x" data-field="x" inputmode="numeric" step="1" placeholder="0">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Sleep ===== -->
+  <div class="divider"><span>SLEEP</span></div>
+  <div class="card">
+    <div class="field-row">
+      <div class="field">
+        <label for="f-bedTime">Bed time</label>
+        <div class="input-wrap">
+          <input type="time" id="f-bedTime" data-field="bedTime">
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-wakeTime">Wake up time</label>
+        <div class="input-wrap">
+          <input type="time" id="f-wakeTime" data-field="wakeTime">
+        </div>
+      </div>
+    </div>
+    <div class="sleep-readout">
+      <span class="sleep-label">Sleep</span>
+      <span class="sleep-val empty" id="sleepVal">—</span>
+    </div>
+  </div>
+
+  <!-- ===== Constraints ===== -->
+  <div class="divider"><span>CONSTRAINTS</span></div>
+  <div class="card">
+    <div class="field">
+      <label for="f-constraintPersonal">Personal</label>
+      <div class="input-wrap">
+        <input type="text" id="f-constraintPersonal" data-field="constraintPersonal" placeholder="What's holding you back personally?">
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-constraintBusiness">Business</label>
+      <div class="input-wrap">
+        <input type="text" id="f-constraintBusiness" data-field="constraintBusiness" placeholder="What's the bottleneck in the business?">
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Habits ===== -->
+  <div class="divider"><span>HABITS</span></div>
+  <div class="card" id="habitList"></div>
+
+  <!-- ===== History ===== -->
+  <div class="divider"><span>PAST DAYS</span></div>
+  <div class="card" id="histList"></div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- Storage -------------------------------------------------
+  // One localStorage entry per day: daily:YYYY-MM-DD -> { field: value }
+  // Same shape as goals:<date> (main.html) and stack:taken:<date> (health.html).
+  const PREFIX = 'daily:';
+
+  function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
+  function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+
+  function dateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  // Days roll over at 6am, matching getActiveDate() in health.html.
+  function todayKey() {
+    const now = new Date();
+    if (now.getHours() < 6) now.setDate(now.getDate() - 1);
+    return dateKey(now);
+  }
+  function shiftKey(key, days) {
+    const [y, m, d] = key.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + days);
+    return dateKey(dt);
+  }
+
+  function getDay(key) { return loadJSON(PREFIX + key, {}); }
+  function setDay(key, obj) {
+    // Don't leave an empty row behind for a day that was opened but never filled.
+    const filled = Object.keys(obj).some(k => obj[k] !== '' && obj[k] !== false && obj[k] != null);
+    if (filled) saveJSON(PREFIX + key, obj);
+    else localStorage.removeItem(PREFIX + key);
+  }
+  function allDayKeys() {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf(PREFIX) === 0) out.push(k.slice(PREFIX.length));
+    }
+    return out.sort().reverse();
+  }
+
+  const HABITS = [
+    { key: 'macros',         name: 'Macros + sub 60 fat' },
+    { key: 'eveningRoutine', name: 'Evening Routine' },
+    { key: 'prepped',        name: 'Prepped To-Do & Clothes' },
+  ];
+
+  let activeKey = todayKey();
+
+  // ---- Day header ----------------------------------------------
+  function renderDayLabel() {
+    const [y, m, d] = activeKey.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    const label = document.getElementById('dayLabel');
+    const isToday = activeKey === todayKey();
+    label.textContent = isToday
+      ? 'Today'
+      : dt.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    label.classList.toggle('is-today', isToday);
+    document.getElementById('dayNext').disabled = isToday;
+  }
+
+  // ---- Save ----------------------------------------------------
+  let flagTimer = null;
+  function flashSaved() {
+    const flag = document.getElementById('savedFlag');
+    flag.classList.add('show');
+    clearTimeout(flagTimer);
+    flagTimer = setTimeout(() => flag.classList.remove('show'), 1200);
+  }
+
+  function collectFromInputs() {
+    const day = getDay(activeKey);
+    document.querySelectorAll('[data-field]').forEach(el => {
+      day[el.dataset.field] = el.value.trim();
+    });
+    return day;
+  }
+
+  function saveInputs() {
+    setDay(activeKey, collectFromInputs());
+    renderSleep();
+    renderHistory();
+    flashSaved();
+  }
+
+  // ---- Sleep ---------------------------------------------------
+  function sleepMinutes(bed, wake) {
+    if (!bed || !wake) return null;
+    const [bh, bm] = bed.split(':').map(Number);
+    const [wh, wm] = wake.split(':').map(Number);
+    let mins = (wh * 60 + wm) - (bh * 60 + bm);
+    if (mins <= 0) mins += 24 * 60;   // went to bed before midnight
+    return mins;
+  }
+  function fmtHrs(mins) {
+    return (Math.floor(mins / 60)) + 'h ' + String(mins % 60).padStart(2, '0') + 'm';
+  }
+  function renderSleep() {
+    const day = getDay(activeKey);
+    const mins = sleepMinutes(day.bedTime, day.wakeTime);
+    const el = document.getElementById('sleepVal');
+    el.textContent = mins == null ? '—' : fmtHrs(mins);
+    el.classList.toggle('empty', mins == null);
+  }
+
+  // ---- Habits --------------------------------------------------
+  function renderHabits() {
+    const day = getDay(activeKey);
+    const wrap = document.getElementById('habitList');
+    wrap.innerHTML = '';
+    HABITS.forEach(h => {
+      const row = document.createElement('div');
+      row.className = 'habit';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'habit-check' + (day[h.key] ? ' checked' : '');
+      btn.textContent = '✓';
+      btn.setAttribute('aria-pressed', day[h.key] ? 'true' : 'false');
+      btn.setAttribute('aria-label', h.name);
+
+      const name = document.createElement('span');
+      name.className = 'habit-name';
+      name.textContent = h.name;
+
+      const toggle = () => {
+        const cur = getDay(activeKey);
+        cur[h.key] = !cur[h.key];
+        setDay(activeKey, cur);
+        renderHabits();
+        renderHistory();
+        flashSaved();
+      };
+      btn.addEventListener('click', toggle);
+      name.addEventListener('click', toggle);
+
+      row.appendChild(btn);
+      row.appendChild(name);
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---- History -------------------------------------------------
+  function renderHistory() {
+    const wrap = document.getElementById('histList');
+    const keys = allDayKeys().filter(k => k !== activeKey).slice(0, 30);
+    wrap.innerHTML = '';
+
+    if (!keys.length) {
+      const p = document.createElement('div');
+      p.className = 'hist-empty';
+      p.textContent = 'No other days logged yet.';
+      wrap.appendChild(p);
+      return;
+    }
+
+    keys.forEach(k => {
+      const day = getDay(k);
+      const [y, m, d] = k.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'hist-row';
+
+      const date = document.createElement('span');
+      date.className = 'hist-date';
+      date.textContent = dt.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+
+      const stats = document.createElement('span');
+      stats.className = 'hist-stats';
+      const bits = [];
+      if (day.cash)   bits.push(['', day.cash + ' Kč']);
+      if (day.gym)    bits.push(['gym', day.gym + 'm']);
+      if (day.studying) bits.push(['study', day.studying + 'm']);
+      const mins = sleepMinutes(day.bedTime, day.wakeTime);
+      if (mins != null) bits.push(['sleep', fmtHrs(mins)]);
+      bits.forEach(([label, val]) => {
+        const s = document.createElement('span');
+        s.className = 'hist-stat';
+        s.innerHTML = (label ? label + ' ' : '') + '<b></b>';
+        s.querySelector('b').textContent = val;
+        stats.appendChild(s);
+      });
+
+      const exec = document.createElement('span');
+      exec.className = 'hist-exec';
+      exec.textContent = day.execution ? day.execution + '%' : '';
+
+      row.appendChild(date);
+      row.appendChild(stats);
+      row.appendChild(exec);
+      row.addEventListener('click', () => { activeKey = k; renderAll(); window.scrollTo(0, 0); });
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---- Render / wire -------------------------------------------
+  function renderInputs() {
+    const day = getDay(activeKey);
+    document.querySelectorAll('[data-field]').forEach(el => {
+      el.value = day[el.dataset.field] != null ? day[el.dataset.field] : '';
+    });
+  }
+  function renderAll() {
+    renderDayLabel();
+    renderInputs();
+    renderSleep();
+    renderHabits();
+    renderHistory();
+  }
+
+  document.querySelectorAll('[data-field]').forEach(el => {
+    el.addEventListener('change', saveInputs);
+  });
+  document.getElementById('dayPrev').addEventListener('click', () => {
+    activeKey = shiftKey(activeKey, -1); renderAll();
+  });
+  document.getElementById('dayNext').addEventListener('click', () => {
+    if (activeKey === todayKey()) return;
+    activeKey = shiftKey(activeKey, 1); renderAll();
+  });
+
+  renderAll();
+
+  // ---- Cloud sync ----------------------------------------------
+  // OFF until sync.js points at YOUR OWN Supabase project (see SETUP.md).
+  // The URL/key currently hardcoded in sync.js belong to the template's author,
+  // so enabling this now would write cash, weight and constraints to their
+  // database. Once sync.js has your project's URL + anon key, delete the
+  // `if (true) return;` line below and this page syncs like the others.
+  (function initSync() {
+    if (true) return;
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
+      appKey: 'daily',
+      syncedPrefixes: [PREFIX],
+      onApplied: function () { renderAll(); }
+    });
+  })();
+})();
+</script>
+</body>
+</html>
