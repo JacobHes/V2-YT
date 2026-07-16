@@ -401,9 +401,15 @@ body::after {
   border-radius: 10px;
 }
 .gm-hist-glyph {
-  font-family: var(--font-mono); font-size: 12px;
-  width: 12px; flex-shrink: 0; color: var(--text-tertiary);
+  font-family: var(--font-mono); font-size: 13px;
+  width: 20px; height: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; background: transparent; border: none;
+  color: var(--text-tertiary); cursor: pointer; border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
+.gm-hist-glyph:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
 .gm-hist-row.is-done .gm-hist-glyph { color: var(--success); }
 .gm-hist-text { font-size: 13px; color: var(--text-secondary); min-width: 0; }
 .gm-hist-row.is-done .gm-hist-text {
@@ -856,21 +862,25 @@ body::after {
   }
   function saveStreak(s) { storeSet('goal_streak_v1', s); }
 
+  // Recompute the streak from scratch on every call, rather than advancing it
+  // incrementally. Idempotent, and it means retroactively ticking a past day
+  // in the Past-days card correctly rebuilds the count. Empty days stay neutral.
   function processStreak() {
     const s = loadStreak();
     const todayDateStr = getActiveDateString();
-    const keys = storeListKeys('goals:')
+    const dates = storeListKeys('goals:')
       .map(k => k.slice('goals:'.length))
       .filter(d => d < todayDateStr)
       .sort();
-    keys.forEach(dateStr => {
-      if (s.lastProcessedDate && dateStr <= s.lastProcessedDate) return;
+    let count = 0;
+    dates.forEach(dateStr => {
       const list = getGoals('goals:' + dateStr);
-      if (list.length === 0) { /* don't break the streak on empty days */ }
-      else if (list.every(g => g.done)) s.count += 1;
-      else s.count = 0;
-      s.lastProcessedDate = dateStr;
+      if (list.length === 0) return;              // neutral, does not break
+      if (list.every(g => g.done)) count += 1;
+      else count = 0;
     });
+    s.count = count;
+    s.lastProcessedDate = dates.length ? dates[dates.length - 1] : s.lastProcessedDate;
     saveStreak(s);
   }
 
@@ -1299,26 +1309,54 @@ body::after {
 
       const ul = document.createElement('ul');
       ul.className = 'gm-hist-tasks';
-      goals.forEach(g => {
+      goals.forEach((g, taskIdx) => {
         const li = document.createElement('li');
         li.className = 'gm-hist-row' + (g.done ? ' is-done' : '');
 
-        const glyph = document.createElement('span');
+        const glyph = document.createElement('button');
+        glyph.type = 'button';
         glyph.className = 'gm-hist-glyph';
         glyph.textContent = g.done ? '✓' : '○';
+        glyph.setAttribute('aria-pressed', g.done ? 'true' : 'false');
+        glyph.setAttribute('aria-label', (g.done ? 'Uncheck ' : 'Check ') + g.text);
 
         const text = document.createElement('span');
         text.className = 'gm-hist-text';
         text.textContent = g.text;
 
+        const tag = document.createElement('span');
+        tag.className = 'gm-hist-tag';
+        tag.textContent = 'carried';
+        tag.style.display = (!g.done && g.carried) ? '' : 'none';
+
+        // Tick a past task retroactively. Write back to that day, update the
+        // row, day count and carried tag in place (so the day stays expanded),
+        // then recompute the streak since a completed past day can change it.
+        glyph.addEventListener('click', () => {
+          const list = getGoals('goals:' + dateStr);
+          if (!list[taskIdx]) return;
+          const nowDone = !list[taskIdx].done;
+          list[taskIdx].done = nowDone;
+          if (nowDone) list[taskIdx].doneAt = Date.now();
+          else delete list[taskIdx].doneAt;
+          setGoals('goals:' + dateStr, list);
+
+          li.classList.toggle('is-done', nowDone);
+          glyph.textContent = nowDone ? '✓' : '○';
+          glyph.setAttribute('aria-pressed', nowDone ? 'true' : 'false');
+          tag.style.display = (!nowDone && list[taskIdx].carried) ? '' : 'none';
+
+          const doneNow = list.filter(x => x.done).length;
+          count.textContent = doneNow + '/' + list.length;
+          count.classList.toggle('is-all-done', list.length > 0 && doneNow === list.length);
+
+          processStreak();
+          renderStreak();
+        });
+
         li.appendChild(glyph);
         li.appendChild(text);
-        if (!g.done && g.carried) {
-          const tag = document.createElement('span');
-          tag.className = 'gm-hist-tag';
-          tag.textContent = 'carried';
-          li.appendChild(tag);
-        }
+        li.appendChild(tag);
         ul.appendChild(li);
       });
 
