@@ -372,6 +372,54 @@ body::after {
   padding: 14px 0;
 }
 
+/* ----- Past days (read-only history) ----- */
+.gm-hist-day { border-bottom: 1px solid rgba(255,255,255,0.06); }
+.gm-hist-day:last-child { border-bottom: none; }
+.gm-hist-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; background: transparent; border: none; cursor: pointer;
+  padding: 12px 2px; font-family: inherit; color: inherit; text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.gm-hist-date { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.gm-hist-head:hover .gm-hist-date { color: var(--text-primary); }
+.gm-hist-meta { display: flex; align-items: center; gap: 10px; }
+.gm-hist-count {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.gm-hist-count.is-all-done { color: var(--success); }
+.gm-hist-caret { font-size: 9px; color: var(--text-tertiary); transition: transform 0.2s; }
+.gm-hist-day.is-open .gm-hist-caret { transform: rotate(180deg); }
+.gm-hist-tasks { display: none; margin: 0 0 10px; padding: 0; list-style: none; }
+.gm-hist-day.is-open .gm-hist-tasks { display: block; }
+.gm-hist-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; margin-bottom: 5px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+}
+.gm-hist-glyph {
+  font-family: var(--font-mono); font-size: 12px;
+  width: 12px; flex-shrink: 0; color: var(--text-tertiary);
+}
+.gm-hist-row.is-done .gm-hist-glyph { color: var(--success); }
+.gm-hist-text { font-size: 13px; color: var(--text-secondary); min-width: 0; }
+.gm-hist-row.is-done .gm-hist-text {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255,255,255,0.35);
+  opacity: 0.55;
+}
+.gm-hist-tag {
+  margin-left: auto; flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 999px; padding: 2px 7px;
+}
+
 .gm-row {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 14px;
@@ -693,6 +741,18 @@ body::after {
     </div>
   </div>
 
+  <!-- ===== Past days ===== -->
+  <div class="gm-card" id="gmCardHistory">
+    <div class="gm-header">
+      <div class="gm-header-left">
+        <div class="gm-eyebrow">Past days</div>
+      </div>
+      <div class="gm-tomorrow-count" id="gmHistoryCount">0 days</div>
+    </div>
+    <div id="historyList"></div>
+    <div id="historyEmpty" class="empty-state">Nothing here yet. Days you finish show up from tomorrow.</div>
+  </div>
+
 </div>
 
 <script>
@@ -761,6 +821,9 @@ body::after {
   function setGoals(key, list) { storeSet(key, list); }
 
   // ---------- rollover: pull undone older goals into today ----------
+  // Past days are kept, not deleted. A goal that moves forward is marked
+  // carried on the day it came from, so history still shows what that day
+  // held and the goal is not pulled forward twice.
   function rollover() {
     const todayDateStr = getActiveDateString();
     const todayK = 'goals:' + todayDateStr;
@@ -771,13 +834,16 @@ body::after {
       const dateStr = k.slice('goals:'.length);
       if (dateStr >= todayDateStr) return;
       const old = getGoals(k);
-      old.forEach(g => {
-        if (!g.done && g.text && !texts.has(g.text)) {
-          today.push({ text: g.text, done: false });
+      let touched = false;
+      old.forEach((g, i) => {
+        if (!g.done && !g.carried && g.text && !texts.has(g.text)) {
+          today.push(Object.assign({}, g, { done: false, carried: false, carriedFrom: dateStr }));
           texts.add(g.text);
+          old[i] = Object.assign({}, g, { carried: true, carriedTo: todayDateStr });
+          touched = true;
         }
       });
-      storeDelete(k);
+      if (touched) setGoals(k, old);
     });
     setGoals(todayK, today);
   }
@@ -1181,9 +1247,91 @@ body::after {
     else                    renderTomorrowCount();
   }
 
+  // ---------- Past days ----------
+  const HISTORY_DAYS = 14;
+
+  function renderHistory() {
+    const todayDateStr = getActiveDateString();
+    const dates = storeListKeys('goals:')
+      .map(k => k.slice('goals:'.length))
+      .filter(d => d < todayDateStr)
+      .sort().reverse()
+      .slice(0, HISTORY_DAYS);
+
+    const listEl  = document.getElementById('historyList');
+    const emptyEl = document.getElementById('historyEmpty');
+    const countEl = document.getElementById('gmHistoryCount');
+    listEl.innerHTML = '';
+    emptyEl.style.display = dates.length === 0 ? 'block' : 'none';
+    countEl.textContent = dates.length + (dates.length === 1 ? ' day' : ' days');
+
+    dates.forEach((dateStr, dayIdx) => {
+      const goals = getGoals('goals:' + dateStr);
+      const done  = goals.filter(g => g.done).length;
+
+      const day = document.createElement('div');
+      day.className = 'gm-hist-day';
+      // Most recent past day starts open, that is the one being looked for.
+      if (dayIdx === 0) day.classList.add('is-open');
+
+      const head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'gm-hist-head';
+
+      const date = document.createElement('span');
+      date.className = 'gm-hist-date';
+      date.textContent = formatDate(dateStr);
+
+      const meta = document.createElement('span');
+      meta.className = 'gm-hist-meta';
+      const count = document.createElement('span');
+      count.className = 'gm-hist-count' + (goals.length > 0 && done === goals.length ? ' is-all-done' : '');
+      count.textContent = done + '/' + goals.length;
+      const caret = document.createElement('span');
+      caret.className = 'gm-hist-caret';
+      caret.textContent = '▾';
+      meta.appendChild(count);
+      meta.appendChild(caret);
+
+      head.appendChild(date);
+      head.appendChild(meta);
+      head.addEventListener('click', () => day.classList.toggle('is-open'));
+
+      const ul = document.createElement('ul');
+      ul.className = 'gm-hist-tasks';
+      goals.forEach(g => {
+        const li = document.createElement('li');
+        li.className = 'gm-hist-row' + (g.done ? ' is-done' : '');
+
+        const glyph = document.createElement('span');
+        glyph.className = 'gm-hist-glyph';
+        glyph.textContent = g.done ? '✓' : '○';
+
+        const text = document.createElement('span');
+        text.className = 'gm-hist-text';
+        text.textContent = g.text;
+
+        li.appendChild(glyph);
+        li.appendChild(text);
+        if (!g.done && g.carried) {
+          const tag = document.createElement('span');
+          tag.className = 'gm-hist-tag';
+          tag.textContent = 'carried';
+          li.appendChild(tag);
+        }
+        ul.appendChild(li);
+      });
+
+      day.appendChild(head);
+      day.appendChild(ul);
+      listEl.appendChild(day);
+    });
+  }
+
   function loadToday() {
     const goals = getGoals(todayKey());
     renderListInto(goals, document.getElementById('goalList'), document.getElementById('emptyState'), todayKey(), false);
+    renderHistory();
   }
   function loadTomorrow() {
     const goals = getGoals(tomorrowKey());
@@ -1199,7 +1347,10 @@ body::after {
     const tomorrow = getGoals(tomorrowKey());
     const seen = new Set(tomorrow.map(g => g.text));
     remaining.forEach(g => {
-      if (!seen.has(g.text)) { tomorrow.push({ text: g.text, done: false }); seen.add(g.text); }
+      if (!seen.has(g.text)) {
+        tomorrow.push(Object.assign({}, g, { done: false, carried: false, carriedFrom: getActiveDateString() }));
+        seen.add(g.text);
+      }
     });
     setGoals(tomorrowKey(), tomorrow);
     setGoals(todayKey(), today.filter(g => g.done));
