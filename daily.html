@@ -589,13 +589,8 @@ html, body {
   renderAll();
 
   // ---- Cloud sync ----------------------------------------------
-  // OFF until sync.js points at YOUR OWN Supabase project (see SETUP.md).
-  // The URL/key currently hardcoded in sync.js belong to the template's author,
-  // so enabling this now would write cash, weight and constraints to their
-  // database. Once sync.js has your project's URL + anon key, delete the
-  // `if (true) return;` line below and this page syncs like the others.
+  // Mirrors daily:<date> entries to Supabase (project wired into sync.js).
   (function initSync() {
-    if (true) return;
     if (typeof initCloudSync !== 'function') return;
     initCloudSync({
       appKey: 'daily',

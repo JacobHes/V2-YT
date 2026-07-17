@@ -16,8 +16,8 @@
   // and have them paste their own values, just like the other pages.
   // Prefer Vercel env vars (served via /api/config → window.DASH_*),
   // otherwise fall back to these defaults.
-  const TOPBAR_SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
-  const TOPBAR_SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  const TOPBAR_SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://bbillwahmyolgsiumxuf.supabase.co';
+  const TOPBAR_SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_mgM66JU6rRQxXKBlbnfp1A_tngIl22h';
 
   // -------- CSS --------
   const css = `
