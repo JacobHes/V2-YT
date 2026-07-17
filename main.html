@@ -372,6 +372,125 @@ body::after {
   padding: 14px 0;
 }
 
+/* ----- The Arrow (one task that makes the day a win) ----- */
+.gm-arrow {
+  --arrow: #E07658;
+  position: relative; overflow: hidden;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  border: 1px solid color-mix(in srgb, var(--arrow) 45%, transparent);
+  background:
+    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--arrow) 16%, transparent), transparent 60%),
+    rgba(255,255,255,0.04);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--arrow) 12%, transparent),
+              0 10px 34px rgba(0,0,0,0.4);
+}
+.gm-arrow-fired  { --arrow: #F2A65A; }
+.gm-arrow-landed { --arrow: var(--success); }
+.gm-arrow-empty {
+  --arrow: #76746E;
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text-tertiary); font-size: 13px; font-style: italic;
+  background: rgba(255,255,255,0.02);
+  box-shadow: none;
+}
+.gm-arrow-empty::before {
+  content: '◎'; font-style: normal; font-size: 18px; color: var(--text-tertiary);
+}
+.gm-arrow-eyebrow {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.gm-arrow-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--arrow);
+}
+.gm-arrow-state {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--arrow);
+  border: 1px solid color-mix(in srgb, var(--arrow) 40%, transparent);
+  border-radius: 999px; padding: 2px 8px;
+}
+.gm-arrow-count {
+  margin-left: auto;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--warning); letter-spacing: 0.04em;
+}
+.gm-arrow-text {
+  font-size: 17px; font-weight: 700; color: var(--text-primary);
+  letter-spacing: -0.01em; line-height: 1.25;
+}
+.gm-arrow-landed .gm-arrow-text {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--success) 60%, transparent);
+}
+.gm-arrow-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.gm-arrow-btn {
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: #0a0a0b; background: var(--arrow);
+  border: none; border-radius: 10px; padding: 9px 16px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, filter 0.15s;
+}
+.gm-arrow-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.gm-arrow-btn:active { transform: scale(0.98); }
+.gm-arrow-meta {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
+}
+
+/* Aim button on each task row */
+.gm-aim-btn {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-tertiary); font-size: 16px; line-height: 1;
+  padding: 4px; border-radius: 6px; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.gm-aim-btn:hover { color: #E07658; background: rgba(224,118,88,0.10); }
+.gm-aim-btn.gm-aim-active { color: #E07658; }
+.gm-row.gm-row-arrow { border-color: color-mix(in srgb, #E07658 35%, transparent); }
+
+/* Aim confirm modal */
+.arrow-modal-bg {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.66); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 22px;
+}
+.arrow-modal-bg.show { display: flex; }
+.arrow-modal {
+  width: 100%; max-width: 400px;
+  background: #111113;
+  border: 1px solid color-mix(in srgb, #E07658 30%, transparent);
+  border-radius: 16px; padding: 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.arrow-modal-eyebrow {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #E07658; margin-bottom: 12px;
+}
+.arrow-modal-task {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  margin-bottom: 14px; line-height: 1.3;
+}
+.arrow-modal-q {
+  font-size: 14px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 20px;
+}
+.arrow-modal-actions { display: flex; gap: 10px; }
+.arrow-modal-actions button {
+  flex: 1; font-family: inherit; font-size: 13px; font-weight: 700;
+  border-radius: 10px; padding: 12px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: filter 0.15s;
+}
+.arrow-modal-yes { background: #E07658; color: #0a0a0b; border: none; }
+.arrow-modal-yes:hover { filter: brightness(1.08); }
+.arrow-modal-no {
+  background: transparent; color: var(--text-secondary);
+  border: 1px solid rgba(255,255,255,0.14);
+}
+.arrow-modal-no:hover { background: rgba(255,255,255,0.05); }
+
 /* ----- Past days (read-only history) ----- */
 .gm-hist-day { border-bottom: 1px solid rgba(255,255,255,0.06); }
 .gm-hist-day:last-child { border-bottom: none; }
@@ -715,6 +834,7 @@ body::after {
           <span>day streak</span>
         </div>
       </div>
+      <div class="gm-arrow gm-arrow-empty" id="gmArrow"></div>
       <div class="gm-bar" id="gmBar"></div>
       <ul id="goalList" class="goal-list gm-list"></ul>
       <div id="emptyState" class="empty-state">No goals for today yet — add one below.</div>
@@ -743,6 +863,19 @@ body::after {
         <button type="button" id="tomorrowAddBtn"    class="gm-add">+ Add</button>
         <button type="button" id="tomorrowPolishBtn" class="gm-polish">✨ Polish</button>
         <div class="gm-status" id="tomorrowStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Aim confirm ===== -->
+  <div class="arrow-modal-bg" id="arrowModalBg">
+    <div class="arrow-modal" role="dialog" aria-label="Aim your arrow">
+      <div class="arrow-modal-eyebrow">Aim your arrow</div>
+      <div class="arrow-modal-task" id="arrowModalTask"></div>
+      <div class="arrow-modal-q">If this is the only thing that ships today, is the day a win?</div>
+      <div class="arrow-modal-actions">
+        <button type="button" class="arrow-modal-yes" id="arrowModalYes">Aim it</button>
+        <button type="button" class="arrow-modal-no" id="arrowModalNo">Pick another</button>
       </div>
     </div>
   </div>
@@ -826,6 +959,56 @@ body::after {
   }
   function setGoals(key, list) { storeSet(key, list); }
 
+  // ---------- task ids ----------
+  // Every task carries a stable id so arrow/carryover logic survives edits and
+  // re-renders. Older tasks predate ids, so backfill them once on boot.
+  let _idCounter = 0;
+  function genId() {
+    return 'g' + Date.now().toString(36) + (_idCounter++).toString(36) +
+           Math.floor(Math.random() * 1e6).toString(36);
+  }
+  function migrateIds() {
+    storeListKeys('goals:').forEach(k => {
+      const list = getGoals(k);
+      let changed = false;
+      list.forEach(g => { if (!g.id) { g.id = genId(); changed = true; } });
+      if (changed) setGoals(k, list);
+    });
+  }
+
+  // ---------- the arrow ----------
+  // At most one task per day is the arrow. State: aimed -> fired -> landed.
+  function arrowState(g) { return g.done ? 'landed' : (g.firedAt ? 'fired' : 'aimed'); }
+  function getArrow(list) { return list.find(g => g.arrow) || null; }
+  // Guard against two arrows landing in one day (e.g. two carried forward).
+  function enforceSingleArrow(list) {
+    let seen = false;
+    list.forEach(g => {
+      if (!g.arrow) return;
+      if (seen) delete g.arrow;
+      else seen = true;
+    });
+    return list;
+  }
+  function setArrowById(key, id) {
+    const list = getGoals(key);
+    list.forEach(g => {
+      if (g.id === id) { g.arrow = true; if (!g.aimedCount) g.aimedCount = 1; }
+      else delete g.arrow;
+    });
+    setGoals(key, list);
+  }
+  function fireArrowById(key, id) {
+    const list = getGoals(key);
+    const g = list.find(x => x.id === id);
+    if (g && !g.firedAt) { g.firedAt = Date.now(); setGoals(key, list); }
+  }
+  function landArrowById(key, id) {
+    const list = getGoals(key);
+    const g = list.find(x => x.id === id);
+    if (g) { g.done = true; g.doneAt = Date.now(); setGoals(key, list); }
+  }
+
   // ---------- rollover: pull undone older goals into today ----------
   // Past days are kept, not deleted. A goal that moves forward is marked
   // carried on the day it came from, so history still shows what that day
@@ -843,7 +1026,14 @@ body::after {
       let touched = false;
       old.forEach((g, i) => {
         if (!g.done && !g.carried && g.text && !texts.has(g.text)) {
-          today.push(Object.assign({}, g, { done: false, carried: false, carriedFrom: dateStr }));
+          const copy = Object.assign({}, g, {
+            id: genId(), done: false, carried: false, carriedFrom: dateStr
+          });
+          delete copy.firedAt; delete copy.doneAt; delete copy.carriedTo;
+          // An arrow that never landed stays aimed, and its aim count grows so
+          // the card can show how many days it has been carried without landing.
+          if (g.arrow) copy.aimedCount = (g.aimedCount || 1) + 1;
+          today.push(copy);
           texts.add(g.text);
           old[i] = Object.assign({}, g, { carried: true, carriedTo: todayDateStr });
           touched = true;
@@ -851,6 +1041,7 @@ body::after {
       });
       if (touched) setGoals(k, old);
     });
+    enforceSingleArrow(today);
     setGoals(todayK, today);
   }
 
@@ -862,9 +1053,10 @@ body::after {
   }
   function saveStreak(s) { storeSet('goal_streak_v1', s); }
 
-  // Recompute the streak from scratch on every call, rather than advancing it
-  // incrementally. Idempotent, and it means retroactively ticking a past day
-  // in the Past-days card correctly rebuilds the count. Empty days stay neutral.
+  // The streak counts consecutive past days whose ARROW LANDED. A day with no
+  // arrow, or an arrow that was aimed but never landed, breaks it. Ticking off
+  // other tasks does not count. Recomputed from scratch each call so a
+  // retroactive change in the Past-days card rebuilds it correctly.
   function processStreak() {
     const s = loadStreak();
     const todayDateStr = getActiveDateString();
@@ -874,10 +1066,9 @@ body::after {
       .sort();
     let count = 0;
     dates.forEach(dateStr => {
-      const list = getGoals('goals:' + dateStr);
-      if (list.length === 0) return;              // neutral, does not break
-      if (list.every(g => g.done)) count += 1;
-      else count = 0;
+      const arrow = getArrow(getGoals('goals:' + dateStr));
+      if (arrow && arrow.done) count += 1;   // landed = win
+      else count = 0;                        // no arrow or unfired/unlanded = break
     });
     s.count = count;
     s.lastProcessedDate = dates.length ? dates[dates.length - 1] : s.lastProcessedDate;
@@ -1117,6 +1308,7 @@ body::after {
     li.dataset.idx = String(idx);
     if (goal.done) li.classList.add('gm-row-done');
     if (goal.queued) li.classList.add('gm-row-queued');
+    if (goal.arrow) li.classList.add('gm-row-arrow');
 
     const handle = document.createElement('span');
     handle.className = 'gm-handle';
@@ -1144,6 +1336,20 @@ body::after {
     text.textContent = goal.text;
     li.appendChild(text);
     makeInlineEdit(text, null, idx, key, reload);
+
+    if (!readOnly) {
+      const aim = document.createElement('button');
+      aim.type = 'button';
+      aim.className = 'gm-aim-btn' + (goal.arrow ? ' gm-aim-active' : '');
+      aim.textContent = '◎';
+      aim.title = goal.arrow ? "Today's arrow" : 'Aim as the arrow';
+      aim.setAttribute('aria-label', goal.arrow ? "Today's arrow" : 'Aim as the arrow');
+      aim.addEventListener('click', () => {
+        if (goal.arrow) return;   // already the arrow
+        openAimConfirm(goal.text, () => { setArrowById(key, goal.id); reload(); });
+      });
+      li.appendChild(aim);
+    }
 
     const queueBtn = document.createElement('button');
     queueBtn.type = 'button';
@@ -1366,9 +1572,94 @@ body::after {
     });
   }
 
+  // ---------- Arrow card ----------
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function renderArrowCard() {
+    const wrap = document.getElementById('gmArrow');
+    const arrow = getArrow(getGoals(todayKey()));
+    wrap.innerHTML = '';
+
+    if (!arrow) {
+      wrap.className = 'gm-arrow gm-arrow-empty';
+      wrap.textContent = 'No arrow yet. Aim the one task that makes today a win.';
+      return;
+    }
+
+    const state = arrowState(arrow);
+    wrap.className = 'gm-arrow gm-arrow-' + state;
+
+    const eyebrow = document.createElement('div');
+    eyebrow.className = 'gm-arrow-eyebrow';
+    const label = document.createElement('span');
+    label.className = 'gm-arrow-label';
+    label.textContent = "Today's arrow";
+    const badge = document.createElement('span');
+    badge.className = 'gm-arrow-state';
+    badge.textContent = state;
+    eyebrow.appendChild(label);
+    eyebrow.appendChild(badge);
+    if ((arrow.aimedCount || 1) > 1) {
+      const cnt = document.createElement('span');
+      cnt.className = 'gm-arrow-count';
+      cnt.textContent = 'aimed ' + arrow.aimedCount + 'x';
+      eyebrow.appendChild(cnt);
+    }
+    wrap.appendChild(eyebrow);
+
+    const text = document.createElement('div');
+    text.className = 'gm-arrow-text';
+    text.textContent = arrow.text;
+    wrap.appendChild(text);
+
+    const foot = document.createElement('div');
+    foot.className = 'gm-arrow-foot';
+    if (state === 'aimed') {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'gm-arrow-btn';
+      btn.textContent = 'Start';
+      btn.addEventListener('click', () => { fireArrowById(todayKey(), arrow.id); loadToday(); });
+      foot.appendChild(btn);
+    } else if (state === 'fired') {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'gm-arrow-btn';
+      btn.textContent = 'Mark it landed';
+      btn.addEventListener('click', () => { landArrowById(todayKey(), arrow.id); processStreak(); loadToday(); renderStreak(); });
+      foot.appendChild(btn);
+      const meta = document.createElement('span');
+      meta.className = 'gm-arrow-meta';
+      meta.textContent = arrow.firedAt ? 'started ' + fmtTime(arrow.firedAt) : '';
+      foot.appendChild(meta);
+    } else {
+      const meta = document.createElement('span');
+      meta.className = 'gm-arrow-meta';
+      meta.textContent = arrow.doneAt ? 'landed ' + fmtTime(arrow.doneAt) : 'landed';
+      foot.appendChild(meta);
+    }
+    wrap.appendChild(foot);
+  }
+
+  // ---------- Aim confirm modal ----------
+  let _aimConfirmCb = null;
+  const arrowModalBg = document.getElementById('arrowModalBg');
+  function openAimConfirm(taskText, onConfirm) {
+    _aimConfirmCb = onConfirm;
+    document.getElementById('arrowModalTask').textContent = taskText;
+    arrowModalBg.classList.add('show');
+  }
+  function closeAimConfirm() { arrowModalBg.classList.remove('show'); _aimConfirmCb = null; }
+  document.getElementById('arrowModalYes').addEventListener('click', () => {
+    const cb = _aimConfirmCb; closeAimConfirm(); if (cb) cb();
+  });
+  document.getElementById('arrowModalNo').addEventListener('click', closeAimConfirm);
+  arrowModalBg.addEventListener('click', (e) => { if (e.target === arrowModalBg) closeAimConfirm(); });
+
   function loadToday() {
     const goals = getGoals(todayKey());
     renderListInto(goals, document.getElementById('goalList'), document.getElementById('emptyState'), todayKey(), false);
+    renderArrowCard();
     renderHistory();
   }
   function loadTomorrow() {
@@ -1433,7 +1724,7 @@ body::after {
   function makeAddHandlers(input, addBtn, polishBtn, key, statusEl, reload) {
     function plainAdd(text) {
       const list = getGoals(key);
-      list.push({ text, done: false });
+      list.push({ id: genId(), text, done: false });
       setGoals(key, list);
       input.value = '';
       reload();
@@ -1485,6 +1776,7 @@ body::after {
   );
 
   // ---------- Boot ----------
+  migrateIds();
   rollover();
   processStreak();
   loadToday();
