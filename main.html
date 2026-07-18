@@ -1337,13 +1337,15 @@ body::after {
     li.appendChild(text);
     makeInlineEdit(text, null, idx, key, reload);
 
-    if (!readOnly) {
+    // Aim is allowed on today AND on the tomorrow plan (the night-before aim).
+    // The read-only lock only disables checking off early, not aiming.
+    {
       const aim = document.createElement('button');
       aim.type = 'button';
       aim.className = 'gm-aim-btn' + (goal.arrow ? ' gm-aim-active' : '');
       aim.textContent = '◎';
-      aim.title = goal.arrow ? "Today's arrow" : 'Aim as the arrow';
-      aim.setAttribute('aria-label', goal.arrow ? "Today's arrow" : 'Aim as the arrow');
+      aim.title = goal.arrow ? 'The arrow' : 'Aim as the arrow';
+      aim.setAttribute('aria-label', goal.arrow ? 'The arrow' : 'Aim as the arrow');
       aim.addEventListener('click', () => {
         if (goal.arrow) return;   // already the arrow
         openAimConfirm(goal.text, () => { setArrowById(key, goal.id); reload(); });
