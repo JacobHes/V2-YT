@@ -544,6 +544,21 @@ body::after {
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 999px; padding: 2px 7px;
 }
+.gm-hist-pull {
+  display: none;
+  margin: 2px 0 12px;
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #E07658;
+  background: rgba(224,118,88,0.08);
+  border: 1px solid color-mix(in srgb, #E07658 30%, transparent);
+  border-radius: 10px; padding: 8px 14px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.gm-hist-day.is-open .gm-hist-pull { display: inline-flex; }
+.gm-hist-pull:hover { background: rgba(224,118,88,0.16); }
+.gm-hist-pull:disabled { opacity: 0.5; cursor: default; color: var(--text-tertiary); border-color: rgba(255,255,255,0.10); background: transparent; }
 
 .gm-row {
   display: flex; align-items: center; gap: 12px;
@@ -1468,6 +1483,31 @@ body::after {
   // ---------- Past days ----------
   const HISTORY_DAYS = 14;
 
+  // Copy a past day's unfinished tasks into today (deduped by text). The source
+  // tasks stay in history, marked carried. Returns how many were pulled.
+  function pullDayToToday(dateStr) {
+    const todayK = todayKey();
+    const today = getGoals(todayK);
+    const texts = new Set(today.map(g => g.text));
+    const src = getGoals('goals:' + dateStr);
+    let pulled = 0;
+    src.forEach((g, i) => {
+      if (!g.done && g.text && !texts.has(g.text)) {
+        const copy = Object.assign({}, g, {
+          id: genId(), done: false, carried: false, carriedFrom: dateStr
+        });
+        delete copy.arrow; delete copy.firedAt; delete copy.doneAt;
+        delete copy.carriedTo; delete copy.aimedCount;
+        today.push(copy);
+        texts.add(g.text);
+        src[i] = Object.assign({}, g, { carried: true, carriedTo: getActiveDateString() });
+        pulled++;
+      }
+    });
+    if (pulled) { setGoals(todayK, today); setGoals('goals:' + dateStr, src); }
+    return pulled;
+  }
+
   function renderHistory() {
     const todayDateStr = getActiveDateString();
     const dates = storeListKeys('goals:')
@@ -1482,6 +1522,10 @@ body::after {
     listEl.innerHTML = '';
     emptyEl.style.display = dates.length === 0 ? 'block' : 'none';
     countEl.textContent = dates.length + (dates.length === 1 ? ' day' : ' days');
+
+    // Tasks already in today, by text, so the pull button only counts what is
+    // genuinely new (auto-rollover may already have carried some forward).
+    const todayTexts = new Set(getGoals(todayKey()).map(g => g.text));
 
     dates.forEach((dateStr, dayIdx) => {
       const goals = getGoals('goals:' + dateStr);
@@ -1570,6 +1614,23 @@ body::after {
 
       day.appendChild(head);
       day.appendChild(ul);
+
+      // One-click: send this day's unfinished tasks into today. Only counts
+      // tasks not already in today, so the button reflects a real action.
+      const pullable = goals.filter(g => !g.done && g.text && !todayTexts.has(g.text)).length;
+      if (pullable > 0) {
+        const pull = document.createElement('button');
+        pull.type = 'button';
+        pull.className = 'gm-hist-pull';
+        pull.textContent = 'Pull ' + pullable + ' to today';
+        pull.addEventListener('click', () => {
+          pullDayToToday(dateStr);
+          loadToday();                 // re-renders today, arrow card and history
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        day.appendChild(pull);
+      }
+
       listEl.appendChild(day);
     });
   }
