@@ -552,6 +552,82 @@ body::after {
 }
 .gm-morning-btn:hover { filter: brightness(1.08); }
 
+/* ----- Energy check-in + routing ----- */
+.gm-checkin { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.gm-checkin-label { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
+.gm-checkin-btns { display: flex; gap: 6px; }
+.gm-checkin-btns button {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-tertiary); background: transparent;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 999px;
+  padding: 5px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s;
+}
+.gm-checkin-btns button[data-energy="full"].on   { color: #0a0a0b; background: #6BE3A4; border-color: #6BE3A4; }
+.gm-checkin-btns button[data-energy="medium"].on { color: #0a0a0b; background: #F2C063; border-color: #F2C063; }
+.gm-checkin-btns button[data-energy="cooked"].on { color: #0a0a0b; background: #FF8A8A; border-color: #FF8A8A; }
+
+.gm-cooked-banner {
+  display: none; margin-bottom: 12px; padding: 12px 14px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; color: #FF8A8A;
+  border: 1px solid color-mix(in srgb, #FF8A8A 30%, transparent);
+  background: rgba(255,138,138,0.06);
+}
+.gm-cooked-banner.show { display: block; }
+.gm-row.is-cooled { opacity: 0.4; }
+.gm-arrow.gm-arrow-cooled { opacity: 0.6; }
+.gm-collapse-toggle {
+  width: 100%; text-align: left; margin: 4px 0 6px;
+  background: transparent; border: none; color: var(--text-tertiary);
+  font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  padding: 6px 2px; -webkit-tap-highlight-color: transparent;
+}
+.gm-collapse-toggle:hover { color: var(--text-secondary); }
+
+.gm-arrow-timer {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+  color: var(--arrow); font-variant-numeric: tabular-nums;
+}
+
+/* ----- Pre-work gate ----- */
+.pw-bg {
+  display: none; position: fixed; inset: 0; z-index: 250;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+.pw-bg.show { display: flex; }
+.pw {
+  width: 100%; max-width: 420px; background: #111113;
+  border: 1px solid color-mix(in srgb, #E07658 30%, transparent);
+  border-radius: 16px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.pw-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #E07658; margin-bottom: 10px; }
+.pw-task { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; line-height: 1.3; }
+.pw-check {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06);
+  -webkit-tap-highlight-color: transparent;
+}
+.pw-check:last-of-type { border-bottom: none; }
+.pw-check-box {
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+  border: 2px solid var(--text-tertiary);
+  display: flex; align-items: center; justify-content: center;
+  color: transparent; font-size: 12px; transition: all 0.15s;
+}
+.pw-check.on .pw-check-box { background: var(--success); border-color: var(--success); color: #0a0a0b; }
+.pw-check-text { font-size: 14px; color: var(--text-secondary); }
+.pw-check.on .pw-check-text { color: var(--text-primary); }
+.pw-go {
+  width: 100%; margin-top: 18px;
+  font-family: inherit; font-size: 14px; font-weight: 800; letter-spacing: 0.08em;
+  color: #0a0a0b; background: #E07658; border: none; border-radius: 12px;
+  padding: 15px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: filter 0.15s;
+}
+.pw-go:hover { filter: brightness(1.08); }
+
 /* ----- Planning wizard ----- */
 .wiz-bg {
   display: none; position: fixed; inset: 0; z-index: 300;
@@ -1028,6 +1104,15 @@ body::after {
         <span class="gm-morning-text">Aim before you touch anything.</span>
         <button type="button" class="gm-morning-btn" id="gmMorningBtn">Plan today</button>
       </div>
+      <div class="gm-checkin" id="gmCheckin">
+        <span class="gm-checkin-label">Energy today</span>
+        <div class="gm-checkin-btns">
+          <button type="button" data-energy="full">Full</button>
+          <button type="button" data-energy="medium">Medium</button>
+          <button type="button" data-energy="cooked">Cooked</button>
+        </div>
+      </div>
+      <div class="gm-cooked-banner" id="gmCookedBanner">Cooked day = prep day. Tee up tomorrow, don't force a mover.</div>
       <div class="gm-arrow gm-arrow-empty" id="gmArrow"></div>
       <div class="gm-bar" id="gmBar"></div>
       <ul id="goalList" class="goal-list gm-list"></ul>
@@ -1057,7 +1142,7 @@ body::after {
         </div>
         <button type="button" class="gm-locked-reopen" id="gmLockedReopen">Reopen</button>
       </div>
-      <button type="button" class="gm-plan-btn" id="gmPlanBtn">Plan tomorrow night</button>
+      <button type="button" class="gm-plan-btn" id="gmPlanBtn">Plan Tomorrow</button>
       <ul id="tomorrowList" class="goal-list gm-list"></ul>
       <div id="tomorrowEmpty" class="empty-state">Nothing planned for tomorrow yet</div>
       <div class="goal-input-wrap gm-input-wrap">
@@ -1066,6 +1151,16 @@ body::after {
         <button type="button" id="tomorrowPolishBtn" class="gm-polish">✨ Polish</button>
         <div class="gm-status" id="tomorrowStatus"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== Pre-work gate ===== -->
+  <div class="pw-bg" id="pwBg">
+    <div class="pw" role="dialog" aria-label="Before you start">
+      <div class="pw-eyebrow">Before you start</div>
+      <div class="pw-task" id="pwTask"></div>
+      <div id="pwChecks"></div>
+      <button type="button" class="pw-go" id="pwGo">I'M DOING THIS</button>
     </div>
   </div>
 
@@ -1246,6 +1341,13 @@ body::after {
     storeSet(planKey(dateStr), { locked: true, at: Date.now(), gate: gate || null });
   }
   function unlockPlan(dateStr) { storeDelete(planKey(dateStr)); }
+
+  // ---------- daily energy state (full / medium / cooked) ----------
+  function energyKey(dateStr) { return 'energy:' + dateStr; }
+  function getDayEnergy(dateStr) { return storeGet(energyKey(dateStr)) || null; }
+  function setDayEnergy(dateStr, v) {
+    if (v) storeSet(energyKey(dateStr), v); else storeDelete(energyKey(dateStr));
+  }
 
   // ---------- rollover: pull undone older goals into today ----------
   // Past days are kept, not deleted. A goal that moves forward is marked
@@ -1876,6 +1978,98 @@ body::after {
     });
   }
 
+  // ---------- Energy check-in + routing ----------
+  function renderCheckin() {
+    const energy = getDayEnergy(getActiveDateString());
+    document.querySelectorAll('#gmCheckin .gm-checkin-btns button').forEach(b => {
+      b.classList.toggle('on', b.dataset.energy === energy);
+    });
+  }
+  function renderRouting() {
+    const cooked = getDayEnergy(getActiveDateString()) === 'cooked';
+    document.getElementById('gmCookedBanner').classList.toggle('show', cooked);
+    // On a cooked day, grey out mover rows so they read as "not today".
+    const goals = getGoals(todayKey());
+    document.querySelectorAll('#goalList .gm-row').forEach(row => {
+      const idx = parseInt(row.dataset.idx, 10);
+      const g = goals[idx];
+      row.classList.toggle('is-cooled', cooked && g && g.energy === 'mover');
+    });
+  }
+  document.querySelectorAll('#gmCheckin .gm-checkin-btns button').forEach(b => {
+    b.addEventListener('click', () => {
+      const d = getActiveDateString();
+      const cur = getDayEnergy(d);
+      setDayEnergy(d, cur === b.dataset.energy ? null : b.dataset.energy);
+      loadToday();
+    });
+  });
+
+  // ---------- Pre-work gate ----------
+  const PW_CHECKS = [
+    'Phone in another room',
+    'Messaging closed on this machine',
+    'Space clean and silent',
+    'No interruption possible for the block'
+  ];
+  let _pwArrowId = null;
+  function openPreWork(arrow) {
+    _pwArrowId = arrow.id;
+    document.getElementById('pwTask').textContent = arrow.text;
+    const box = document.getElementById('pwChecks');
+    box.innerHTML = '';
+    PW_CHECKS.forEach(txt => {
+      const row = document.createElement('div'); row.className = 'pw-check';
+      const chk = document.createElement('div'); chk.className = 'pw-check-box'; chk.textContent = '✓';
+      const t = document.createElement('span'); t.className = 'pw-check-text'; t.textContent = txt;
+      row.appendChild(chk); row.appendChild(t);
+      row.addEventListener('click', () => row.classList.toggle('on'));
+      box.appendChild(row);
+    });
+    document.getElementById('pwBg').classList.add('show');
+  }
+  function closePreWork() { document.getElementById('pwBg').classList.remove('show'); _pwArrowId = null; }
+  document.getElementById('pwGo').addEventListener('click', () => {
+    if (_pwArrowId) fireArrowById(todayKey(), _pwArrowId);
+    closePreWork();
+    loadToday();
+  });
+  document.getElementById('pwBg').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('pwBg')) closePreWork();
+  });
+
+  // ---------- 5-minute test (cooked days) ----------
+  const FIVE_MIN_MS = 5 * 60 * 1000;
+  let testTimer = null, testEndsAt = 0, testArrowId = null;
+  function fmtCountdown(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return Math.floor(s / 60) + ':' + pad2(s % 60);
+  }
+  function startFiveMinTest(arrowId) {
+    testArrowId = arrowId;
+    testEndsAt = Date.now() + FIVE_MIN_MS;
+    clearInterval(testTimer);
+    testTimer = setInterval(tickTest, 250);
+    renderArrowCard();
+  }
+  function stopFiveMinTest() {
+    clearInterval(testTimer); testTimer = null; testArrowId = null;
+    renderArrowCard();
+  }
+  function tickTest() {
+    const remaining = testEndsAt - Date.now();
+    if (remaining <= 0) {
+      clearInterval(testTimer); testTimer = null;
+      const id = testArrowId; testArrowId = null;
+      // Survived the 5 minutes: the "can't start" was the brain lying. Fire it.
+      if (id) fireArrowById(todayKey(), id);
+      loadToday();
+      return;
+    }
+    const el = document.getElementById('gmTestCountdown');
+    if (el) el.textContent = fmtCountdown(remaining);
+  }
+
   // ---------- Arrow card ----------
   function fmtTime(ts) {
     const d = new Date(ts);
@@ -1921,11 +2115,34 @@ body::after {
     const foot = document.createElement('div');
     foot.className = 'gm-arrow-foot';
     if (state === 'aimed') {
-      const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'gm-arrow-btn';
-      btn.textContent = 'Start';
-      btn.addEventListener('click', () => { fireArrowById(todayKey(), arrow.id); loadToday(); });
-      foot.appendChild(btn);
+      const cooked = getDayEnergy(getActiveDateString()) === 'cooked';
+      if (cooked) {
+        // Cooked day: the arrow is greyed and gated behind the 5-minute test.
+        wrap.classList.add('gm-arrow-cooled');
+        if (testTimer && testArrowId === arrow.id) {
+          const cd = document.createElement('span');
+          cd.className = 'gm-arrow-timer'; cd.id = 'gmTestCountdown';
+          cd.textContent = fmtCountdown(testEndsAt - Date.now());
+          const stop = document.createElement('button');
+          stop.type = 'button'; stop.className = 'gm-arrow-btn'; stop.textContent = 'Stop';
+          stop.addEventListener('click', stopFiveMinTest);
+          const meta = document.createElement('span');
+          meta.className = 'gm-arrow-meta'; meta.textContent = 'keep going and it fires';
+          foot.appendChild(cd); foot.appendChild(stop); foot.appendChild(meta);
+        } else {
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.className = 'gm-arrow-btn';
+          btn.textContent = 'Test it: 5-min start';
+          btn.addEventListener('click', () => startFiveMinTest(arrow.id));
+          foot.appendChild(btn);
+        }
+      } else {
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'gm-arrow-btn';
+        btn.textContent = "I'M DOING THIS";
+        btn.addEventListener('click', () => openPreWork(arrow));
+        foot.appendChild(btn);
+      }
     } else if (state === 'fired') {
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'gm-arrow-btn';
@@ -1963,6 +2180,8 @@ body::after {
   function loadToday() {
     const goals = getGoals(todayKey());
     renderListInto(goals, document.getElementById('goalList'), document.getElementById('emptyState'), todayKey(), false);
+    renderCheckin();
+    renderRouting();
     renderArrowCard();
     renderMorning();
     renderHistory();
@@ -2300,7 +2519,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'goals',
-    syncedPrefixes: ['goals:', 'plan:'],
+    syncedPrefixes: ['goals:', 'plan:', 'energy:'],
     onApplied: function () {
       window.dispatchEvent(new CustomEvent('goals-changed'));
       window.dispatchEvent(new Event('storage'));
