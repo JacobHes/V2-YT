@@ -180,6 +180,32 @@ html, body {
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 
+/* ----- Energy curve ----- */
+.en-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.en-row:last-child { border-bottom: none; }
+.en-label { width: 96px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.en-btns { display: flex; gap: 6px; }
+.en-btn {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3);
+  background: transparent; border: 1px solid var(--border); border-radius: 999px;
+  padding: 5px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.en-btn.low.on  { color: #0a0a0b; background: var(--bad);  border-color: var(--bad); }
+.en-btn.med.on  { color: #0a0a0b; background: var(--warn); border-color: var(--warn); }
+.en-btn.high.on { color: #0a0a0b; background: var(--good); border-color: var(--good); }
+
+.peak-readout { margin-top: 18px; }
+.peak-line { font-size: 13px; color: var(--text-2); margin-bottom: 12px; }
+.peak-line .peak-window { color: var(--good); font-weight: 700; }
+.peak-hint { font-size: 12px; color: var(--text-3); font-style: italic; }
+.peak-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.peak-bar-label { width: 96px; flex-shrink: 0; font-size: 11px; color: var(--text-3); }
+.peak-bar-track { flex: 1; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.peak-bar-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--info), var(--good)); transition: width 0.4s ease; min-width: 2px; }
+.peak-bar-fill.is-peak { background: linear-gradient(90deg, var(--good), var(--warn)); }
+.peak-bar-val { width: 34px; flex-shrink: 0; text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--text-2); }
+
 /* ----- History ----- */
 .hist-row {
   display: grid; grid-template-columns: 72px 1fr auto; gap: 10px;
@@ -338,6 +364,13 @@ html, body {
   <div class="divider"><span>HABITS</span></div>
   <div class="card" id="habitList"></div>
 
+  <!-- ===== Energy curve ===== -->
+  <div class="divider"><span>ENERGY CURVE</span></div>
+  <div class="card">
+    <div id="energyLogRows"></div>
+    <div class="peak-readout" id="peakReadout"></div>
+  </div>
+
   <!-- ===== History ===== -->
   <div class="divider"><span>PAST DAYS</span></div>
   <div class="card" id="histList"></div>
@@ -407,6 +440,7 @@ html, body {
     { key: 'warPlan',        name: 'War Plan Tomorrow' },
     { key: 'prepClothes',    name: 'Prep Clothes' },
     { key: 'sleepBy11',      name: 'Sleep By 11 PM' },
+    { key: 'planLocked',     name: 'Plan locked night before' },
   ];
 
   let activeKey = todayKey();
@@ -505,6 +539,96 @@ html, body {
     });
   }
 
+  // ---- Energy curve --------------------------------------------
+  const SLOTS = [
+    { key: 'morning',   name: 'Morning' },
+    { key: 'afternoon', name: 'Afternoon' },
+    { key: 'evening',   name: 'Evening' }
+  ];
+  const LEVELS = [
+    { key: 'low',  val: 1 },
+    { key: 'med',  val: 2 },
+    { key: 'high', val: 3 }
+  ];
+  const PEAK_MIN_DAYS = 3;   // need a few logged days before naming a peak
+
+  function renderEnergyLog() {
+    const day = getDay(activeKey);
+    const log = day.energyLog || {};
+    const wrap = document.getElementById('energyLogRows');
+    wrap.innerHTML = '';
+    SLOTS.forEach(slot => {
+      const row = document.createElement('div'); row.className = 'en-row';
+      const label = document.createElement('span'); label.className = 'en-label'; label.textContent = slot.name;
+      const btns = document.createElement('div'); btns.className = 'en-btns';
+      LEVELS.forEach(lv => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'en-btn ' + lv.key + (log[slot.key] === lv.key ? ' on' : '');
+        b.textContent = lv.key;
+        b.addEventListener('click', () => {
+          const cur = getDay(activeKey);
+          cur.energyLog = cur.energyLog || {};
+          // Tap the active level again to clear it.
+          cur.energyLog[slot.key] = cur.energyLog[slot.key] === lv.key ? undefined : lv.key;
+          setDay(activeKey, cur);
+          renderEnergyLog();
+          flashSaved();
+        });
+        btns.appendChild(b);
+      });
+      row.appendChild(label); row.appendChild(btns);
+      wrap.appendChild(row);
+    });
+    renderPeak();
+  }
+
+  function renderPeak() {
+    const sums = { morning: 0, afternoon: 0, evening: 0 };
+    const counts = { morning: 0, afternoon: 0, evening: 0 };
+    const daysWithData = new Set();
+    allDayKeys().forEach(k => {
+      const log = (getDay(k).energyLog) || {};
+      SLOTS.forEach(slot => {
+        const lvl = LEVELS.find(l => l.key === log[slot.key]);
+        if (lvl) { sums[slot.key] += lvl.val; counts[slot.key] += 1; daysWithData.add(k); }
+      });
+    });
+
+    const el = document.getElementById('peakReadout');
+    el.innerHTML = '';
+    if (daysWithData.size < PEAK_MIN_DAYS) {
+      const p = document.createElement('div'); p.className = 'peak-hint';
+      p.textContent = 'Log your energy across the day. Your peak window shows up after ' +
+        PEAK_MIN_DAYS + ' logged days (' + daysWithData.size + ' so far).';
+      el.appendChild(p);
+      return;
+    }
+
+    const avgs = SLOTS.map(s => ({ name: s.name, key: s.key, avg: counts[s.key] ? sums[s.key] / counts[s.key] : 0 }));
+    const peak = avgs.reduce((a, b) => (b.avg > a.avg ? b : a));
+
+    const line = document.createElement('div'); line.className = 'peak-line';
+    line.innerHTML = 'Your peak window is ';
+    const w = document.createElement('span'); w.className = 'peak-window'; w.textContent = peak.name;
+    line.appendChild(w);
+    line.appendChild(document.createTextNode('. Schedule the arrow there.'));
+    el.appendChild(line);
+
+    avgs.forEach(a => {
+      const row = document.createElement('div'); row.className = 'peak-bar-row';
+      const lbl = document.createElement('span'); lbl.className = 'peak-bar-label'; lbl.textContent = a.name;
+      const track = document.createElement('div'); track.className = 'peak-bar-track';
+      const fill = document.createElement('div'); fill.className = 'peak-bar-fill' + (a.key === peak.key ? ' is-peak' : '');
+      fill.style.width = (a.avg / 3 * 100) + '%';
+      track.appendChild(fill);
+      const val = document.createElement('span'); val.className = 'peak-bar-val';
+      val.textContent = a.avg ? a.avg.toFixed(1) : '—';
+      row.appendChild(lbl); row.appendChild(track); row.appendChild(val);
+      el.appendChild(row);
+    });
+  }
+
   // ---- History -------------------------------------------------
   function renderHistory() {
     const wrap = document.getElementById('histList');
@@ -572,6 +696,7 @@ html, body {
     renderInputs();
     renderSleep();
     renderHabits();
+    renderEnergyLog();
     renderHistory();
   }
 
