@@ -672,6 +672,37 @@ body::after {
 .wiz-note.show { display: block; }
 .wiz-note b { color: var(--warning); font-weight: 700; }
 
+/* ----- Open-loop inbox ----- */
+.gm-loops-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.gm-loops-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-tertiary); }
+.gm-loops-badge {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: #0a0a0b; background: var(--warning); border-radius: 999px; padding: 2px 10px;
+}
+.gm-loops-badge.zero { color: var(--success); background: transparent; border: 1px solid color-mix(in srgb, var(--success) 40%, transparent); }
+.gm-loop-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 6px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;
+}
+.gm-loop-text { flex: 1; min-width: 0; font-size: 14px; color: var(--text-secondary); }
+.gm-loop-close-btn {
+  flex-shrink: 0; font-family: inherit; font-size: 11px; font-weight: 700;
+  color: var(--text-secondary); background: transparent; border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px; padding: 6px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s;
+}
+.gm-loop-close-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+
+/* Task age badge */
+.gm-age {
+  flex-shrink: 0; font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.06em; color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  border-radius: 999px; padding: 2px 7px;
+}
+.gm-age.old { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+
 /* ----- Planning wizard ----- */
 .wiz-bg {
   display: none; position: fixed; inset: 0; z-index: 300;
@@ -1171,6 +1202,20 @@ body::after {
       <button type="button" class="gm-eod-btn" id="gmEodBtn">End of day debrief</button>
     </div>
 
+    <!-- OPEN LOOPS -->
+    <div class="gm-card" id="gmCardLoops">
+      <div class="gm-loops-head">
+        <span class="gm-loops-title">Open loops</span>
+        <span class="gm-loops-badge zero" id="gmLoopsBadge">0</span>
+      </div>
+      <div class="goal-input-wrap gm-input-wrap">
+        <input id="loopInput" class="gm-input" type="text" placeholder="Close the loop later, capture it now." autocomplete="off">
+        <button type="button" id="loopAddBtn" class="gm-add">+ Capture</button>
+      </div>
+      <ul id="loopList" class="gm-list" style="margin-top:12px;"></ul>
+      <div id="loopEmpty" class="empty-state">No open loops. Clear head.</div>
+    </div>
+
     <!-- PLAN TOMORROW -->
     <div class="gm-card gm-card-tomorrow" id="gmCardTomorrow">
       <div class="gm-header">
@@ -1195,6 +1240,21 @@ body::after {
         <button type="button" id="tomorrowAddBtn"    class="gm-add">+ Add</button>
         <button type="button" id="tomorrowPolishBtn" class="gm-polish">✨ Polish</button>
         <div class="gm-status" id="tomorrowStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Close the loop ===== -->
+  <div class="pw-bg" id="loopBg">
+    <div class="pw" role="dialog" aria-label="Close the loop">
+      <div class="pw-eyebrow">Close the loop</div>
+      <div class="pw-task" id="loopTaskText"></div>
+      <div class="eod-field"><span class="eod-label">What is it?</span><input class="eod-input" id="loopWhat" type="text" autocomplete="off"></div>
+      <div class="eod-field"><span class="eod-label">My part</span><input class="eod-input" id="loopPart" type="text" autocomplete="off"></div>
+      <div class="eod-field"><span class="eod-label">Next physical action</span><input class="eod-input" id="loopNext" type="text" autocomplete="off"></div>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button type="button" class="wiz-back" id="loopArchive">Archive</button>
+        <button type="button" class="pw-go" id="loopMakeTask" style="margin-top:0; flex:1;">Make it a task</button>
       </div>
     </div>
   </div>
@@ -1430,6 +1490,18 @@ body::after {
     dt.setDate(dt.getDate() + days);
     return dateToKey(dt);
   }
+  function daysBetween(fromStr, toStr) {
+    const a = fromStr.split('-').map(Number), b = toStr.split('-').map(Number);
+    const d1 = new Date(a[0], a[1] - 1, a[2]), d2 = new Date(b[0], b[1] - 1, b[2]);
+    return Math.round((d2 - d1) / 86400000);
+  }
+  function keyDate(key) { return key.slice('goals:'.length); }
+
+  // ---------- open-loop inbox ----------
+  function getLoops() { const l = storeGet('loops:open'); return Array.isArray(l) ? l : []; }
+  function setLoops(arr) { storeSet('loops:open', arr); }
+  function addLoop(text) { const a = getLoops(); a.push({ id: genId(), text: text, createdAt: Date.now() }); setLoops(a); }
+  function removeLoop(id) { setLoops(getLoops().filter(l => l.id !== id)); }
 
   // ---------- rollover: pull undone older goals into today ----------
   // Past days are kept, not deleted. A goal that moves forward is marked
@@ -1780,6 +1852,18 @@ body::after {
         reload();
       });
       li.appendChild(en);
+    }
+
+    // Age badge: how many days this task has been carried without finishing.
+    if (goal.bornOn && !goal.done) {
+      const age = daysBetween(goal.bornOn, getActiveDateString());
+      if (age >= 3) {
+        const ab = document.createElement('span');
+        ab.className = 'gm-age' + (age >= 5 ? ' old' : '');
+        ab.textContent = age + 'd';
+        ab.title = 'Carried for ' + age + ' days';
+        li.appendChild(ab);
+      }
     }
     makeInlineEdit(text, null, idx, key, reload);
 
@@ -2325,6 +2409,7 @@ body::after {
     renderRouting();
     renderArrowCard();
     renderMorning();
+    renderLoops();
     renderHistory();
   }
   function loadTomorrow() {
@@ -2341,6 +2426,71 @@ body::after {
     const needsPlan = !isPlanLocked(dateStr) && !getArrow(goals);
     document.getElementById('gmMorning').classList.toggle('show', needsPlan);
   }
+
+  // ---------- Open-loop inbox ----------
+  function renderLoops() {
+    const loops = getLoops();
+    const badge = document.getElementById('gmLoopsBadge');
+    badge.textContent = loops.length;
+    badge.classList.toggle('zero', loops.length === 0);
+
+    const listEl = document.getElementById('loopList');
+    document.getElementById('loopEmpty').style.display = loops.length === 0 ? 'block' : 'none';
+    listEl.innerHTML = '';
+    loops.forEach(loop => {
+      const li = document.createElement('li');
+      li.className = 'gm-loop-row';
+      const t = document.createElement('span');
+      t.className = 'gm-loop-text';
+      t.textContent = loop.text;
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'gm-loop-close-btn'; btn.textContent = 'Close';
+      btn.addEventListener('click', () => openLoopClose(loop));
+      li.appendChild(t); li.appendChild(btn);
+      listEl.appendChild(li);
+    });
+  }
+
+  let _loopClosingId = null;
+  function openLoopClose(loop) {
+    _loopClosingId = loop.id;
+    document.getElementById('loopTaskText').textContent = loop.text;
+    document.getElementById('loopWhat').value = '';
+    document.getElementById('loopPart').value = '';
+    document.getElementById('loopNext').value = loop.text;
+    document.getElementById('loopBg').classList.add('show');
+  }
+  function closeLoopModal() { document.getElementById('loopBg').classList.remove('show'); _loopClosingId = null; }
+
+  document.getElementById('loopAddBtn').addEventListener('click', () => {
+    const input = document.getElementById('loopInput');
+    const text = input.value.trim();
+    if (!text) return;
+    addLoop(text); input.value = ''; renderLoops();
+  });
+  document.getElementById('loopInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('loopAddBtn').click(); }
+  });
+  document.getElementById('loopMakeTask').addEventListener('click', () => {
+    // The next physical action becomes today's task; fall back to what/text.
+    const action = document.getElementById('loopNext').value.trim()
+      || document.getElementById('loopWhat').value.trim()
+      || document.getElementById('loopTaskText').textContent;
+    const list = getGoals(todayKey());
+    list.push({ id: genId(), text: action, done: false, bornOn: getActiveDateString() });
+    setGoals(todayKey(), list);
+    if (_loopClosingId) removeLoop(_loopClosingId);
+    closeLoopModal();
+    loadToday();
+  });
+  document.getElementById('loopArchive').addEventListener('click', () => {
+    if (_loopClosingId) removeLoop(_loopClosingId);
+    closeLoopModal();
+    renderLoops();
+  });
+  document.getElementById('loopBg').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('loopBg')) closeLoopModal();
+  });
 
   // ================= Planning wizard =================
   // Four steps: Dump -> Sort -> Aim -> Gate. Targets a day key (tomorrow for the
@@ -2491,7 +2641,7 @@ body::after {
       const list = getGoals(wiz.key);
       const seen = new Set(list.map(g => g.text));
       lines.forEach(text => {
-        if (!seen.has(text)) { list.push({ id: genId(), text, done: false }); seen.add(text); }
+        if (!seen.has(text)) { list.push({ id: genId(), text, done: false, bornOn: wiz.dateStr }); seen.add(text); }
       });
       setGoals(wiz.key, list);
       wiz.step = 1; renderWizard(); return;
@@ -2600,7 +2750,7 @@ body::after {
   function makeAddHandlers(input, addBtn, polishBtn, key, statusEl, reload) {
     function plainAdd(text) {
       const list = getGoals(key);
-      list.push({ id: genId(), text, done: false });
+      list.push({ id: genId(), text, done: false, bornOn: keyDate(key) });
       setGoals(key, list);
       input.value = '';
       reload();
@@ -2674,7 +2824,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'goals',
-    syncedPrefixes: ['goals:', 'plan:', 'energy:', 'debrief:'],
+    syncedPrefixes: ['goals:', 'plan:', 'energy:', 'debrief:', 'loops:'],
     onApplied: function () {
       window.dispatchEvent(new CustomEvent('goals-changed'));
       window.dispatchEvent(new Event('storage'));
