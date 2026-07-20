@@ -703,6 +703,39 @@ body::after {
 }
 .gm-age.old { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
 
+/* Category chip (client vs inner-work) */
+.gm-cat {
+  flex-shrink: 0; cursor: pointer; font-family: var(--font-mono);
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  border-radius: 999px; padding: 2px 8px; border: 1px solid transparent;
+  background: transparent; -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.gm-cat-none   { color: var(--text-tertiary); border-color: rgba(255,255,255,0.10); opacity: 0.55; }
+.gm-cat-client { color: #F2C063; border-color: color-mix(in srgb, #F2C063 40%, transparent); background: rgba(242,192,99,0.08); }
+.gm-cat-inner  { color: #A78BFA; border-color: color-mix(in srgb, #A78BFA 40%, transparent); background: rgba(167,139,250,0.08); }
+.gm-cat:hover { opacity: 1; filter: brightness(1.15); }
+
+/* Jump-ship weekly widget */
+.gm-js-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.gm-js-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-tertiary); }
+.gm-js-sub { font-size: 11px; color: var(--text-tertiary); }
+.gm-js-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.gm-js-bar-label { width: 64px; flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.gm-js-bar-label.client { color: #F2C063; }
+.gm-js-bar-label.inner  { color: #A78BFA; }
+.gm-js-bar-track { flex: 1; height: 12px; border-radius: 6px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.gm-js-bar-fill { height: 100%; border-radius: 6px; transition: width 0.4s ease; min-width: 2px; }
+.gm-js-bar-fill.client { background: linear-gradient(90deg, #F2C063, #E0A800); }
+.gm-js-bar-fill.inner  { background: linear-gradient(90deg, #A78BFA, #7C5CFA); }
+.gm-js-bar-num { width: 20px; flex-shrink: 0; text-align: right; font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.gm-js-banner {
+  display: none; margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; color: var(--warning); line-height: 1.4;
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  background: rgba(242,192,99,0.06);
+}
+.gm-js-banner.show { display: block; }
+
 /* ----- Planning wizard ----- */
 .wiz-bg {
   display: none; position: fixed; inset: 0; z-index: 300;
@@ -1216,6 +1249,25 @@ body::after {
       <div id="loopEmpty" class="empty-state">No open loops. Clear head.</div>
     </div>
 
+    <!-- JUMP-SHIP COUNTER -->
+    <div class="gm-card" id="gmCardJumpShip">
+      <div class="gm-js-head">
+        <span class="gm-js-title">This week shipped</span>
+        <span class="gm-js-sub">rolling 7 days</span>
+      </div>
+      <div class="gm-js-bar-row">
+        <span class="gm-js-bar-label client">Client</span>
+        <div class="gm-js-bar-track"><div class="gm-js-bar-fill client" id="gmJsClientBar"></div></div>
+        <span class="gm-js-bar-num" id="gmJsClientNum">0</span>
+      </div>
+      <div class="gm-js-bar-row">
+        <span class="gm-js-bar-label inner">Inner</span>
+        <div class="gm-js-bar-track"><div class="gm-js-bar-fill inner" id="gmJsInnerBar"></div></div>
+        <span class="gm-js-bar-num" id="gmJsInnerNum">0</span>
+      </div>
+      <div class="gm-js-banner" id="gmJsBanner">Desk-rearranging is outpacing the remote. Pick a client arrow.</div>
+    </div>
+
     <!-- PLAN TOMORROW -->
     <div class="gm-card gm-card-tomorrow" id="gmCardTomorrow">
       <div class="gm-header">
@@ -1496,6 +1548,29 @@ body::after {
     return Math.round((d2 - d1) / 86400000);
   }
   function keyDate(key) { return key.slice('goals:'.length); }
+
+  // ---------- task category (client vs inner-work) ----------
+  const CATEGORY_CYCLE = [null, 'client', 'inner'];
+  function setCategoryById(key, id, category) {
+    const list = getGoals(key);
+    const g = list.find(x => x.id === id);
+    if (g) { if (category) g.category = category; else delete g.category; setGoals(key, list); }
+  }
+  // Completions in the last 7 days, tallied by category (by doneAt timestamp so
+  // each finished task counts once, not per carried copy).
+  function jumpShipCounts() {
+    const weekAgo = Date.now() - 7 * 86400000;
+    let client = 0, inner = 0;
+    storeListKeys('goals:').forEach(k => {
+      getGoals(k).forEach(g => {
+        if (g.done && g.doneAt && g.doneAt >= weekAgo) {
+          if (g.category === 'client') client++;
+          else if (g.category === 'inner') inner++;
+        }
+      });
+    });
+    return { client, inner };
+  }
 
   // ---------- open-loop inbox ----------
   function getLoops() { const l = storeGet('loops:open'); return Array.isArray(l) ? l : []; }
@@ -1852,6 +1927,22 @@ body::after {
         reload();
       });
       li.appendChild(en);
+    }
+
+    if (!readOnly) {
+      // Category: tap to cycle none -> client -> inner. Feeds the jump-ship bars.
+      const cat = document.createElement('button');
+      cat.type = 'button';
+      cat.className = 'gm-cat gm-cat-' + (goal.category || 'none');
+      cat.textContent = goal.category || 'type';
+      cat.title = 'Client work or inner-work?';
+      cat.addEventListener('click', () => {
+        const cur = (getGoals(key).find(x => x.id === goal.id) || {}).category || null;
+        const next = CATEGORY_CYCLE[(CATEGORY_CYCLE.indexOf(cur) + 1) % CATEGORY_CYCLE.length];
+        setCategoryById(key, goal.id, next);
+        reload();
+      });
+      li.appendChild(cat);
     }
 
     // Age badge: how many days this task has been carried without finishing.
@@ -2410,6 +2501,7 @@ body::after {
     renderArrowCard();
     renderMorning();
     renderLoops();
+    renderJumpShip();
     renderHistory();
   }
   function loadTomorrow() {
@@ -2425,6 +2517,18 @@ body::after {
     const goals = getGoals(todayKey());
     const needsPlan = !isPlanLocked(dateStr) && !getArrow(goals);
     document.getElementById('gmMorning').classList.toggle('show', needsPlan);
+  }
+
+  // ---------- Jump-ship widget ----------
+  function renderJumpShip() {
+    const { client, inner } = jumpShipCounts();
+    const max = Math.max(client, inner, 1);
+    document.getElementById('gmJsClientNum').textContent = client;
+    document.getElementById('gmJsInnerNum').textContent = inner;
+    document.getElementById('gmJsClientBar').style.width = (client / max * 100) + '%';
+    document.getElementById('gmJsInnerBar').style.width = (inner / max * 100) + '%';
+    // Warn when busywork outpaces client work.
+    document.getElementById('gmJsBanner').classList.toggle('show', inner > client);
   }
 
   // ---------- Open-loop inbox ----------
