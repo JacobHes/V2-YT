@@ -502,6 +502,9 @@ body::after {
 .gm-energy-mover { color: #6BE3A4; border-color: color-mix(in srgb, #6BE3A4 40%, transparent); background: rgba(107,227,164,0.08); }
 .gm-energy-prep  { color: #7DD3FC; border-color: color-mix(in srgb, #7DD3FC 40%, transparent); background: rgba(125,211,252,0.08); }
 .gm-energy-admin { color: var(--text-tertiary); border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); }
+.gm-energy-btn { cursor: pointer; font-family: var(--font-mono); -webkit-tap-highlight-color: transparent; transition: all 0.15s; }
+.gm-energy-none { color: var(--text-tertiary); border-color: rgba(255,255,255,0.10); background: transparent; opacity: 0.6; }
+.gm-energy-btn:hover { opacity: 1; filter: brightness(1.15); }
 
 /* ----- Plan-tomorrow launch button + locked banner ----- */
 .gm-plan-btn {
@@ -1392,10 +1395,11 @@ body::after {
   }
 
   // ---------- energy tags ----------
+  const ENERGY_CYCLE = [null, 'mover', 'prep', 'admin'];
   function setEnergyById(key, id, energy) {
     const list = getGoals(key);
     const g = list.find(x => x.id === id);
-    if (g) { g.energy = energy; setGoals(key, list); }
+    if (g) { if (energy) g.energy = energy; else delete g.energy; setGoals(key, list); }
   }
 
   // ---------- plan lock (the night-before ritual) ----------
@@ -1754,10 +1758,27 @@ body::after {
     text.textContent = goal.text;
     li.appendChild(text);
 
-    if (goal.energy) {
-      const en = document.createElement('span');
-      en.className = 'gm-energy gm-energy-' + goal.energy;
-      en.textContent = goal.energy;
+    if (readOnly) {
+      // Tomorrow list: static badge only (tagging happens in the wizard).
+      if (goal.energy) {
+        const en = document.createElement('span');
+        en.className = 'gm-energy gm-energy-' + goal.energy;
+        en.textContent = goal.energy;
+        li.appendChild(en);
+      }
+    } else {
+      // Today list: tap to cycle none -> mover -> prep -> admin.
+      const en = document.createElement('button');
+      en.type = 'button';
+      en.className = 'gm-energy gm-energy-btn ' + (goal.energy ? 'gm-energy-' + goal.energy : 'gm-energy-none');
+      en.textContent = goal.energy || 'tag';
+      en.title = 'Set energy: mover, prep or admin';
+      en.addEventListener('click', () => {
+        const cur = (getGoals(key).find(x => x.id === goal.id) || {}).energy || null;
+        const next = ENERGY_CYCLE[(ENERGY_CYCLE.indexOf(cur) + 1) % ENERGY_CYCLE.length];
+        setEnergyById(key, goal.id, next);
+        reload();
+      });
       li.appendChild(en);
     }
     makeInlineEdit(text, null, idx, key, reload);
