@@ -491,6 +491,181 @@ body::after {
 }
 .arrow-modal-no:hover { background: rgba(255,255,255,0.05); }
 
+/* ----- Energy tags (mover / prep / admin) ----- */
+.gm-energy {
+  flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  border-radius: 999px; padding: 2px 8px;
+  border: 1px solid transparent;
+}
+.gm-energy-mover { color: #6BE3A4; border-color: color-mix(in srgb, #6BE3A4 40%, transparent); background: rgba(107,227,164,0.08); }
+.gm-energy-prep  { color: #7DD3FC; border-color: color-mix(in srgb, #7DD3FC 40%, transparent); background: rgba(125,211,252,0.08); }
+.gm-energy-admin { color: var(--text-tertiary); border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); }
+
+/* ----- Plan-tomorrow launch button + locked banner ----- */
+.gm-plan-btn {
+  width: 100%; margin-bottom: 12px;
+  font-family: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+  color: #0a0a0b;
+  background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
+  border: none; border-radius: 12px; padding: 13px; cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 6px 18px rgba(0,0,0,0.3);
+  transition: transform 0.12s, filter 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.gm-plan-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.gm-locked-banner {
+  display: none; align-items: center; gap: 10px;
+  margin-bottom: 12px; padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+  background: rgba(107,227,164,0.07);
+}
+.gm-locked-banner.show { display: flex; }
+.gm-locked-banner .gm-locked-title { font-size: 13px; font-weight: 700; color: var(--success); }
+.gm-locked-banner .gm-locked-sub { font-size: 12px; color: var(--text-tertiary); }
+.gm-locked-reopen {
+  margin-left: auto; background: transparent; border: 1px solid rgba(255,255,255,0.14);
+  color: var(--text-secondary); border-radius: 8px; padding: 6px 12px;
+  font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.gm-locked-reopen:hover { background: rgba(255,255,255,0.05); }
+
+/* ----- Morning fallback banner ----- */
+.gm-morning {
+  display: none; align-items: center; gap: 12px;
+  margin: 0 0 14px; padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #E07658 35%, transparent);
+  background: radial-gradient(circle at 90% 0%, rgba(224,118,88,0.12), transparent 60%), rgba(255,255,255,0.03);
+}
+.gm-morning.show { display: flex; }
+.gm-morning-text { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.gm-morning-btn {
+  margin-left: auto; flex-shrink: 0;
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  color: #0a0a0b; background: #E07658; border: none;
+  border-radius: 10px; padding: 9px 15px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: filter 0.15s;
+}
+.gm-morning-btn:hover { filter: brightness(1.08); }
+
+/* ----- Planning wizard ----- */
+.wiz-bg {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center; padding: 18px;
+}
+.wiz-bg.show { display: flex; }
+.wiz {
+  width: 100%; max-width: 520px; max-height: 90vh;
+  display: flex; flex-direction: column;
+  background: #111113;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.65);
+  overflow: hidden;
+}
+.wiz-head { padding: 20px 22px 0; }
+.wiz-steps { display: flex; gap: 6px; margin-bottom: 16px; }
+.wiz-step-dot { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.10); transition: background 0.2s; }
+.wiz-step-dot.done { background: var(--text-tertiary); }
+.wiz-step-dot.active { background: #E07658; }
+.wiz-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #E07658; }
+.wiz-title { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 6px 0 4px; letter-spacing: -0.01em; }
+.wiz-hint { font-size: 13px; color: var(--text-tertiary); line-height: 1.4; }
+.wiz-body { padding: 16px 22px; overflow-y: auto; flex: 1; }
+.wiz-dump {
+  width: 100%; min-height: 180px; resize: vertical;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px; padding: 14px; color: var(--text-primary);
+  font-family: inherit; font-size: 14px; line-height: 1.6; outline: none;
+}
+.wiz-dump:focus { border-color: color-mix(in srgb, #E07658 40%, transparent); box-shadow: 0 0 0 2px rgba(224,118,88,0.10); }
+.wiz-dump::placeholder { color: var(--text-tertiary); }
+
+/* Sort rows */
+.wiz-sort-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.wiz-sort-row:last-child { border-bottom: none; }
+.wiz-sort-text { font-size: 14px; color: var(--text-primary); flex: 1; min-width: 0; }
+.wiz-tagset { display: flex; gap: 5px; flex-shrink: 0; }
+.wiz-tag {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.12); background: transparent;
+  color: var(--text-tertiary); border-radius: 999px; padding: 4px 9px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.wiz-tag[data-energy="mover"].on { color: #0a0a0b; background: #6BE3A4; border-color: #6BE3A4; }
+.wiz-tag[data-energy="prep"].on  { color: #0a0a0b; background: #7DD3FC; border-color: #7DD3FC; }
+.wiz-tag[data-energy="admin"].on { color: #0a0a0b; background: #B8B6B0; border-color: #B8B6B0; }
+
+/* Aim step */
+.wiz-aim-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; margin-bottom: 8px;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+  background: rgba(255,255,255,0.03); cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.wiz-aim-row:hover { border-color: color-mix(in srgb, #E07658 40%, transparent); }
+.wiz-aim-row.on { border-color: #E07658; background: rgba(224,118,88,0.10); }
+.wiz-aim-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--text-tertiary); flex-shrink: 0; }
+.wiz-aim-row.on .wiz-aim-radio { border-color: #E07658; background: #E07658; box-shadow: inset 0 0 0 3px #111113; }
+.wiz-aim-text { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.wiz-empty { font-size: 13px; color: var(--text-tertiary); font-style: italic; padding: 20px 0; text-align: center; }
+
+/* Gate step */
+.wiz-gate-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; margin-bottom: 10px;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+  background: rgba(255,255,255,0.03); cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.wiz-gate-row.on { border-color: color-mix(in srgb, var(--success) 45%, transparent); background: rgba(107,227,164,0.06); }
+.wiz-gate-row.nudge { border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
+.wiz-gate-check {
+  width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
+  border: 2px solid var(--text-tertiary);
+  display: flex; align-items: center; justify-content: center;
+  color: transparent; font-size: 13px; transition: all 0.15s;
+}
+.wiz-gate-row.on .wiz-gate-check { background: var(--success); border-color: var(--success); color: #0a0a0b; }
+.wiz-gate-text { font-size: 14px; color: var(--text-primary); line-height: 1.3; }
+
+/* Wizard footer */
+.wiz-foot { display: flex; gap: 10px; padding: 16px 22px; border-top: 1px solid rgba(255,255,255,0.08); }
+.wiz-back {
+  background: transparent; border: 1px solid rgba(255,255,255,0.14); color: var(--text-secondary);
+  border-radius: 10px; padding: 12px 18px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.wiz-back:hover { background: rgba(255,255,255,0.05); }
+.wiz-next {
+  flex: 1; background: #E07658; color: #0a0a0b; border: none;
+  border-radius: 10px; padding: 12px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: filter 0.15s;
+}
+.wiz-next:hover { filter: brightness(1.08); }
+.wiz-next:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+.wiz-close {
+  position: absolute; top: 14px; right: 16px; z-index: 1;
+  background: transparent; border: none; color: var(--text-tertiary);
+  font-size: 22px; cursor: pointer; line-height: 1; padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.wiz-close:hover { color: var(--text-primary); }
+.wiz-won { text-align: center; padding: 20px 0 8px; }
+.wiz-won-glyph { font-size: 34px; }
+.wiz-won-title { font-size: 22px; font-weight: 700; color: var(--success); margin: 10px 0 4px; }
+.wiz-won-sub { font-size: 14px; color: var(--text-secondary); }
+
 /* ----- Past days (read-only history) ----- */
 .gm-hist-day { border-bottom: 1px solid rgba(255,255,255,0.06); }
 .gm-hist-day:last-child { border-bottom: none; }
@@ -849,6 +1024,10 @@ body::after {
           <span>day streak</span>
         </div>
       </div>
+      <div class="gm-morning" id="gmMorning">
+        <span class="gm-morning-text">Aim before you touch anything.</span>
+        <button type="button" class="gm-morning-btn" id="gmMorningBtn">Plan today</button>
+      </div>
       <div class="gm-arrow gm-arrow-empty" id="gmArrow"></div>
       <div class="gm-bar" id="gmBar"></div>
       <ul id="goalList" class="goal-list gm-list"></ul>
@@ -871,6 +1050,14 @@ body::after {
         </div>
         <div class="gm-tomorrow-count" id="gmTomorrowCount">0 planned</div>
       </div>
+      <div class="gm-locked-banner" id="gmLockedBanner">
+        <div>
+          <div class="gm-locked-title">Day is won. Sleep.</div>
+          <div class="gm-locked-sub" id="gmLockedSub">Plan locked</div>
+        </div>
+        <button type="button" class="gm-locked-reopen" id="gmLockedReopen">Reopen</button>
+      </div>
+      <button type="button" class="gm-plan-btn" id="gmPlanBtn">Plan tomorrow night</button>
       <ul id="tomorrowList" class="goal-list gm-list"></ul>
       <div id="tomorrowEmpty" class="empty-state">Nothing planned for tomorrow yet</div>
       <div class="goal-input-wrap gm-input-wrap">
@@ -878,6 +1065,24 @@ body::after {
         <button type="button" id="tomorrowAddBtn"    class="gm-add">+ Add</button>
         <button type="button" id="tomorrowPolishBtn" class="gm-polish">✨ Polish</button>
         <div class="gm-status" id="tomorrowStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Planning wizard ===== -->
+  <div class="wiz-bg" id="wizBg">
+    <div class="wiz" role="dialog" aria-label="Planning">
+      <button type="button" class="wiz-close" id="wizClose" aria-label="Close">×</button>
+      <div class="wiz-head">
+        <div class="wiz-steps" id="wizSteps"></div>
+        <div class="wiz-eyebrow" id="wizEyebrow">Step</div>
+        <div class="wiz-title" id="wizTitle"></div>
+        <div class="wiz-hint" id="wizHint"></div>
+      </div>
+      <div class="wiz-body" id="wizBody"></div>
+      <div class="wiz-foot">
+        <button type="button" class="wiz-back" id="wizBack">Back</button>
+        <button type="button" class="wiz-next" id="wizNext">Next</button>
       </div>
     </div>
   </div>
@@ -1023,6 +1228,24 @@ body::after {
     const g = list.find(x => x.id === id);
     if (g) { g.done = true; g.doneAt = Date.now(); setGoals(key, list); }
   }
+
+  // ---------- energy tags ----------
+  function setEnergyById(key, id, energy) {
+    const list = getGoals(key);
+    const g = list.find(x => x.id === id);
+    if (g) { g.energy = energy; setGoals(key, list); }
+  }
+
+  // ---------- plan lock (the night-before ritual) ----------
+  // Stored under plan:<date> so it syncs alongside goals. A locked plan means
+  // the four-step ritual was completed for that day.
+  function planKey(dateStr) { return 'plan:' + dateStr; }
+  function getPlan(dateStr) { return storeGet(planKey(dateStr)) || null; }
+  function isPlanLocked(dateStr) { const p = getPlan(dateStr); return !!(p && p.locked); }
+  function lockPlan(dateStr, gate) {
+    storeSet(planKey(dateStr), { locked: true, at: Date.now(), gate: gate || null });
+  }
+  function unlockPlan(dateStr) { storeDelete(planKey(dateStr)); }
 
   // ---------- rollover: pull undone older goals into today ----------
   // Past days are kept, not deleted. A goal that moves forward is marked
@@ -1350,6 +1573,13 @@ body::after {
     text.className = 'gm-text';
     text.textContent = goal.text;
     li.appendChild(text);
+
+    if (goal.energy) {
+      const en = document.createElement('span');
+      en.className = 'gm-energy gm-energy-' + goal.energy;
+      en.textContent = goal.energy;
+      li.appendChild(en);
+    }
     makeInlineEdit(text, null, idx, key, reload);
 
     // Aim is allowed on today AND on the tomorrow plan (the night-before aim).
@@ -1442,6 +1672,17 @@ body::after {
     document.getElementById('gmTomorrowCount').textContent = list.length + ' planned';
     document.getElementById('tomorrowLabel').textContent =
       'Plan tomorrow — ' + formatDate(getTomorrowDateString());
+
+    const locked = isPlanLocked(getTomorrowDateString());
+    const banner = document.getElementById('gmLockedBanner');
+    const planBtn = document.getElementById('gmPlanBtn');
+    banner.classList.toggle('show', locked);
+    planBtn.style.display = locked ? 'none' : 'block';
+    if (locked) {
+      const arrow = getArrow(list);
+      document.getElementById('gmLockedSub').textContent =
+        (arrow ? 'Arrow: ' + arrow.text : list.length + ' planned') ;
+    }
   }
 
   function renderListInto(goals, listEl, emptyEl, key, readOnly) {
@@ -1723,12 +1964,210 @@ body::after {
     const goals = getGoals(todayKey());
     renderListInto(goals, document.getElementById('goalList'), document.getElementById('emptyState'), todayKey(), false);
     renderArrowCard();
+    renderMorning();
     renderHistory();
   }
   function loadTomorrow() {
     const goals = getGoals(tomorrowKey());
     renderListInto(goals, document.getElementById('tomorrowList'), document.getElementById('tomorrowEmpty'), tomorrowKey(), true);
   }
+
+  // ---------- Morning fallback ----------
+  // If it is a fresh day and no plan was locked and no arrow is set, nudge the
+  // user to aim before doing anything. Opens the wizard targeting today.
+  function renderMorning() {
+    const dateStr = getActiveDateString();
+    const goals = getGoals(todayKey());
+    const needsPlan = !isPlanLocked(dateStr) && !getArrow(goals);
+    document.getElementById('gmMorning').classList.toggle('show', needsPlan);
+  }
+
+  // ================= Planning wizard =================
+  // Four steps: Dump -> Sort -> Aim -> Gate. Targets a day key (tomorrow for the
+  // night ritual, today for the morning fallback). Locking records the gate.
+  const wiz = {
+    open: false, won: false, dateStr: null, key: null, step: 0, aimId: null,
+    gate: { energy: false, place: false, tasks: false }
+  };
+  const WIZ_STEPS = ['Dump', 'Sort', 'Aim', 'Gate'];
+  const GATE_Q = [
+    { id: 'energy', text: 'Energy prioritized? Sleep planned, no sabotage tonight.' },
+    { id: 'place',  text: 'Do I know where I am working tomorrow?' },
+    { id: 'tasks',  text: 'Are the tasks clear, doable, and would finishing them make it a good day?' }
+  ];
+
+  function openWizard(dateStr) {
+    wiz.open = true;
+    wiz.won = false;
+    wiz.dateStr = dateStr;
+    wiz.key = 'goals:' + dateStr;
+    wiz.step = 0;
+    wiz.aimId = (getArrow(getGoals(wiz.key)) || {}).id || null;
+    wiz.gate = { energy: false, place: false, tasks: false };
+    document.getElementById('wizBg').classList.add('show');
+    renderWizard();
+  }
+  function closeWizard() {
+    wiz.open = false;
+    document.getElementById('wizBg').classList.remove('show');
+    loadToday(); loadTomorrow();
+  }
+
+  function renderWizard() {
+    const isTomorrow = wiz.dateStr === getTomorrowDateString();
+    // step dots
+    const dots = document.getElementById('wizSteps');
+    dots.innerHTML = '';
+    WIZ_STEPS.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'wiz-step-dot' + (i === wiz.step ? ' active' : (i < wiz.step ? ' done' : ''));
+      dots.appendChild(d);
+    });
+    document.getElementById('wizEyebrow').textContent =
+      'Step ' + (wiz.step + 1) + ' of 4 · ' + (isTomorrow ? 'Tomorrow' : 'Today');
+
+    const body = document.getElementById('wizBody');
+    const title = document.getElementById('wizTitle');
+    const hint = document.getElementById('wizHint');
+    const nextBtn = document.getElementById('wizNext');
+    const backBtn = document.getElementById('wizBack');
+    body.innerHTML = '';
+    backBtn.style.visibility = wiz.step === 0 ? 'hidden' : 'visible';
+    nextBtn.disabled = false;
+    nextBtn.textContent = wiz.step === 3 ? 'Lock the plan' : 'Next';
+
+    if (wiz.step === 0) {                    // ---- Dump ----
+      title.textContent = 'Empty your head';
+      hint.textContent = 'One line per task. These become your list.';
+      const ta = document.createElement('textarea');
+      ta.className = 'wiz-dump';
+      ta.id = 'wizDump';
+      ta.placeholder = 'Everything pulling at you. Work, personal, worries, owed replies.';
+      body.appendChild(ta);
+      setTimeout(() => ta.focus(), 50);
+
+    } else if (wiz.step === 1) {             // ---- Sort ----
+      title.textContent = 'Tag your energy';
+      hint.textContent = 'Mover moves the ball. Prep tees up a mover. Admin is low-energy sends and errands.';
+      const list = getGoals(wiz.key);
+      if (!list.length) {
+        const e = document.createElement('div'); e.className = 'wiz-empty';
+        e.textContent = 'Nothing to sort. Go back and dump a few tasks.';
+        body.appendChild(e);
+      }
+      list.forEach(g => {
+        const row = document.createElement('div'); row.className = 'wiz-sort-row';
+        const t = document.createElement('span'); t.className = 'wiz-sort-text'; t.textContent = g.text;
+        const set = document.createElement('div'); set.className = 'wiz-tagset';
+        ['mover', 'prep', 'admin'].forEach(en => {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'wiz-tag' + (g.energy === en ? ' on' : '');
+          b.dataset.energy = en; b.textContent = en;
+          b.addEventListener('click', () => { setEnergyById(wiz.key, g.id, en); renderWizard(); });
+          set.appendChild(b);
+        });
+        row.appendChild(t); row.appendChild(set);
+        body.appendChild(row);
+      });
+
+    } else if (wiz.step === 2) {             // ---- Aim ----
+      title.textContent = 'Aim one arrow';
+      hint.textContent = 'Pick the single mover that makes the day a win. Only movers can be the arrow.';
+      const movers = getGoals(wiz.key).filter(g => g.energy === 'mover');
+      if (!movers.length) {
+        const e = document.createElement('div'); e.className = 'wiz-empty';
+        e.textContent = 'No movers yet. Go back and tag at least one task as a mover.';
+        body.appendChild(e);
+        nextBtn.disabled = true;
+      }
+      movers.forEach(g => {
+        const row = document.createElement('div');
+        row.className = 'wiz-aim-row' + (wiz.aimId === g.id ? ' on' : '');
+        const radio = document.createElement('div'); radio.className = 'wiz-aim-radio';
+        const t = document.createElement('span'); t.className = 'wiz-aim-text'; t.textContent = g.text;
+        row.appendChild(radio); row.appendChild(t);
+        row.addEventListener('click', () => {
+          openAimConfirm(g.text, () => { wiz.aimId = g.id; renderWizard(); });
+        });
+        body.appendChild(row);
+      });
+      if (movers.length && !wiz.aimId) nextBtn.disabled = true;
+
+    } else {                                 // ---- Gate ----
+      title.textContent = 'The gate';
+      hint.textContent = 'All three yes, and the plan locks.';
+      GATE_Q.forEach(q => {
+        const row = document.createElement('div');
+        row.className = 'wiz-gate-row' + (wiz.gate[q.id] ? ' on' : '');
+        const chk = document.createElement('div'); chk.className = 'wiz-gate-check'; chk.textContent = '✓';
+        const t = document.createElement('span'); t.className = 'wiz-gate-text'; t.textContent = q.text;
+        row.appendChild(chk); row.appendChild(t);
+        row.addEventListener('click', () => { wiz.gate[q.id] = !wiz.gate[q.id]; renderWizard(); });
+        body.appendChild(row);
+      });
+      const allYes = GATE_Q.every(q => wiz.gate[q.id]);
+      nextBtn.disabled = !allYes;
+    }
+  }
+
+  function wizardNext() {
+    if (wiz.won) { closeWizard(); return; }
+    if (wiz.step === 0) {                     // commit dump
+      const ta = document.getElementById('wizDump');
+      const lines = (ta ? ta.value : '').split('\n').map(s => s.trim()).filter(Boolean);
+      const list = getGoals(wiz.key);
+      const seen = new Set(list.map(g => g.text));
+      lines.forEach(text => {
+        if (!seen.has(text)) { list.push({ id: genId(), text, done: false }); seen.add(text); }
+      });
+      setGoals(wiz.key, list);
+      wiz.step = 1; renderWizard(); return;
+    }
+    if (wiz.step === 2) {                      // commit aim
+      if (wiz.aimId) setArrowById(wiz.key, wiz.aimId);
+      wiz.step = 3; renderWizard(); return;
+    }
+    if (wiz.step === 3) {                      // lock
+      if (wiz.aimId) setArrowById(wiz.key, wiz.aimId);
+      lockPlan(wiz.dateStr, Object.assign({}, wiz.gate));
+      showWizardWon();
+      return;
+    }
+    wiz.step++; renderWizard();
+  }
+
+  function showWizardWon() {
+    wiz.won = true;
+    document.getElementById('wizSteps').innerHTML = '';
+    document.getElementById('wizEyebrow').textContent = '';
+    document.getElementById('wizTitle').textContent = '';
+    document.getElementById('wizHint').textContent = '';
+    document.getElementById('wizBody').innerHTML =
+      '<div class="wiz-won"><div class="wiz-won-glyph">◎</div>' +
+      '<div class="wiz-won-title">Day is won. Sleep.</div>' +
+      '<div class="wiz-won-sub">The arrow is aimed. Nothing left to decide.</div></div>';
+    // Reuse the existing footer buttons rather than rebuilding them, so their
+    // listeners survive for the next time the wizard opens.
+    document.getElementById('wizBack').style.visibility = 'hidden';
+    const nextBtn = document.getElementById('wizNext');
+    nextBtn.disabled = false;
+    nextBtn.textContent = 'Done';
+  }
+
+  document.getElementById('wizNext').addEventListener('click', wizardNext);
+  document.getElementById('wizBack').addEventListener('click', () => {
+    if (wiz.step > 0) { wiz.step--; renderWizard(); }
+  });
+  document.getElementById('wizClose').addEventListener('click', closeWizard);
+  document.getElementById('wizBg').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('wizBg')) closeWizard();
+  });
+  document.getElementById('gmPlanBtn').addEventListener('click', () => openWizard(getTomorrowDateString()));
+  document.getElementById('gmMorningBtn').addEventListener('click', () => openWizard(getActiveDateString()));
+  document.getElementById('gmLockedReopen').addEventListener('click', () => {
+    unlockPlan(getTomorrowDateString());
+    openWizard(getTomorrowDateString());
+  });
 
   // ---------- Push remaining ----------
   document.getElementById('gmPushBtn').addEventListener('click', () => {
@@ -1861,7 +2300,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'goals',
-    syncedPrefixes: ['goals:'],
+    syncedPrefixes: ['goals:', 'plan:'],
     onApplied: function () {
       window.dispatchEvent(new CustomEvent('goals-changed'));
       window.dispatchEvent(new Event('storage'));
