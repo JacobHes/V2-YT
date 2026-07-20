@@ -628,6 +628,47 @@ body::after {
 }
 .pw-go:hover { filter: brightness(1.08); }
 
+/* ----- End of day debrief ----- */
+.gm-eod-btn {
+  width: 100%; margin-top: 12px;
+  font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--text-secondary); background: transparent;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 12px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.gm-eod-btn:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+.eod-field { margin: 14px 0; }
+.eod-label {
+  display: block; margin-bottom: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary);
+}
+.eod-outcome { display: flex; gap: 6px; }
+.eod-outcome button {
+  flex: 1; font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
+  background: transparent; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+  padding: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.eod-outcome button[data-outcome="landed"].on  { color: #0a0a0b; background: var(--success); border-color: var(--success); }
+.eod-outcome button[data-outcome="partial"].on { color: #0a0a0b; background: var(--warning); border-color: var(--warning); }
+.eod-outcome button[data-outcome="unfired"].on { color: #0a0a0b; background: var(--danger); border-color: var(--danger); }
+.eod-input {
+  width: 100%; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px; padding: 11px 12px; color: var(--text-primary);
+  font-family: inherit; font-size: 14px; outline: none;
+}
+.eod-input:focus { border-color: color-mix(in srgb, #E07658 40%, transparent); box-shadow: 0 0 0 2px rgba(224,118,88,0.10); }
+.eod-input::placeholder { color: var(--text-tertiary); }
+
+.wiz-note {
+  display: none; margin-bottom: 14px; padding: 10px 12px; border-radius: 10px;
+  font-size: 12px; color: var(--text-secondary); line-height: 1.4;
+  border: 1px solid color-mix(in srgb, #F2C063 30%, transparent);
+  background: rgba(242,192,99,0.06);
+}
+.wiz-note.show { display: block; }
+.wiz-note b { color: var(--warning); font-weight: 700; }
+
 /* ----- Planning wizard ----- */
 .wiz-bg {
   display: none; position: fixed; inset: 0; z-index: 300;
@@ -1124,6 +1165,7 @@ body::after {
         <button type="button" id="goalPolishBtn" class="gm-polish">✨ Polish</button>
         <div class="gm-status" id="polishStatus"></div>
       </div>
+      <button type="button" class="gm-eod-btn" id="gmEodBtn">End of day debrief</button>
     </div>
 
     <!-- PLAN TOMORROW -->
@@ -1154,6 +1196,30 @@ body::after {
     </div>
   </div>
 
+  <!-- ===== End of day debrief ===== -->
+  <div class="pw-bg" id="eodBg">
+    <div class="pw" role="dialog" aria-label="End of day debrief">
+      <div class="pw-eyebrow">End of day</div>
+      <div class="eod-field">
+        <span class="eod-label">The arrow</span>
+        <div class="eod-outcome" id="eodOutcome">
+          <button type="button" data-outcome="landed">Landed</button>
+          <button type="button" data-outcome="partial">Partial</button>
+          <button type="button" data-outcome="unfired">Unfired</button>
+        </div>
+      </div>
+      <div class="eod-field">
+        <span class="eod-label">Where did the energy actually go?</span>
+        <input class="eod-input" id="eodEnergy" type="text" placeholder="One line." autocomplete="off">
+      </div>
+      <div class="eod-field">
+        <span class="eod-label">One fix for tomorrow's prep</span>
+        <input class="eod-input" id="eodFix" type="text" placeholder="One line. Shows up when you plan tomorrow." autocomplete="off">
+      </div>
+      <button type="button" class="pw-go" id="eodGo">Plan tomorrow</button>
+    </div>
+  </div>
+
   <!-- ===== Pre-work gate ===== -->
   <div class="pw-bg" id="pwBg">
     <div class="pw" role="dialog" aria-label="Before you start">
@@ -1173,6 +1239,7 @@ body::after {
         <div class="wiz-eyebrow" id="wizEyebrow">Step</div>
         <div class="wiz-title" id="wizTitle"></div>
         <div class="wiz-hint" id="wizHint"></div>
+        <div class="wiz-note" id="wizNote"></div>
       </div>
       <div class="wiz-body" id="wizBody"></div>
       <div class="wiz-foot">
@@ -1347,6 +1414,17 @@ body::after {
   function getDayEnergy(dateStr) { return storeGet(energyKey(dateStr)) || null; }
   function setDayEnergy(dateStr, v) {
     if (v) storeSet(energyKey(dateStr), v); else storeDelete(energyKey(dateStr));
+  }
+
+  // ---------- end-of-day debrief ----------
+  function debriefKey(dateStr) { return 'debrief:' + dateStr; }
+  function getDebrief(dateStr) { return storeGet(debriefKey(dateStr)) || null; }
+  function saveDebrief(dateStr, obj) { storeSet(debriefKey(dateStr), obj); }
+  function shiftDateStr(dateStr, days) {
+    const p = dateStr.split('-').map(Number);
+    const dt = new Date(p[0], p[1] - 1, p[2]);
+    dt.setDate(dt.getDate() + days);
+    return dateToKey(dt);
   }
 
   // ---------- rollover: pull undone older goals into today ----------
@@ -2038,6 +2116,48 @@ body::after {
     if (e.target === document.getElementById('pwBg')) closePreWork();
   });
 
+  // ---------- End-of-day debrief ----------
+  let _eodOutcome = null;
+  function openEod() {
+    const d = getActiveDateString();
+    const existing = getDebrief(d) || {};
+    _eodOutcome = existing.outcome || null;
+    document.querySelectorAll('#eodOutcome button').forEach(b =>
+      b.classList.toggle('on', b.dataset.outcome === _eodOutcome));
+    document.getElementById('eodEnergy').value = existing.energyWent || '';
+    document.getElementById('eodFix').value = existing.fix || '';
+    document.getElementById('eodBg').classList.add('show');
+  }
+  function closeEod() { document.getElementById('eodBg').classList.remove('show'); }
+  document.querySelectorAll('#eodOutcome button').forEach(b => {
+    b.addEventListener('click', () => {
+      _eodOutcome = b.dataset.outcome;
+      document.querySelectorAll('#eodOutcome button').forEach(x => x.classList.toggle('on', x === b));
+    });
+  });
+  document.getElementById('eodGo').addEventListener('click', () => {
+    const d = getActiveDateString();
+    saveDebrief(d, {
+      outcome: _eodOutcome,
+      energyWent: document.getElementById('eodEnergy').value.trim(),
+      fix: document.getElementById('eodFix').value.trim(),
+      at: Date.now()
+    });
+    // "Landed" also lands the arrow if it is not already done.
+    if (_eodOutcome === 'landed') {
+      const a = getArrow(getGoals(todayKey()));
+      if (a && !a.done) { landArrowById(todayKey(), a.id); processStreak(); }
+    }
+    closeEod();
+    loadToday(); renderStreak();
+    // Debrief flows straight into planning tomorrow.
+    openWizard(getTomorrowDateString());
+  });
+  document.getElementById('gmEodBtn').addEventListener('click', openEod);
+  document.getElementById('eodBg').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('eodBg')) closeEod();
+  });
+
   // ---------- 5-minute test (cooked days) ----------
   const FIVE_MIN_MS = 5 * 60 * 1000;
   let testTimer = null, testEndsAt = 0, testArrowId = null;
@@ -2245,6 +2365,19 @@ body::after {
     document.getElementById('wizEyebrow').textContent =
       'Step ' + (wiz.step + 1) + ' of 4 · ' + (isTomorrow ? 'Tomorrow' : 'Today');
 
+    // Carry the previous day's "one fix" note into this plan.
+    const note = document.getElementById('wizNote');
+    const prevFix = (getDebrief(shiftDateStr(wiz.dateStr, -1)) || {}).fix;
+    if (prevFix) {
+      note.innerHTML = '';
+      const b = document.createElement('b'); b.textContent = "Yesterday's fix: ";
+      note.appendChild(b);
+      note.appendChild(document.createTextNode(prevFix));
+      note.classList.add('show');
+    } else {
+      note.classList.remove('show');
+    }
+
     const body = document.getElementById('wizBody');
     const title = document.getElementById('wizTitle');
     const hint = document.getElementById('wizHint');
@@ -2361,6 +2494,7 @@ body::after {
     document.getElementById('wizEyebrow').textContent = '';
     document.getElementById('wizTitle').textContent = '';
     document.getElementById('wizHint').textContent = '';
+    document.getElementById('wizNote').classList.remove('show');
     document.getElementById('wizBody').innerHTML =
       '<div class="wiz-won"><div class="wiz-won-glyph">◎</div>' +
       '<div class="wiz-won-title">Day is won. Sleep.</div>' +
@@ -2519,7 +2653,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'goals',
-    syncedPrefixes: ['goals:', 'plan:', 'energy:'],
+    syncedPrefixes: ['goals:', 'plan:', 'energy:', 'debrief:'],
     onApplied: function () {
       window.dispatchEvent(new CustomEvent('goals-changed'));
       window.dispatchEvent(new Event('storage'));
