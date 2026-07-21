@@ -2009,28 +2009,35 @@ body::after {
   // ---------- Past days ----------
   const HISTORY_DAYS = 14;
 
-  // Copy a past day's unfinished tasks into today (deduped by text). The source
-  // tasks stay in history, marked carried. Returns how many were pulled.
+  // Move a past day's unfinished tasks into today (deduped by text). The pulled
+  // tasks are REMOVED from the source day; completed tasks stay in history.
+  // Returns how many were moved.
   function pullDayToToday(dateStr) {
     const todayK = todayKey();
     const today = getGoals(todayK);
     const texts = new Set(today.map(g => g.text));
     const src = getGoals('goals:' + dateStr);
+    const remaining = [];
     let pulled = 0;
-    src.forEach((g, i) => {
+    src.forEach(g => {
       if (!g.done && g.text && !texts.has(g.text)) {
-        const copy = Object.assign({}, g, {
-          id: genId(), done: false, carried: false, carriedFrom: dateStr
-        });
+        const copy = Object.assign({}, g, { id: genId(), done: false, carriedFrom: dateStr });
         delete copy.arrow; delete copy.firedAt; delete copy.doneAt;
-        delete copy.carriedTo; delete copy.aimedCount;
+        delete copy.carried; delete copy.carriedTo; delete copy.aimedCount;
         today.push(copy);
         texts.add(g.text);
-        src[i] = Object.assign({}, g, { carried: true, carriedTo: getActiveDateString() });
         pulled++;
+        // not added to `remaining` -> removed from the source day
+      } else {
+        remaining.push(g);
       }
     });
-    if (pulled) { setGoals(todayK, today); setGoals('goals:' + dateStr, src); }
+    if (pulled) {
+      setGoals(todayK, today);
+      // If nothing is left on that day, drop the record entirely.
+      if (remaining.length) setGoals('goals:' + dateStr, remaining);
+      else storeDelete('goals:' + dateStr);
+    }
     return pulled;
   }
 
