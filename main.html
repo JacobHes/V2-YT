@@ -1970,36 +1970,29 @@ body::after {
     }
   }
 
+  // Whether each list is expanded past the first 5. Persists across re-renders
+  // so adding or editing a task keeps the list open if the user opened it.
+  const listExpanded = {};
+
   function renderListInto(goals, listEl, emptyEl, key, readOnly) {
     listEl.innerHTML = '';
     emptyEl.style.display = goals.length === 0 ? 'block' : 'none';
     const reload = () => (key === todayKey() ? loadToday() : loadTomorrow());
 
-    const visible = goals.length > 5 ? goals.slice(0, 5) : goals;
+    const expanded = !!listExpanded[key];
+    const visible = (goals.length > 5 && !expanded) ? goals.slice(0, 5) : goals;
     visible.forEach((g, i) => listEl.appendChild(buildGoalRow(g, i, key, readOnly, reload)));
 
     if (goals.length > 5) {
-      let expanded = false;
       const toggle = document.createElement('button');
       toggle.type = 'button';
       toggle.className = 'gm-show-toggle';
-      const updateLabel = () => {
-        toggle.textContent = expanded ? 'Show less ▴' : ('Show ' + (goals.length - 5) + ' more ▾');
-      };
-      updateLabel();
-      toggle.addEventListener('click', () => {
-        expanded = !expanded;
-        if (expanded) {
-          goals.slice(5).forEach((g, i) => {
-            const row = buildGoalRow(g, i + 5, key, readOnly, reload);
-            listEl.insertBefore(row, toggle);
-          });
-        } else {
-          Array.from(listEl.querySelectorAll('.gm-row')).slice(5).forEach(r => r.remove());
-        }
-        updateLabel();
-      });
+      toggle.textContent = expanded ? 'Show less ▴' : ('Show ' + (goals.length - 5) + ' more ▾');
+      toggle.addEventListener('click', () => { listExpanded[key] = !expanded; reload(); });
       listEl.appendChild(toggle);
+    } else if (listExpanded[key]) {
+      // Nothing left to expand; reset so it starts collapsed if it grows again.
+      listExpanded[key] = false;
     }
 
     if (key === todayKey()) renderTodayHeader();
