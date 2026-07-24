@@ -321,6 +321,42 @@ body::after {
 }
 .gm-card-tomorrow .gm-progress-row { display: none; }
 
+/* Plan-ahead date stepper */
+.gm-plan-nav {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px; padding: 3px;
+}
+.gm-plan-step {
+  width: 26px; height: 26px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; border-radius: 999px;
+  color: var(--text-secondary); font-size: 15px; cursor: pointer; line-height: 1;
+  -webkit-tap-highlight-color: transparent; transition: background 0.15s, color 0.15s;
+}
+.gm-plan-step:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.gm-plan-step:disabled { opacity: 0.3; cursor: default; }
+.gm-plan-rel {
+  min-width: 78px; text-align: center; padding: 0 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+
+/* Upcoming strip */
+.gm-upcoming { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.gm-upcoming:empty { display: none; }
+.gm-up-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px; padding: 5px 11px; cursor: pointer;
+  font-size: 11px; color: var(--text-secondary);
+  -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+}
+.gm-up-chip:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.16); color: var(--text-primary); }
+.gm-up-chip.current { border-color: color-mix(in srgb, #E07658 45%, transparent); color: #E07658; }
+.gm-up-chip-count { font-family: var(--font-mono); font-weight: 700; color: var(--text-tertiary); }
+.gm-up-chip.current .gm-up-chip-count { color: #E07658; }
+
 .gm-streak {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 12px;
@@ -1220,11 +1256,16 @@ body::after {
     <div class="gm-card gm-card-tomorrow" id="gmCardTomorrow">
       <div class="gm-header">
         <div class="gm-header-left">
-          <div class="gm-eyebrow" id="tomorrowLabel">Plan tomorrow —</div>
-          <div class="gm-tomorrow-sub">Write tonight, locked until 6 AM.</div>
+          <div class="gm-eyebrow" id="tomorrowLabel">Plan —</div>
+          <div class="gm-tomorrow-sub" id="planSub">0 planned</div>
         </div>
-        <div class="gm-tomorrow-count" id="gmTomorrowCount">0 planned</div>
+        <div class="gm-plan-nav">
+          <button type="button" class="gm-plan-step" id="planPrev" aria-label="Earlier day">‹</button>
+          <span class="gm-plan-rel" id="planRel">Tomorrow</span>
+          <button type="button" class="gm-plan-step" id="planNext" aria-label="Later day">›</button>
+        </div>
       </div>
+      <div class="gm-upcoming" id="gmUpcoming"></div>
       <div class="gm-locked-banner" id="gmLockedBanner">
         <div>
           <div class="gm-locked-title">Day is won. Sleep.</div>
@@ -1234,9 +1275,9 @@ body::after {
       </div>
       <button type="button" class="gm-plan-btn" id="gmPlanBtn">Plan Tomorrow</button>
       <ul id="tomorrowList" class="goal-list gm-list"></ul>
-      <div id="tomorrowEmpty" class="empty-state">Nothing planned for tomorrow yet</div>
+      <div id="tomorrowEmpty" class="empty-state">Nothing planned for this day yet</div>
       <div class="goal-input-wrap gm-input-wrap">
-        <input id="tomorrowInput" class="gm-input" type="text" placeholder="Add a goal for tomorrow…" autocomplete="off">
+        <input id="tomorrowInput" class="gm-input" type="text" placeholder="Add a task for this day…" autocomplete="off">
         <button type="button" id="tomorrowAddBtn"    class="gm-add">+ Add</button>
         <button type="button" id="tomorrowPolishBtn" class="gm-polish">✨ Polish</button>
         <div class="gm-status" id="tomorrowStatus"></div>
@@ -1397,6 +1438,19 @@ body::after {
 
   function todayKey()    { return 'goals:' + getActiveDateString(); }
   function tomorrowKey() { return 'goals:' + getTomorrowDateString(); }
+
+  // The plan-ahead card can target any future day, not just tomorrow.
+  let planDate = getTomorrowDateString();
+  function planKeyStr() { return 'goals:' + planDate; }
+  function relativeDayLabel(dateStr) {
+    const days = (function () {
+      const a = getActiveDateString().split('-').map(Number), b = dateStr.split('-').map(Number);
+      return Math.round((new Date(b[0], b[1] - 1, b[2]) - new Date(a[0], a[1] - 1, a[2])) / 86400000);
+    })();
+    if (days === 1) return 'Tomorrow';
+    if (days <= 6) { const d = dateStr.split('-').map(Number); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d[0], d[1]-1, d[2]).getDay()]; }
+    return 'in ' + days + ' days';
+  }
 
   function getGoals(key) {
     const g = storeGet(key);
@@ -1953,21 +2007,50 @@ body::after {
   }
 
   function renderTomorrowCount() {
-    const list = getGoals(tomorrowKey());
-    document.getElementById('gmTomorrowCount').textContent = list.length + ' planned';
-    document.getElementById('tomorrowLabel').textContent =
-      'Plan tomorrow — ' + formatDate(getTomorrowDateString());
+    const list = getGoals(planKeyStr());
+    document.getElementById('planSub').textContent = list.length + ' planned';
+    document.getElementById('tomorrowLabel').textContent = 'Plan — ' + formatDate(planDate);
+    document.getElementById('planRel').textContent = relativeDayLabel(planDate);
+    // Can't plan earlier than tomorrow; cap forward at ~2 months out.
+    document.getElementById('planPrev').disabled = planDate <= getTomorrowDateString();
+    document.getElementById('planNext').disabled = planDate >= shiftDateStr(getActiveDateString(), 60);
 
-    const locked = isPlanLocked(getTomorrowDateString());
+    const locked = isPlanLocked(planDate);
     const banner = document.getElementById('gmLockedBanner');
     const planBtn = document.getElementById('gmPlanBtn');
     banner.classList.toggle('show', locked);
     planBtn.style.display = locked ? 'none' : 'block';
+    planBtn.textContent = 'Plan ' + relativeDayLabel(planDate);
     if (locked) {
       const arrow = getArrow(list);
       document.getElementById('gmLockedSub').textContent =
-        (arrow ? 'Arrow: ' + arrow.text : list.length + ' planned') ;
+        (arrow ? 'Arrow: ' + arrow.text : list.length + ' planned');
     }
+    renderUpcoming();
+  }
+
+  // Chips for every future day that already has tasks, so nothing gets lost.
+  function renderUpcoming() {
+    const wrap = document.getElementById('gmUpcoming');
+    wrap.innerHTML = '';
+    const todayStr = getActiveDateString();
+    const dates = storeListKeys('goals:')
+      .map(k => k.slice('goals:'.length))
+      .filter(d => d > todayStr && getGoals('goals:' + d).length > 0)
+      .sort();
+    dates.forEach(d => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'gm-up-chip' + (d === planDate ? ' current' : '');
+      const label = document.createElement('span');
+      label.textContent = relativeDayLabel(d);
+      const count = document.createElement('span');
+      count.className = 'gm-up-chip-count';
+      count.textContent = getGoals('goals:' + d).length;
+      chip.appendChild(label); chip.appendChild(count);
+      chip.addEventListener('click', () => { planDate = d; loadTomorrow(); });
+      wrap.appendChild(chip);
+    });
   }
 
   // Whether each list is expanded past the first 5. Persists across re-renders
@@ -2413,8 +2496,8 @@ body::after {
     renderHistory();
   }
   function loadTomorrow() {
-    const goals = getGoals(tomorrowKey());
-    renderListInto(goals, document.getElementById('tomorrowList'), document.getElementById('tomorrowEmpty'), tomorrowKey(), true);
+    const goals = getGoals(planKeyStr());
+    renderListInto(goals, document.getElementById('tomorrowList'), document.getElementById('tomorrowEmpty'), planKeyStr(), true);
   }
 
   // ---------- Morning fallback ----------
@@ -2524,7 +2607,7 @@ body::after {
   }
 
   function renderWizard() {
-    const isTomorrow = wiz.dateStr === getTomorrowDateString();
+    const wizWhen = wiz.dateStr === getActiveDateString() ? 'Today' : relativeDayLabel(wiz.dateStr);
     // step dots
     const dots = document.getElementById('wizSteps');
     dots.innerHTML = '';
@@ -2534,7 +2617,7 @@ body::after {
       dots.appendChild(d);
     });
     document.getElementById('wizEyebrow').textContent =
-      'Step ' + (wiz.step + 1) + ' of 4 · ' + (isTomorrow ? 'Tomorrow' : 'Today');
+      'Step ' + (wiz.step + 1) + ' of 4 · ' + wizWhen;
 
     // Carry the previous day's "one fix" note into this plan.
     const note = document.getElementById('wizNote');
@@ -2686,11 +2769,20 @@ body::after {
   document.getElementById('wizBg').addEventListener('click', (e) => {
     if (e.target === document.getElementById('wizBg')) closeWizard();
   });
-  document.getElementById('gmPlanBtn').addEventListener('click', () => openWizard(getTomorrowDateString()));
+  document.getElementById('gmPlanBtn').addEventListener('click', () => openWizard(planDate));
   document.getElementById('gmMorningBtn').addEventListener('click', () => openWizard(getActiveDateString()));
   document.getElementById('gmLockedReopen').addEventListener('click', () => {
-    unlockPlan(getTomorrowDateString());
-    openWizard(getTomorrowDateString());
+    unlockPlan(planDate);
+    openWizard(planDate);
+  });
+  // Plan-ahead date stepper
+  document.getElementById('planPrev').addEventListener('click', () => {
+    const prev = shiftDateStr(planDate, -1);
+    if (prev >= getTomorrowDateString()) { planDate = prev; loadTomorrow(); }
+  });
+  document.getElementById('planNext').addEventListener('click', () => {
+    const next = shiftDateStr(planDate, 1);
+    if (next <= shiftDateStr(getActiveDateString(), 60)) { planDate = next; loadTomorrow(); }
   });
 
   // ---------- Push remaining ----------
@@ -2748,10 +2840,13 @@ body::after {
   }
 
   function makeAddHandlers(input, addBtn, polishBtn, key, statusEl, reload) {
+    // key may be a function so the plan-ahead card resolves the current date.
+    const resolveKey = () => (typeof key === 'function' ? key() : key);
     function plainAdd(text) {
-      const list = getGoals(key);
-      list.push({ id: genId(), text, done: false, bornOn: keyDate(key) });
-      setGoals(key, list);
+      const k = resolveKey();
+      const list = getGoals(k);
+      list.push({ id: genId(), text, done: false, bornOn: keyDate(k) });
+      setGoals(k, list);
       input.value = '';
       reload();
     }
@@ -2796,7 +2891,7 @@ body::after {
     document.getElementById('tomorrowInput'),
     document.getElementById('tomorrowAddBtn'),
     document.getElementById('tomorrowPolishBtn'),
-    tomorrowKey(),
+    planKeyStr,
     document.getElementById('tomorrowStatus'),
     loadTomorrow
   );
