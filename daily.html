@@ -237,6 +237,70 @@ html, body {
   color: var(--text-4); font-size: 13px; font-style: italic;
   padding: 8px 0;
 }
+
+/* ===== DISCIPLINED30 ===== */
+.d30-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 20px; margin-bottom: 14px; }
+.d30-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+.d30-name { font-size: 16px; font-weight: 800; letter-spacing: 0.06em; color: var(--text-1); }
+.d30-daynum { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--accent); }
+.d30-top { display: flex; align-items: center; gap: 18px; margin-bottom: 4px; }
+.d30-ring { position: relative; width: 92px; height: 92px; flex-shrink: 0; }
+.d30-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.d30-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+.d30-ring-fill { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
+.d30-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.d30-ring-pct { font-size: 21px; font-weight: 700; color: var(--text-1); font-variant-numeric: tabular-nums; line-height: 1; }
+.d30-ring-sub { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); margin-top: 3px; }
+.d30-bars { flex: 1; min-width: 0; }
+.d30-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.d30-bar-row:last-child { margin-bottom: 0; }
+.d30-bar-name { width: 88px; flex-shrink: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d30-bar-track { flex: 1; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.d30-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #F2A65A); transition: width 0.4s ease; }
+.d30-bar-pct { width: 30px; flex-shrink: 0; text-align: right; font-family: var(--font-mono); font-size: 10px; color: var(--text-2); }
+
+.d30-today { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
+.d30-today-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.d30-today-label { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); }
+.d30-today-pct { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-2); }
+.d30-hrow { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.d30-hrow:last-child { border-bottom: none; }
+.d30-check {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--border-strong); background: var(--bg-card);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: transparent; padding: 0; font-family: inherit; transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.d30-check.clickable { cursor: pointer; }
+.d30-check.clickable:hover { border-color: var(--accent); }
+.d30-check.on { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 12px var(--accent-glow); }
+.d30-hname { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--text-1); }
+.d30-hrow.is-done .d30-hname { color: var(--good); }
+.d30-min-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.d30-min {
+  width: 54px; background: rgba(0,0,0,0.28); border: 1px solid var(--border); color: var(--text-1);
+  font-family: var(--font-mono); font-size: 14px; text-align: right; padding: 7px 8px; border-radius: 8px;
+  outline: none; -moz-appearance: textfield;
+}
+.d30-min::-webkit-outer-spin-button, .d30-min::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.d30-min:focus { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.d30-min-unit { font-family: var(--font-mono); font-size: 10px; color: var(--text-3); }
+
+.d30-strip { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-top: 16px; }
+.d30-cell {
+  aspect-ratio: 1; border-radius: 4px; background: rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-family: var(--font-mono); color: var(--text-3);
+  border: 1px solid transparent; -webkit-tap-highlight-color: transparent;
+}
+.d30-cell.p25  { background: rgba(224,118,88,0.28); color: var(--text-2); }
+.d30-cell.p50  { background: rgba(224,118,88,0.5); color: var(--text-1); }
+.d30-cell.p75  { background: rgba(224,118,88,0.72); color: #fff; }
+.d30-cell.p100 { background: var(--good); color: #0a0a0b; font-weight: 700; }
+.d30-cell.current { border-color: var(--text-1); }
+.d30-cell.tappable { cursor: pointer; }
+.d30-cell.future { opacity: 0.45; }
 </style>
 </head>
 <body>
@@ -252,6 +316,31 @@ html, body {
     <h1 class="title">Daily Tracker</h1>
     <span class="saved-flag" id="savedFlag">Saved</span>
   </div>
+
+  <!-- ===== DISCIPLINED30 ===== -->
+  <div class="d30-card">
+    <div class="d30-head">
+      <span class="d30-name">DISCIPLINED30</span>
+      <span class="d30-daynum" id="d30Day">Day 1 / 30</span>
+    </div>
+    <div class="d30-top">
+      <div class="d30-ring">
+        <svg viewBox="0 0 120 120">
+          <circle class="d30-ring-bg" cx="60" cy="60" r="52"></circle>
+          <circle class="d30-ring-fill" id="d30RingFill" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="d30-ring-label">
+          <span class="d30-ring-pct" id="d30Pct">0%</span>
+          <span class="d30-ring-sub">avg</span>
+        </div>
+      </div>
+      <div class="d30-bars" id="d30Bars"></div>
+    </div>
+    <div class="d30-today" id="d30Today"></div>
+    <div class="d30-strip" id="d30Strip"></div>
+  </div>
+
+  <div class="divider"><span>DAILY LOG</span></div>
 
   <!-- ===== Numbers ===== -->
   <div class="card">
@@ -411,6 +500,10 @@ html, body {
     const dt = new Date(y, m - 1, d);
     dt.setDate(dt.getDate() + days);
     return dateKey(dt);
+  }
+  function daysBetween(fromKey, toKey) {
+    const a = fromKey.split('-').map(Number), b = toKey.split('-').map(Number);
+    return Math.round((new Date(b[0], b[1] - 1, b[2]) - new Date(a[0], a[1] - 1, a[2])) / 86400000);
   }
 
   function getDay(key) { return loadJSON(PREFIX + key, {}); }
@@ -691,12 +784,181 @@ html, body {
       el.value = day[el.dataset.field] != null ? day[el.dataset.field] : '';
     });
   }
+  // ---- DISCIPLINED30 -------------------------------------------
+  // A 30-day, start-small challenge. Each timed habit auto-completes once it
+  // hits the 10-minute goal; Plan is a simple checkbox. Day 1 is the first day
+  // the challenge is opened. Challenge data lives inside each day's record
+  // under `.d30`, so it syncs with everything else.
+  const D30_GOAL = 10;
+  const D30_HABITS = [
+    { key: 'plan',     name: 'Plan',             timed: false },
+    { key: 'meditate', name: 'Meditate',         timed: true  },
+    { key: 'workout',  name: 'Workout + Macros', timed: true  },
+    { key: 'deep',     name: 'Deep Work',        timed: true  },
+    { key: 'study',    name: 'Study',            timed: true  }
+  ];
+  function d30Start() {
+    let s = loadJSON('d30:start', null);
+    if (!s) { s = todayKey(); saveJSON('d30:start', s); }
+    return s;
+  }
+  function d30DateOfDay(n) { return shiftKey(d30Start(), n - 1); }
+  function d30DayNum(dateStr) { return daysBetween(d30Start(), dateStr) + 1; }
+  function d30Of(dateStr) { return getDay(dateStr).d30 || {}; }
+  function d30HabitDone(h, data) {
+    return h.timed ? (Number(data[h.key]) || 0) >= D30_GOAL : !!data[h.key];
+  }
+  function d30DayPercent(dateStr) {
+    const data = d30Of(dateStr);
+    const done = D30_HABITS.filter(h => d30HabitDone(h, data)).length;
+    return done / D30_HABITS.length * 100;
+  }
+  function d30SetHabit(dateStr, key, value) {
+    const day = getDay(dateStr);
+    day.d30 = day.d30 || {};
+    if (value === null || value === '' || value === false || value === 0) delete day.d30[key];
+    else day.d30[key] = value;
+    if (Object.keys(day.d30).length === 0) delete day.d30;
+    setDay(dateStr, day);
+  }
+
+  function renderD30() {
+    const active = activeKey;
+    const dayNum = d30DayNum(active);
+    document.getElementById('d30Day').textContent =
+      (dayNum >= 1 && dayNum <= 30) ? ('Day ' + dayNum + ' / 30')
+      : (dayNum < 1 ? 'Not started' : 'Complete');
+
+    // Aggregate across all 30 days (unreached days count as 0).
+    let totalPct = 0;
+    const habitDone = {};
+    D30_HABITS.forEach(h => habitDone[h.key] = 0);
+    for (let n = 1; n <= 30; n++) {
+      const ds = d30DateOfDay(n);
+      const data = d30Of(ds);
+      totalPct += d30DayPercent(ds);
+      D30_HABITS.forEach(h => { if (d30HabitDone(h, data)) habitDone[h.key]++; });
+    }
+    const avg = totalPct / 30;
+
+    // Ring
+    const r = 52, circ = 2 * Math.PI * r;
+    const fill = document.getElementById('d30RingFill');
+    fill.setAttribute('stroke-dasharray', circ.toFixed(1));
+    fill.setAttribute('stroke-dashoffset', (circ * (1 - avg / 100)).toFixed(1));
+    document.getElementById('d30Pct').textContent = Math.round(avg) + '%';
+
+    // Per-habit bars
+    const bars = document.getElementById('d30Bars');
+    bars.innerHTML = '';
+    D30_HABITS.forEach(h => {
+      const pct = habitDone[h.key] / 30 * 100;
+      const row = document.createElement('div'); row.className = 'd30-bar-row';
+      const name = document.createElement('span'); name.className = 'd30-bar-name'; name.textContent = h.name;
+      const track = document.createElement('div'); track.className = 'd30-bar-track';
+      const bfill = document.createElement('div'); bfill.className = 'd30-bar-fill'; bfill.style.width = pct + '%';
+      track.appendChild(bfill);
+      const p = document.createElement('span'); p.className = 'd30-bar-pct'; p.textContent = Math.round(pct) + '%';
+      row.appendChild(name); row.appendChild(track); row.appendChild(p);
+      bars.appendChild(row);
+    });
+
+    renderD30Today(active, dayNum);
+    renderD30Strip(active);
+  }
+
+  function renderD30Today(dateStr, dayNum) {
+    const wrap = document.getElementById('d30Today');
+    wrap.innerHTML = '';
+    if (dayNum < 1 || dayNum > 30) {
+      const p = document.createElement('div'); p.className = 'peak-hint';
+      p.textContent = 'This day is outside the 30-day challenge.';
+      wrap.appendChild(p);
+      return;
+    }
+    const data = d30Of(dateStr);
+    const done = D30_HABITS.filter(h => d30HabitDone(h, data)).length;
+
+    const head = document.createElement('div'); head.className = 'd30-today-head';
+    const lbl = document.createElement('span'); lbl.className = 'd30-today-label';
+    lbl.textContent = (dateStr === todayKey() ? 'Today' : 'Day') + ' · Day ' + dayNum;
+    const pct = document.createElement('span'); pct.className = 'd30-today-pct';
+    pct.textContent = done + '/' + D30_HABITS.length + ' · ' + Math.round(done / D30_HABITS.length * 100) + '%';
+    head.appendChild(lbl); head.appendChild(pct);
+    wrap.appendChild(head);
+
+    D30_HABITS.forEach(h => {
+      const isDone = d30HabitDone(h, data);
+      const row = document.createElement('div'); row.className = 'd30-hrow' + (isDone ? ' is-done' : '');
+
+      const check = document.createElement('button');
+      check.type = 'button';
+      check.className = 'd30-check' + (isDone ? ' on' : '') + (h.timed ? '' : ' clickable');
+      check.textContent = '✓';
+      if (!h.timed) {
+        check.addEventListener('click', () => {
+          d30SetHabit(dateStr, h.key, isDone ? false : true);
+          renderD30(); flashSaved();
+        });
+      } else {
+        check.disabled = true;
+      }
+      row.appendChild(check);
+
+      const name = document.createElement('span'); name.className = 'd30-hname'; name.textContent = h.name;
+      row.appendChild(name);
+
+      if (h.timed) {
+        const mw = document.createElement('div'); mw.className = 'd30-min-wrap';
+        const input = document.createElement('input');
+        input.type = 'number'; input.className = 'd30-min'; input.inputMode = 'numeric';
+        input.placeholder = '0'; input.value = data[h.key] != null ? data[h.key] : '';
+        input.addEventListener('change', () => {
+          const v = Math.max(0, Math.floor(Number(input.value) || 0));
+          d30SetHabit(dateStr, h.key, v);
+          renderD30(); flashSaved();
+        });
+        const unit = document.createElement('span'); unit.className = 'd30-min-unit'; unit.textContent = 'min';
+        mw.appendChild(input); mw.appendChild(unit);
+        row.appendChild(mw);
+      }
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderD30Strip(active) {
+    const strip = document.getElementById('d30Strip');
+    strip.innerHTML = '';
+    const today = todayKey();
+    for (let n = 1; n <= 30; n++) {
+      const ds = d30DateOfDay(n);
+      const pct = d30DayPercent(ds);
+      const cell = document.createElement('div');
+      let cls = 'd30-cell';
+      if (pct >= 100) cls += ' p100';
+      else if (pct >= 75) cls += ' p75';
+      else if (pct >= 50) cls += ' p50';
+      else if (pct > 0) cls += ' p25';
+      if (ds === active) cls += ' current';
+      const isFuture = ds > today;
+      if (isFuture) cls += ' future';
+      else cls += ' tappable';
+      cell.className = cls;
+      cell.textContent = n;
+      if (!isFuture) {
+        cell.addEventListener('click', () => { activeKey = ds; renderAll(); });
+      }
+      strip.appendChild(cell);
+    }
+  }
+
   function renderAll() {
     renderDayLabel();
     renderInputs();
     renderSleep();
     renderHabits();
     renderEnergyLog();
+    renderD30();
     renderHistory();
   }
 
@@ -719,7 +981,7 @@ html, body {
     if (typeof initCloudSync !== 'function') return;
     initCloudSync({
       appKey: 'daily',
-      syncedPrefixes: [PREFIX],
+      syncedPrefixes: [PREFIX, 'd30:'],
       onApplied: function () { renderAll(); }
     });
   })();
