@@ -1942,7 +1942,8 @@ body::after {
     queueBtn.className = 'gm-queue-btn' + (goal.queued ? ' gm-queue-active' : '');
     queueBtn.textContent = '⚡';
     queueBtn.title = 'Queue for productivity window';
-    if (readOnly) queueBtn.disabled = true;
+    // Queuing is a planning action, so it works on future days too (like aim).
+    // The read-only lock only stops checking a task done before its day.
     queueBtn.addEventListener('click', () => {
       const list = getGoals(key);
       if (!list[idx]) return;
