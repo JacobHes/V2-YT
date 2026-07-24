@@ -301,6 +301,11 @@ html, body {
 .d30-cell.current { border-color: var(--text-1); }
 .d30-cell.tappable { cursor: pointer; }
 .d30-cell.future { opacity: 0.45; }
+
+/* ===== Social media total ===== */
+.sm-total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.sm-total-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.sm-total-val { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--text-1); font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -406,6 +411,38 @@ html, body {
           <input type="number" id="f-x" data-field="x" inputmode="numeric" step="1" placeholder="0">
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== Social media ===== -->
+  <div class="divider"><span>SOCIAL MEDIA</span></div>
+  <div class="card">
+    <div class="field-row-3">
+      <div class="field">
+        <label for="f-smIg">Instagram</label>
+        <div class="input-wrap">
+          <input type="number" id="f-smIg" data-field="smIg" inputmode="numeric" step="1" placeholder="0">
+          <span class="unit">min</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-smYt">YouTube</label>
+        <div class="input-wrap">
+          <input type="number" id="f-smYt" data-field="smYt" inputmode="numeric" step="1" placeholder="0">
+          <span class="unit">min</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-smX">X</label>
+        <div class="input-wrap">
+          <input type="number" id="f-smX" data-field="smX" inputmode="numeric" step="1" placeholder="0">
+          <span class="unit">min</span>
+        </div>
+      </div>
+    </div>
+    <div class="sm-total">
+      <span class="sm-total-label">Total on socials</span>
+      <span class="sm-total-val" id="smTotal">0m</span>
     </div>
   </div>
 
@@ -571,6 +608,7 @@ html, body {
   function saveInputs() {
     setDay(activeKey, collectFromInputs());
     renderSleep();
+    renderSocial();
     renderHistory();
     flashSaved();
   }
@@ -952,6 +990,17 @@ html, body {
     }
   }
 
+  // ---- Social media -------------------------------------------
+  function fmtDur(mins) {
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return h ? (h + 'h ' + m + 'm') : (m + 'm');
+  }
+  function renderSocial() {
+    const day = getDay(activeKey);
+    const total = (Number(day.smIg) || 0) + (Number(day.smYt) || 0) + (Number(day.smX) || 0);
+    document.getElementById('smTotal').textContent = fmtDur(total);
+  }
+
   function renderAll() {
     renderDayLabel();
     renderInputs();
@@ -959,6 +1008,7 @@ html, body {
     renderHabits();
     renderEnergyLog();
     renderD30();
+    renderSocial();
     renderHistory();
   }
 
