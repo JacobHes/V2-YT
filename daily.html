@@ -306,6 +306,9 @@ html, body {
 .sm-total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
 .sm-total-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
 .sm-total-val { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--text-1); font-variant-numeric: tabular-nums; }
+.sm-cost { display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px; }
+.sm-cost-label { font-size: 10px; letter-spacing: 0.04em; color: var(--text-4); }
+.sm-cost-val { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--warn); font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -443,6 +446,10 @@ html, body {
     <div class="sm-total">
       <span class="sm-total-label">Total on socials</span>
       <span class="sm-total-val" id="smTotal">0m</span>
+    </div>
+    <div class="sm-cost">
+      <span class="sm-cost-label">Cost at 1,000 Kč/hr</span>
+      <span class="sm-cost-val" id="smCost">≈ 0 Kč</span>
     </div>
   </div>
 
@@ -995,10 +1002,13 @@ html, body {
     const h = Math.floor(mins / 60), m = mins % 60;
     return h ? (h + 'h ' + m + 'm') : (m + 'm');
   }
+  const SOCIAL_RATE_PER_HOUR = 1000;   // Kč — what an hour of your time is worth
   function renderSocial() {
     const day = getDay(activeKey);
     const total = (Number(day.smIg) || 0) + (Number(day.smYt) || 0) + (Number(day.smX) || 0);
     document.getElementById('smTotal').textContent = fmtDur(total);
+    const cost = Math.round(total * SOCIAL_RATE_PER_HOUR / 60);
+    document.getElementById('smCost').textContent = '≈ ' + cost.toLocaleString('en-US') + ' Kč';
   }
 
   function renderAll() {
