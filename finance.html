@@ -1875,6 +1875,24 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   </div>
 </div>
 
+<!-- ===== FAKTURY (iDoklad) ===== -->
+<div class="section" data-section="invoices" hidden>
+  <div class="section-title">
+    <span class="section-title-text">FAKTURY</span>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;font-weight:500">Vydané faktury · iDoklad</div>
+        <div id="invSummary" style="font-size:12px;color:var(--text-tertiary);margin-top:2px"></div>
+      </div>
+      <button id="invRefresh" type="button" style="background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">↻ Načíst z iDokladu</button>
+    </div>
+    <div id="invStatus" style="font-size:13px;color:var(--text-tertiary);padding:6px 0;line-height:1.5"></div>
+    <div id="invList"></div>
+  </div>
+</div>
+
 </div>
 
 <!-- ===== BOTTOM TAB BAR ===== -->
@@ -1894,6 +1912,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <button class="bot-tab" data-tab="wish">
     <span class="bot-tab-icon">🎯</span>
     <span class="bot-tab-label">Wishlist</span>
+  </button>
+  <button class="bot-tab" data-tab="invoices">
+    <span class="bot-tab-icon">🧾</span>
+    <span class="bot-tab-label">Faktury</span>
   </button>
 </nav>
 
@@ -1944,7 +1966,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
   tabs.forEach(b => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
   const savedTab = storeGet(TAB_KEY);
-  setActiveTab(savedTab && ['net','subs','incoming','wish'].includes(savedTab) ? savedTab : 'net');
+  setActiveTab(savedTab && ['net','subs','incoming','wish','invoices'].includes(savedTab) ? savedTab : 'net');
 
   // ============================================================
   // NET WORTH (copied from the main dashboard, verbatim logic)
@@ -3419,6 +3441,89 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
   safeRenderTicker();
   setInterval(safeRenderTicker, 1500);
+
+  // ============================================================
+  // FAKTURY — pulls issued invoices from iDoklad via the serverless
+  // proxy at /api/idoklad-invoices (credentials live in Vercel env).
+  // ============================================================
+  let _invLoaded = false;
+  function fmtInvDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d)) return String(iso);
+    return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function invPaidBadge(status) {
+    if (status === 1) return { t: 'Zaplaceno', c: '#6ee7b7' };
+    if (status === 2) return { t: 'Částečně', c: '#F2C063' };
+    if (status === 3) return { t: 'Přeplaceno', c: '#7DD3FC' };
+    return { t: 'Nezaplaceno', c: '#ff8a8a' };
+  }
+  function invPlural(n) {
+    if (n === 1) return ' faktura';
+    if (n >= 2 && n <= 4) return ' faktury';
+    return ' faktur';
+  }
+  async function loadInvoices() {
+    const statusEl = document.getElementById('invStatus');
+    const listEl = document.getElementById('invList');
+    const sumEl = document.getElementById('invSummary');
+    if (!statusEl) return;
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Načítám…';
+    try {
+      const r = await fetch('/api/idoklad-invoices');
+      const data = await r.json();
+      if (!data.ok) {
+        listEl.innerHTML = ''; sumEl.textContent = '';
+        if (data.error === 'not_configured') {
+          statusEl.innerHTML = 'iDoklad zatím není napojený. Přidej do Vercelu proměnné <b>IDOKLAD_CLIENT_ID</b> a <b>IDOKLAD_CLIENT_SECRET</b> a nasaď znovu.';
+        } else if (data.error === 'auth_failed') {
+          statusEl.innerHTML = 'Ověření u iDokladu selhalo — zkontroluj client_id / client_secret. <span style="color:var(--text-tertiary)">' + escapeHtml(String(data.detail || '')) + '</span>';
+        } else {
+          statusEl.innerHTML = 'Chyba: ' + escapeHtml(String(data.error || 'unknown')) + (data.detail ? ' — ' + escapeHtml(String(data.detail)) : '');
+        }
+        return;
+      }
+      const inv = data.invoices || [];
+      sumEl.textContent = inv.length + invPlural(inv.length);
+      if (!inv.length) {
+        statusEl.style.display = 'none';
+        listEl.innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;padding:8px 0">Žádné vydané faktury.</div>';
+        _invLoaded = true; return;
+      }
+      statusEl.style.display = 'none';
+      listEl.innerHTML = '';
+      inv.forEach(iv => {
+        const badge = invPaidBadge(iv.paymentStatus);
+        const amt = iv.totalHc != null ? iv.totalHc : (iv.total != null ? iv.total : 0);
+        const row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 14px;background:rgba(255,255,255,0.025);border-radius:var(--radius-md);margin-bottom:8px';
+        row.innerHTML =
+          '<div style="min-width:0">'
+          + '<div style="font-weight:600;color:var(--text-primary);font-size:14px">' + escapeHtml(iv.number || '—')
+          + (iv.partner ? ' · <span style="color:var(--text-secondary);font-weight:500">' + escapeHtml(iv.partner) + '</span>' : '')
+          + '</div>'
+          + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:3px">vystaveno ' + fmtInvDate(iv.issued) + ' · splatnost ' + fmtInvDate(iv.due) + '</div>'
+          + '</div>'
+          + '<div style="text-align:right">'
+          + '<div style="font-size:16px;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums">' + Number(amt).toLocaleString('cs-CZ', { maximumFractionDigits: 2 }) + ' Kč</div>'
+          + '<div style="font-size:10px;font-weight:700;margin-top:2px;color:' + badge.c + '">' + badge.t + '</div>'
+          + '</div>';
+        listEl.appendChild(row);
+      });
+      _invLoaded = true;
+    } catch (e) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = 'Nepodařilo se načíst — funguje jen na nasazeném webu (ne z lokálního souboru). <span style="color:var(--text-tertiary)">' + escapeHtml(String(e && e.message || e)) + '</span>';
+    }
+  }
+  const _invRefreshBtn = document.getElementById('invRefresh');
+  if (_invRefreshBtn) _invRefreshBtn.addEventListener('click', () => { _invLoaded = false; loadInvoices(); });
+  const _invTab = document.querySelector('.bot-tab[data-tab="invoices"]');
+  if (_invTab) _invTab.addEventListener('click', () => { if (!_invLoaded) loadInvoices(); });
+  // If the page opens straight onto the Faktury tab, load once.
+  if (storeGet(TAB_KEY) === 'invoices') loadInvoices();
 
 })();
 </script>
