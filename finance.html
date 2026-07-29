@@ -1766,6 +1766,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <select id="subFromCat" title="Which net worth account to deduct from" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);min-width:130px">
         <option value="">No accounts yet</option>
       </select>
+      <select id="subKind" title="Personal or business" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);max-width:110px">
+        <option value="personal">Personal</option>
+        <option value="business">Business</option>
+      </select>
       <label class="sub-auto-toggle" title="Auto-deduct from the linked account on each renewal">
         <input type="checkbox" id="subAutoDeduct" />
         <span class="sub-auto-track"><span class="sub-auto-thumb"></span></span>
@@ -2483,7 +2487,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     }
     subsEmpty.style.display = 'none';
     let monthly = 0;
-    items.forEach((it, idx) => {
+    // Split into Personal and Business groups, each with its own subtotal.
+    const gTot = { personal: 0, business: 0 };
+    items.forEach(s => { gTot[(s.kind === 'business') ? 'business' : 'personal'] += monthlyEquivalent(s); });
+    const order = items.map((it, idx) => ({ it, idx }))
+      .sort((a, b) => (((a.it.kind === 'business') ? 1 : 0) - ((b.it.kind === 'business') ? 1 : 0)));
+    let lastKind = null;
+    order.forEach(({ it, idx }) => {
+      const kind = (it.kind === 'business') ? 'business' : 'personal';
+      if (kind !== lastKind) {
+        lastKind = kind;
+        const gh = document.createElement('div');
+        gh.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;margin:' + (subsList.children.length ? '18px' : '2px') + ' 2px 8px';
+        gh.innerHTML = '<span style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary)">' + (kind === 'business' ? 'Business' : 'Personal') + '</span>' +
+          '<span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-tertiary)">' + fmtMoney(gTot[kind]) + ' / mo</span>';
+        subsList.appendChild(gh);
+      }
       const m = monthlyEquivalent(it);
       monthly += m;
       // Days until next renewal (rolls past dates forward by the period so
@@ -2507,6 +2526,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       // Linked NW account + auto-deduct toggle pills
       let metaLine = '';
       const pills = [];
+      pills.push('<button type="button" data-sub-kind="' + idx + '" title="Switch personal / business" style="background:transparent;border:1px solid rgba(255,255,255,0.14);color:var(--text-secondary);cursor:pointer;font-size:10px;padding:3px 9px;border-radius:999px;font-family:inherit;line-height:1.4">' + ((it.kind === 'business') ? 'Business' : 'Personal') + '</button>');
       if (it.fromCat && it.fromAccount) {
         pills.push('<span class="sub-from-pill">from · ' + escapeHtml(it.fromAccount) + '</span>');
       }
@@ -2567,6 +2587,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
           return;
         }
         arr[i].autoDeduct = !arr[i].autoDeduct;
+        storeSet('subs', arr);
+        renderSubs();
+      });
+    });
+    // Wire personal/business switch pills
+    subsList.querySelectorAll('[data-sub-kind]').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const i = parseInt(b.dataset.subKind, 10);
+        const arr = storeGet('subs') || [];
+        if (!arr[i]) return;
+        arr[i].kind = (arr[i].kind === 'business') ? 'personal' : 'business';
         storeSet('subs', arr);
         renderSubs();
       });
@@ -2730,6 +2762,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const rEl = document.getElementById('subRenewal');
       const fEl = document.getElementById('subFromCat');
       const tEl = document.getElementById('subAutoDeduct');
+      const kEl = document.getElementById('subKind');
       if (!nEl || !aEl) return;
       const n = (nEl.value || '').trim();
       const aRaw = parseFloat(aEl.value);
@@ -2759,6 +2792,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         fromCat: fromCat,
         fromAccount: fromAccount,
         autoDeduct: autoDeduct,
+        kind: (kEl && kEl.value === 'business') ? 'business' : 'personal',
         lastDeductedAt: null
       });
       storeSet('subs', items);
