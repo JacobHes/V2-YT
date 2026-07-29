@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="lock.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Track · Dashboard</title>
+
+<!-- Shared dashboard scripts. Keep this order. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger:  #FF6B6B;
+  --accent:  #A78BFA;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #050506;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  min-height: 100vh; position: relative; overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px 90px;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(167, 139, 250, 0.16), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(180, 180, 200, 0.06), transparent 50%);
+  filter: blur(40px); pointer-events: none; z-index: -2;
+  animation: drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: -1;
+}
+@keyframes drift { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-22px, 14px, 0); } }
+
+.page { max-width: 1100px; margin: 0 auto; }
+
+.dash-title {
+  margin: 0 0 4px; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.dash-sub { margin: 0 0 16px; font-size: 12.5px; color: var(--text-tertiary); }
+@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+
+.section { margin-top: 8px; }
+.section-title {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary); display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.section-title::before { content: ''; width: 18px; height: 1px; background: var(--text-tertiary); opacity: 0.6; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+
+.gm-card {
+  position: relative; background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px; padding: 20px; margin-bottom: 14px;
+  backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45); overflow: hidden;
+}
+.gm-eyebrow {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 6px;
+}
+
+/* ===== TIMER ===== */
+.timer-card { text-align: center; }
+.timer-state { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+.timer-active-proj { display: inline-flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.timer-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 12px currentColor; }
+.timer-active-name { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.01em; }
+.timer-clock {
+  font-family: var(--font-mono); font-size: 58px; font-weight: 700; line-height: 1;
+  letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums;
+  margin: 4px 0 6px; transition: color .3s;
+}
+.timer-clock.running { color: var(--accent); text-shadow: 0 0 30px rgba(167,139,250,0.35); }
+.timer-since { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); min-height: 14px; }
+@media (max-width: 480px) { .timer-clock { font-size: 46px; } }
+
+.timer-stop {
+  margin: 16px auto 4px; display: none; padding: 14px 40px; border: 0; border-radius: 14px;
+  background: linear-gradient(180deg, #FF8585 0%, #E45757 100%);
+  color: #1a0606; font-family: inherit; font-size: 15px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 8px 22px rgba(255,107,107,0.3);
+  transition: transform .1s, filter .15s;
+}
+.timer-stop:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.timer-stop.show { display: inline-block; }
+
+.chips-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin: 18px 0 10px; text-align: left; }
+.chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 9px; }
+.chip {
+  display: flex; align-items: center; gap: 8px; padding: 12px 13px;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 13px;
+  background: rgba(255,255,255,0.035); color: var(--text-primary);
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.chip:hover { background: rgba(255,255,255,0.07); }
+.chip:active { transform: scale(0.97); }
+.chip-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+.chip-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip.active { border-color: currentColor; background: rgba(255,255,255,0.08); box-shadow: 0 0 0 1px currentColor inset; }
+
+/* ===== bars / lists ===== */
+.tot-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.tot-big { font-family: var(--font-mono); font-size: 30px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+.tot-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
+
+.pbar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.pbar-row:last-child { margin-bottom: 0; }
+.pbar-name { width: 92px; flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+.pbar-name .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.pbar-track { flex: 1; height: 8px; border-radius: 5px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.pbar-fill { height: 100%; border-radius: 5px; transition: width .4s ease; }
+.pbar-val { width: 52px; flex-shrink: 0; text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+.empty-state { text-align: center; font-size: 12px; font-style: italic; color: var(--text-tertiary); padding: 14px 0; }
+
+.sess-list { list-style: none; margin: 14px 0 0; padding: 14px 0 0; border-top: 1px solid rgba(255,255,255,0.06); }
+.sess { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.sess:last-child { border-bottom: 0; }
+.sess-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.sess-name { flex: 1; min-width: 0; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-time { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+.sess-dur { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-secondary); min-width: 52px; text-align: right; }
+.sess-del { border: 0; background: transparent; color: var(--text-tertiary); font-size: 17px; cursor: pointer; padding: 0 2px; opacity: 0.5; }
+.sess-del:hover { color: var(--danger); opacity: 1; }
+
+.map-note { font-size: 11px; color: var(--text-tertiary); margin-top: 12px; line-height: 1.5; display: flex; gap: 7px; }
+.map-note b { color: var(--success); font-weight: 700; }
+
+/* ===== calendar ===== */
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-title { font-size: 14px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.01em; }
+.cal-nav { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: var(--text-primary); width: 30px; height: 30px; border-radius: 9px; cursor: pointer; font-size: 15px; }
+.cal-nav:hover { background: rgba(255,255,255,0.08); }
+.cal-nav:disabled { opacity: 0.3; cursor: default; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.cal-dow { text-align: center; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); padding-bottom: 4px; }
+.cal-cell {
+  position: relative; aspect-ratio: 1; border-radius: 9px; border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; cursor: pointer; transition: border-color .15s, transform .1s;
+}
+.cal-cell.empty { background: transparent; border: 0; cursor: default; }
+.cal-cell.future { opacity: 0.4; cursor: default; }
+.cal-cell:not(.empty):not(.future):hover { border-color: rgba(255,255,255,0.25); }
+.cal-cell.today { border-color: var(--accent); }
+.cal-cell.selected { border-color: var(--text-primary); box-shadow: 0 0 0 1px var(--text-primary) inset; }
+.cal-daynum { font-size: 11px; font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.cal-hrs { font-family: var(--font-mono); font-size: 8.5px; color: var(--text-tertiary); }
+.cal-cell.h1 { background: rgba(167,139,250,0.14); }
+.cal-cell.h2 { background: rgba(167,139,250,0.28); }
+.cal-cell.h3 { background: rgba(167,139,250,0.45); }
+.cal-cell.h4 { background: rgba(167,139,250,0.68); }
+.cal-cell.h4 .cal-daynum, .cal-cell.h3 .cal-daynum { color: var(--text-primary); }
+.cal-detail { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+.cal-detail-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; }
+
+/* ===== manage projects ===== */
+.mng-toggle { background: transparent; border: 0; color: var(--text-tertiary); font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; padding: 4px 0; }
+.mng-toggle:hover { color: var(--text-secondary); }
+.mng-body { display: none; margin-top: 12px; }
+.mng-body.open { display: block; }
+.mng-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.mng-swatch { width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15); cursor: pointer; padding: 0; background: transparent; }
+.mng-name { flex: 1; font-size: 13px; color: var(--text-primary); outline: none; border-radius: 4px; padding: 2px 4px; margin: -2px -4px; }
+.mng-name[contenteditable="true"]:focus { outline: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.28); }
+.mng-map { font-size: 10px; color: var(--success); font-weight: 700; letter-spacing: 0.04em; }
+.mng-del { border: 0; background: transparent; color: var(--text-tertiary); font-size: 17px; cursor: pointer; padding: 0 3px; opacity: 0.5; }
+.mng-del:hover { color: var(--danger); opacity: 1; }
+.mng-add { display: flex; gap: 8px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.mng-input { flex: 1; min-width: 120px; padding: 10px 13px; border: 1px solid rgba(255,255,255,0.08); border-radius: 11px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none; }
+.mng-input:focus { border-color: rgba(255,255,255,0.28); }
+.mng-color { width: 42px; height: 40px; padding: 0; border: 1px solid rgba(255,255,255,0.1); border-radius: 11px; background: transparent; cursor: pointer; }
+.gm-add {
+  padding: 11px 20px; border: 0; border-radius: 12px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%); color: #0A0A0B;
+  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 8px rgba(0,0,0,0.35);
+  transition: transform .1s, filter .15s;
+}
+.gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+@media (max-width: 480px) {
+  body { padding: max(20px, env(safe-area-inset-top)) 14px 84px; }
+  .gm-card { padding: 16px; }
+  .pbar-name { width: 74px; font-size: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1 class="dash-title">Track</h1>
+  <p class="dash-sub">Toggle on a project, work, toggle off. Minutes flow straight into your Daily Tracker.</p>
+
+  <!-- ===== TIMER ===== -->
+  <div class="section">
+    <div class="gm-card timer-card">
+      <div class="timer-state" id="timerState">Nothing running</div>
+      <div class="timer-active-proj" id="timerActiveProj" style="display:none">
+        <span class="timer-dot" id="timerDot"></span>
+        <span class="timer-active-name" id="timerActiveName"></span>
+      </div>
+      <div class="timer-clock" id="timerClock">0:00:00</div>
+      <div class="timer-since" id="timerSince"></div>
+      <button class="timer-stop" id="timerStop" type="button">■ STOP</button>
+
+      <div class="chips-label" id="chipsLabel">Tap a project to start</div>
+      <div class="chip-grid" id="chipGrid"></div>
+    </div>
+  </div>
+
+  <!-- ===== TODAY ===== -->
+  <div class="section">
+    <div class="section-title">Today</div>
+    <div class="gm-card">
+      <div class="tot-row">
+        <span class="gm-eyebrow">Tracked today</span>
+        <span class="tot-big" id="todayTotal">0:00</span>
+      </div>
+      <div id="todayBars"></div>
+      <ul class="sess-list" id="todaySessions" style="display:none"></ul>
+      <div class="map-note">
+        <span>↳</span>
+        <span><b>Auto-synced to Daily:</b> Deep Work, Studying, Meditation &amp; Gym minutes are written into today's Daily Tracker + DISCIPLINED30 for you.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WEEK ===== -->
+  <div class="section">
+    <div class="section-title">Last 7 days</div>
+    <div class="gm-card">
+      <div class="tot-row">
+        <span class="gm-eyebrow">Weekly total</span>
+        <span class="tot-big" id="weekTotal">0:00</span>
+      </div>
+      <div id="weekBars"></div>
+    </div>
+  </div>
+
+  <!-- ===== CALENDAR ===== -->
+  <div class="section">
+    <div class="section-title">Calendar</div>
+    <div class="gm-card">
+      <div class="cal-head">
+        <button class="cal-nav" id="calPrev" type="button" aria-label="Previous month">‹</button>
+        <span class="cal-title" id="calTitle">—</span>
+        <button class="cal-nav" id="calNext" type="button" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-detail" id="calDetail" style="display:none">
+        <div class="cal-detail-title" id="calDetailTitle"></div>
+        <div id="calDetailBars"></div>
+        <ul class="sess-list" id="calDetailSessions" style="display:none"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MANAGE ===== -->
+  <div class="section">
+    <div class="gm-card">
+      <button class="mng-toggle" id="mngToggle" type="button">⚙ Manage projects</button>
+      <div class="mng-body" id="mngBody">
+        <div id="mngList"></div>
+        <div class="mng-add">
+          <input class="mng-color" id="mngColor" type="color" value="#A78BFA" aria-label="Color">
+          <input class="mng-input" id="mngInput" type="text" placeholder="New project name…" autocomplete="off">
+          <button class="gm-add" id="mngAdd" type="button">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<script>
+(function () {
+  'use strict';
+
+  // ============================================================
+  //  Storage keys (all synced under the 'toggl:' prefix)
+  //    toggl:projects         -> [{id,name,color,map}]
+  //    toggl:running          -> {projectId, startedAt} | null
+  //    toggl:day:YYYY-MM-DD    -> [{id, projectId, start, end, sec}]
+  //    toggl:mirror:YYYY-MM-DD -> what Track last wrote into daily: (guard)
+  //  Auto-fill writes into the shared 'daily:'/'d30:' record that
+  //  daily.html owns — Track mirrors that same Supabase row too.
+  // ============================================================
+  const TZ = 'Europe/Prague';
+  function loadJSON(k, f) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? f : v; } catch (e) { return f; } }
+  function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+
+  function dayKeyOf(ms) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+  }
+  function todayKey() { return dayKeyOf(Date.now()); }
+  function shiftKey(key, days) {
+    const [y, m, d] = key.split('-').map(Number);
+    const dt = new Date(y, m - 1, d); dt.setDate(dt.getDate() + days);
+    const yy = dt.getFullYear(), mm = String(dt.getMonth() + 1).padStart(2, '0'), dd = String(dt.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+  }
+
+  // ---- projects -------------------------------------------------
+  // map: { daily?: <daily field>, d30?: <DISCIPLINED30 habit key> }
+  const DEFAULT_PROJECTS = [
+    { id: 'deepwork',   name: 'Deep Work',  color: '#6BE3A4', map: { d30: 'deep' } },
+    { id: 'studying',   name: 'Studying',   color: '#7DD3FC', map: { daily: 'studying', d30: 'study' } },
+    { id: 'lightwork',  name: 'Lightwork',  color: '#F2C063', map: {} },
+    { id: 'planning',   name: 'Planning',   color: '#A78BFA', map: {} },
+    { id: 'journaling', name: 'Journaling', color: '#F472B6', map: {} },
+    { id: 'meditation', name: 'Meditation', color: '#60A5FA', map: { daily: 'meditation', d30: 'meditate' } },
+    { id: 'gym',        name: 'Gym',        color: '#FB923C', map: { daily: 'gym', d30: 'workout' } },
+    { id: 'mindset',    name: 'Mindset',    color: '#34D399', map: {} },
+    { id: 'cardio',     name: 'Cardio',     color: '#FF6B6B', map: {} }
+  ];
+  function getProjects() {
+    let p = loadJSON('toggl:projects', null);
+    if (!p || !Array.isArray(p) || !p.length) { p = DEFAULT_PROJECTS.slice(); saveJSON('toggl:projects', p); }
+    return p;
+  }
+  function projById(id) { return getProjects().find(function (p) { return p.id === id; }) || null; }
+  function slug(name) {
+    const base = (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '') || 'proj';
+    const ids = getProjects().map(function (p) { return p.id; });
+    let id = base, n = 2;
+    while (ids.indexOf(id) !== -1) { id = base + n; n++; }
+    return id;
+  }
+
+  // ---- day sessions ---------------------------------------------
+  function getSessions(key) { const a = loadJSON('toggl:day:' + key, []); return Array.isArray(a) ? a : []; }
+  function setSessions(key, arr) {
+    if (arr && arr.length) saveJSON('toggl:day:' + key, arr);
+    else localStorage.removeItem('toggl:day:' + key);
+  }
+  let seqCounter = 0;
+  function seq() { seqCounter++; return Date.now().toString(36) + '-' + seqCounter; }
+
+  // ---- time formatting ------------------------------------------
+  function fmtClock(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+  function fmtHM(sec) {
+    const mins = Math.round(sec / 60);
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return h > 0 ? (h + ':' + String(m).padStart(2, '0')) : (m + 'm');
+  }
+  function fmtTime(ms) {
+    return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms));
+  }
+
+  // ============================================================
+  //  RUNNING TIMER  (wall-clock: only startedAt is stored, elapsed
+  //  is computed — so it keeps counting if you close the tab/phone)
+  // ============================================================
+  function getRunning() { return loadJSON('toggl:running', null); }
+  function startProject(id) {
+    if (getRunning()) stopRunning();          // switching = stop current, start new
+    saveJSON('toggl:running', { projectId: id, startedAt: Date.now() });
+  }
+  function stopRunning() {
+    const run = getRunning();
+    localStorage.removeItem('toggl:running');
+    if (!run) return null;
+    const end = Date.now();
+    const sec = Math.round((end - run.startedAt) / 1000);
+    if (sec >= 1) {
+      const key = dayKeyOf(run.startedAt);
+      const arr = getSessions(key);
+      arr.push({ id: seq(), projectId: run.projectId, start: run.startedAt, end: end, sec: sec });
+      setSessions(key, arr);
+      syncDailyFor(key);
+    }
+    return run;
+  }
+  document.getElementById('timerStop').addEventListener('click', function () {
+    stopRunning(); renderAll();
+  });
+
+  let tick = null;
+  function renderTimer() {
+    const run = getRunning();
+    const clock = document.getElementById('timerClock');
+    const stopBtn = document.getElementById('timerStop');
+    const state = document.getElementById('timerState');
+    const activeWrap = document.getElementById('timerActiveProj');
+    const chipsLabel = document.getElementById('chipsLabel');
+    clearInterval(tick);
+    if (run) {
+      const p = projById(run.projectId) || { name: 'Unknown', color: '#888' };
+      state.style.display = 'none';
+      activeWrap.style.display = 'inline-flex';
+      document.getElementById('timerActiveName').textContent = p.name;
+      const dot = document.getElementById('timerDot'); dot.style.background = p.color; dot.style.color = p.color;
+      clock.classList.add('running');
+      stopBtn.classList.add('show');
+      chipsLabel.textContent = 'Switch project';
+      const paint = function () {
+        const sec = (Date.now() - run.startedAt) / 1000;
+        clock.textContent = fmtClock(sec);
+        document.getElementById('timerSince').textContent = 'since ' + fmtTime(run.startedAt);
+      };
+      paint(); tick = setInterval(paint, 1000);
+    } else {
+      state.style.display = 'block';
+      state.textContent = 'Nothing running';
+      activeWrap.style.display = 'none';
+      clock.textContent = '0:00:00';
+      clock.classList.remove('running');
+      stopBtn.classList.remove('show');
+      document.getElementById('timerSince').textContent = '';
+      chipsLabel.textContent = 'Tap a project to start';
+    }
+  }
+
+  function renderChips() {
+    const grid = document.getElementById('chipGrid');
+    const run = getRunning();
+    grid.innerHTML = '';
+    getProjects().forEach(function (p) {
+      const b = document.createElement('button');
+      b.className = 'chip' + (run && run.projectId === p.id ? ' active' : '');
+      b.type = 'button';
+      b.style.color = p.color;
+      const dot = document.createElement('span'); dot.className = 'chip-dot'; dot.style.background = p.color;
+      const name = document.createElement('span'); name.className = 'chip-name'; name.textContent = p.name; name.style.color = 'var(--text-primary)';
+      b.append(dot, name);
+      b.addEventListener('click', function () {
+        if (run && run.projectId === p.id) { stopRunning(); }
+        else { startProject(p.id); }
+        renderAll();
+      });
+      grid.appendChild(b);
+    });
+  }
+
+  // ============================================================
+  //  PER-PROJECT BAR SUMMARIES
+  // ============================================================
+  function totalsFor(keys) {
+    const map = {}; let total = 0;
+    keys.forEach(function (k) {
+      getSessions(k).forEach(function (s) {
+        map[s.projectId] = (map[s.projectId] || 0) + s.sec; total += s.sec;
+      });
+    });
+    return { map: map, total: total };
+  }
+  function renderBars(container, totals) {
+    container.innerHTML = '';
+    const entries = getProjects()
+      .map(function (p) { return { p: p, sec: totals.map[p.id] || 0 }; })
+      .filter(function (e) { return e.sec > 0; })
+      .sort(function (a, b) { return b.sec - a.sec; });
+    if (!entries.length) {
+      const d = document.createElement('div'); d.className = 'empty-state'; d.textContent = 'No time tracked yet.';
+      container.appendChild(d); return;
+    }
+    const max = entries[0].sec;
+    entries.forEach(function (e) {
+      const row = document.createElement('div'); row.className = 'pbar-row';
+      const name = document.createElement('div'); name.className = 'pbar-name';
+      const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = e.p.color;
+      const nm = document.createElement('span'); nm.textContent = e.p.name; nm.style.overflow = 'hidden'; nm.style.textOverflow = 'ellipsis';
+      name.append(dot, nm);
+      const track = document.createElement('div'); track.className = 'pbar-track';
+      const fill = document.createElement('div'); fill.className = 'pbar-fill';
+      fill.style.width = Math.max(4, (e.sec / max) * 100) + '%'; fill.style.background = e.p.color;
+      track.appendChild(fill);
+      const val = document.createElement('div'); val.className = 'pbar-val'; val.textContent = fmtHM(e.sec);
+      row.append(name, track, val);
+      container.appendChild(row);
+    });
+  }
+
+  function renderSessionList(ul, key, allowDelete) {
+    const arr = getSessions(key).slice().sort(function (a, b) { return b.start - a.start; });
+    ul.innerHTML = '';
+    if (!arr.length) { ul.style.display = 'none'; return; }
+    ul.style.display = 'block';
+    arr.forEach(function (s) {
+      const p = projById(s.projectId) || { name: 'Unknown', color: '#888' };
+      const li = document.createElement('li'); li.className = 'sess';
+      const dot = document.createElement('span'); dot.className = 'sess-dot'; dot.style.background = p.color;
+      const nm = document.createElement('span'); nm.className = 'sess-name'; nm.textContent = p.name;
+      const tm = document.createElement('span'); tm.className = 'sess-time'; tm.textContent = fmtTime(s.start) + '–' + fmtTime(s.end);
+      const du = document.createElement('span'); du.className = 'sess-dur'; du.textContent = fmtHM(s.sec);
+      li.append(dot, nm, tm, du);
+      if (allowDelete) {
+        const del = document.createElement('button'); del.className = 'sess-del'; del.type = 'button'; del.textContent = '×';
+        del.addEventListener('click', function () {
+          const cur = getSessions(key).filter(function (x) { return x.id !== s.id; });
+          setSessions(key, cur); syncDailyFor(key); renderAll();
+        });
+        li.appendChild(del);
+      }
+      ul.appendChild(li);
+    });
+  }
+
+  function renderToday() {
+    const key = todayKey();
+    const t = totalsFor([key]);
+    document.getElementById('todayTotal').textContent = fmtHM(t.total);
+    renderBars(document.getElementById('todayBars'), t);
+    renderSessionList(document.getElementById('todaySessions'), key, true);
+  }
+  function renderWeek() {
+    const keys = []; for (let i = 0; i < 7; i++) keys.push(shiftKey(todayKey(), -i));
+    const t = totalsFor(keys);
+    document.getElementById('weekTotal').textContent = fmtHM(t.total);
+    renderBars(document.getElementById('weekBars'), t);
+  }
+
+  // ============================================================
+  //  CALENDAR
+  // ============================================================
+  let calYear, calMonth;                 // month currently shown (0-based month)
+  let selectedDay = null;
+  (function initCal() { const parts = todayKey().split('-').map(Number); calYear = parts[0]; calMonth = parts[1] - 1; })();
+
+  function daySeconds(key) { let s = 0; getSessions(key).forEach(function (x) { s += x.sec; }); return s; }
+  function heatClass(sec) {
+    const h = sec / 3600;
+    if (h <= 0) return '';
+    if (h < 1) return 'h1'; if (h < 2.5) return 'h2'; if (h < 4.5) return 'h3'; return 'h4';
+  }
+  function renderCalendar() {
+    const grid = document.getElementById('calGrid');
+    const first = new Date(calYear, calMonth, 1);
+    document.getElementById('calTitle').textContent = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const tk = todayKey();
+    const tParts = tk.split('-').map(Number);
+    document.getElementById('calNext').disabled = (calYear > tParts[0]) || (calYear === tParts[0] && calMonth >= tParts[1] - 1);
+
+    grid.innerHTML = '';
+    ['M', 'T', 'W', 'T', 'F', 'S', 'S'].forEach(function (d) {
+      const el = document.createElement('div'); el.className = 'cal-dow'; el.textContent = d; grid.appendChild(el);
+    });
+    const lead = (first.getDay() + 6) % 7;   // make Monday = 0
+    for (let i = 0; i < lead; i++) { const e = document.createElement('div'); e.className = 'cal-cell empty'; grid.appendChild(e); }
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = calYear + '-' + String(calMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const cell = document.createElement('div');
+      const sec = daySeconds(key);
+      const isFuture = key > tk;
+      cell.className = 'cal-cell ' + heatClass(sec) + (key === tk ? ' today' : '') + (isFuture ? ' future' : '') + (key === selectedDay ? ' selected' : '');
+      const num = document.createElement('div'); num.className = 'cal-daynum'; num.textContent = d;
+      cell.appendChild(num);
+      if (sec > 0) { const hr = document.createElement('div'); hr.className = 'cal-hrs'; hr.textContent = fmtHM(sec); cell.appendChild(hr); }
+      if (!isFuture) {
+        cell.addEventListener('click', function () {
+          selectedDay = (selectedDay === key ? null : key);
+          renderCalendar(); renderCalDetail();
+        });
+      }
+      grid.appendChild(cell);
+    }
+  }
+  function renderCalDetail() {
+    const wrap = document.getElementById('calDetail');
+    if (!selectedDay) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    const parts = selectedDay.split('-').map(Number);
+    const label = new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+    const t = totalsFor([selectedDay]);
+    document.getElementById('calDetailTitle').textContent = label + ' · ' + fmtHM(t.total);
+    renderBars(document.getElementById('calDetailBars'), t);
+    renderSessionList(document.getElementById('calDetailSessions'), selectedDay, true);
+  }
+  document.getElementById('calPrev').addEventListener('click', function () {
+    calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar();
+  });
+  document.getElementById('calNext').addEventListener('click', function () {
+    if (document.getElementById('calNext').disabled) return;
+    calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar();
+  });
+
+  // ============================================================
+  //  AUTO-FILL INTO THE DAILY TRACKER (shared 'daily:' record)
+  //  Mirror-guarded: we only overwrite a Daily field when it is
+  //  empty or still holds the value Track wrote last time, so a
+  //  manual edit in daily.html is never clobbered.
+  // ============================================================
+  function syncDailyFor(key) {
+    const totals = totalsFor([key]).map;          // seconds per projectId
+    const dailyMin = {}; const d30Min = {};
+    getProjects().forEach(function (p) {
+      const sec = totals[p.id] || 0; if (!p.map) return;
+      const min = Math.round(sec / 60);
+      if (p.map.daily) dailyMin[p.map.daily] = (dailyMin[p.map.daily] || 0) + min;
+      if (p.map.d30)   d30Min[p.map.d30]     = (d30Min[p.map.d30] || 0) + min;
+    });
+
+    const dayRec = loadJSON('daily:' + key, {});
+    const mirror = loadJSON('toggl:mirror:' + key, { daily: {}, d30: {} });
+    mirror.daily = mirror.daily || {}; mirror.d30 = mirror.d30 || {};
+    dayRec.d30 = dayRec.d30 || {};
+
+    // daily.* fields are stored as strings (matching daily.html inputs)
+    Object.keys(Object.assign({}, dailyMin, mirror.daily)).forEach(function (f) {
+      const min = dailyMin[f] || 0;
+      const prev = mirror.daily[f];
+      const cur = dayRec[f];
+      const curEmpty = (cur == null || cur === '');
+      const ownedByTrack = (prev != null && String(cur) === String(prev));
+      if (min > 0) {
+        if (curEmpty || ownedByTrack) dayRec[f] = String(min);
+        mirror.daily[f] = min;
+      } else {
+        if (ownedByTrack) delete dayRec[f];
+        delete mirror.daily[f];
+      }
+    });
+
+    // d30.* values are numbers; daily.html auto-completes the habit at >= 10 min
+    Object.keys(Object.assign({}, d30Min, mirror.d30)).forEach(function (k) {
+      const min = d30Min[k] || 0;
+      const prev = mirror.d30[k];
+      const cur = dayRec.d30[k];
+      const curEmpty = (cur == null || cur === '' || cur === 0);
+      const ownedByTrack = (prev != null && Number(cur) === Number(prev));
+      if (min > 0) {
+        if (curEmpty || ownedByTrack) dayRec.d30[k] = min;
+        mirror.d30[k] = min;
+      } else {
+        if (ownedByTrack) delete dayRec.d30[k];
+        delete mirror.d30[k];
+      }
+    });
+
+    if (Object.keys(dayRec.d30).length === 0) delete dayRec.d30;
+
+    // Persist. daily.html's setDay drops empty records; mirror that rule.
+    const filled = Object.keys(dayRec).some(function (k) {
+      const v = dayRec[k];
+      return v !== '' && v !== false && v != null && !(typeof v === 'object' && Object.keys(v).length === 0);
+    });
+    if (filled) saveJSON('daily:' + key, dayRec); else localStorage.removeItem('daily:' + key);
+
+    if (Object.keys(mirror.daily).length === 0 && Object.keys(mirror.d30).length === 0) localStorage.removeItem('toggl:mirror:' + key);
+    else saveJSON('toggl:mirror:' + key, mirror);
+  }
+
+  // ============================================================
+  //  MANAGE PROJECTS
+  // ============================================================
+  document.getElementById('mngToggle').addEventListener('click', function () {
+    document.getElementById('mngBody').classList.toggle('open');
+  });
+  function renderManage() {
+    const list = document.getElementById('mngList');
+    list.innerHTML = '';
+    getProjects().forEach(function (p) {
+      const row = document.createElement('div'); row.className = 'mng-row';
+      const sw = document.createElement('input'); sw.type = 'color'; sw.className = 'mng-swatch'; sw.value = p.color;
+      sw.addEventListener('change', function () { updateProject(p.id, { color: sw.value }); });
+      const nm = document.createElement('div'); nm.className = 'mng-name'; nm.contentEditable = 'true'; nm.textContent = p.name;
+      nm.addEventListener('blur', function () { const v = nm.textContent.trim(); if (v && v !== p.name) updateProject(p.id, { name: v }); });
+      nm.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); nm.blur(); } });
+      const tag = document.createElement('span'); tag.className = 'mng-map';
+      const parts = []; if (p.map && p.map.daily) parts.push('Daily'); if (p.map && p.map.d30) parts.push('D30');
+      tag.textContent = parts.length ? '→ ' + parts.join('+') : '';
+      const del = document.createElement('button'); del.className = 'mng-del'; del.type = 'button'; del.textContent = '×';
+      del.addEventListener('click', function () {
+        if (!confirm('Delete "' + p.name + '"? Past tracked time stays, but the project disappears from the picker.')) return;
+        const run = getRunning(); if (run && run.projectId === p.id) localStorage.removeItem('toggl:running');
+        saveJSON('toggl:projects', getProjects().filter(function (x) { return x.id !== p.id; }));
+        renderAll();
+      });
+      row.append(sw, nm, tag, del);
+      list.appendChild(row);
+    });
+  }
+  function updateProject(id, patch) {
+    const ps = getProjects().map(function (p) { return p.id === id ? Object.assign({}, p, patch) : p; });
+    saveJSON('toggl:projects', ps); renderAll();
+  }
+  function addProject() {
+    const input = document.getElementById('mngInput');
+    const name = input.value.trim(); if (!name) return;
+    const color = document.getElementById('mngColor').value || '#A78BFA';
+    const ps = getProjects(); ps.push({ id: slug(name), name: name, color: color, map: {} });
+    saveJSON('toggl:projects', ps); input.value = ''; renderAll();
+  }
+  document.getElementById('mngAdd').addEventListener('click', addProject);
+  document.getElementById('mngInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') addProject(); });
+
+  // ============================================================
+  //  RENDER + SYNC
+  // ============================================================
+  function renderAll() {
+    renderTimer(); renderChips(); renderToday(); renderWeek(); renderCalendar(); renderCalDetail(); renderManage();
+  }
+  renderAll();
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    // Track's own data.
+    initCloudSync({ appKey: 'track', syncedPrefixes: ['toggl:'], onApplied: renderAll });
+    // Mirror the SAME Supabase row daily.html owns, so auto-fill reaches
+    // every device and Track always reads the latest Daily state.
+    initCloudSync({ appKey: 'daily', syncedPrefixes: ['daily:', 'd30:'] });
+  });
+})();
+</script>
+</body>
+</html>
