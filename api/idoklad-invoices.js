@@ -70,16 +70,22 @@ export default async function handler(req, res) {
       });
     }
 
+    const isNullDate = (d) => !d || String(d).startsWith('1753');
     const invoices = list.map(iv => {
       const prices = iv.Prices || {};
+      const pa = iv.PartnerAddress || {};
+      const partner = pa.NickName
+        || [pa.Firstname, pa.Surname].filter(Boolean).join(' ').trim()
+        || iv.CompanyName || null;
       return {
         id: iv.Id,
         number: iv.DocumentNumber || iv.Number || null,
-        partner: iv.PartnerName || iv.PartnerContactName || iv.CompanyName || null,
+        partner: partner,
+        description: iv.Description || null,
         partnerId: iv.PartnerId != null ? iv.PartnerId : null,
         issued: iv.DateOfIssue || null,
         due: iv.DateOfMaturity || null,
-        paidOn: iv.DateOfPayment || null,
+        paidOn: isNullDate(iv.DateOfPayment) ? null : iv.DateOfPayment,
         // TotalWithVat is in the invoice currency; Hc = home currency (CZK)
         total: prices.TotalWithVat != null ? prices.TotalWithVat
              : (prices.TotalWithVatHc != null ? prices.TotalWithVatHc

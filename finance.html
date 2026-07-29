@@ -3503,9 +3503,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         row.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 14px;background:rgba(255,255,255,0.025);border-radius:var(--radius-md);margin-bottom:8px';
         row.innerHTML =
           '<div style="min-width:0">'
-          + '<div style="font-weight:600;color:var(--text-primary);font-size:14px">' + escapeHtml(iv.number || '—')
-          + (iv.partner ? ' · <span style="color:var(--text-secondary);font-weight:500">' + escapeHtml(iv.partner) + '</span>' : '')
+          + '<div style="font-weight:600;color:var(--text-primary);font-size:14px">' + escapeHtml(iv.partner || iv.number || '—')
+          + (iv.partner && iv.number ? ' · <span style="color:var(--text-tertiary);font-weight:500;font-size:12px">' + escapeHtml(iv.number) + '</span>' : '')
           + '</div>'
+          + (iv.description ? '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px">' + escapeHtml(iv.description) + '</div>' : '')
           + '<div style="font-size:11px;color:var(--text-tertiary);margin-top:3px">vystaveno ' + fmtInvDate(iv.issued) + ' · splatnost ' + fmtInvDate(iv.due) + '</div>'
           + '</div>'
           + '<div style="text-align:right">'
