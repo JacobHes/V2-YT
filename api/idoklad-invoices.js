@@ -52,10 +52,22 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: false, error: 'fetch_failed', status: invRes.status, detail });
     }
     const data = await invRes.json();
-    const list = Array.isArray(data) ? data : (data.Data || data.data || []);
+    let list = [];
+    if (Array.isArray(data)) list = data;
+    else if (data && Array.isArray(data.Data)) list = data.Data;
+    else if (data && Array.isArray(data.data)) list = data.data;
+    else if (data && Array.isArray(data.Items)) list = data.Items;
+    else if (data && data.Data && Array.isArray(data.Data.Items)) list = data.Data.Items;
 
     if (req.query && req.query.debug) {
-      return res.status(200).json({ ok: true, debug: true, sample: list[0] || null, total: list.length });
+      return res.status(200).json({
+        ok: true, debug: true,
+        topType: Array.isArray(data) ? 'array' : typeof data,
+        topKeys: (data && typeof data === 'object' && !Array.isArray(data)) ? Object.keys(data) : null,
+        listLen: list.length,
+        sample: list[0] || null,
+        rawSnippet: JSON.stringify(data).slice(0, 1000)
+      });
     }
 
     const invoices = list.map(iv => {

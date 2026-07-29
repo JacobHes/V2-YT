@@ -3481,7 +3481,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         } else if (data.error === 'auth_failed') {
           statusEl.innerHTML = 'Ověření u iDokladu selhalo — zkontroluj client_id / client_secret. <span style="color:var(--text-tertiary)">' + escapeHtml(String(data.detail || '')) + '</span>';
         } else {
-          statusEl.innerHTML = 'Chyba: ' + escapeHtml(String(data.error || 'unknown')) + (data.detail ? ' — ' + escapeHtml(String(data.detail)) : '');
+          statusEl.innerHTML = 'Chyba: ' + escapeHtml(String(data.error || 'unknown'))
+            + (data.message ? ' — ' + escapeHtml(String(data.message)) : '')
+            + (data.detail ? ' — ' + escapeHtml(String(data.detail)) : '');
         }
         return;
       }
