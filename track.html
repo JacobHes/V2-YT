@@ -291,6 +291,19 @@ body::after {
           <input class="mng-input" id="mngInput" type="text" placeholder="New project name…" autocomplete="off">
           <button class="gm-add" id="mngAdd" type="button">Add</button>
         </div>
+
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08)">
+          <div class="gm-eyebrow" style="margin-bottom:6px">Google Calendar</div>
+          <div style="font-size:12px;color:var(--text-tertiary,#76746E);line-height:1.5;margin-bottom:10px">
+            Paste your Apps Script URL. Every tracked session then lands on your calendar as a green ✓ event, next to your planned blocks.
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input class="mng-input" id="gcalUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:180px" autocomplete="off">
+            <button class="gm-add" id="gcalSave" type="button">Save</button>
+            <button class="gm-add" id="gcalTest" type="button" style="background:transparent;border:1px solid rgba(255,255,255,0.14)">Test</button>
+          </div>
+          <div id="gcalStatus" style="font-size:12px;margin-top:8px;color:var(--text-tertiary,#76746E)"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -397,9 +410,49 @@ body::after {
       arr.push({ id: seq(), projectId: run.projectId, start: run.startedAt, end: end, sec: sec });
       setSessions(key, arr);
       syncDailyFor(key);
+      const proj = projById(run.projectId);
+      postToCalendar(proj ? proj.name : 'Tracked', run.startedAt, end);
     }
     return run;
   }
+
+  // ---- Google Calendar (optional, via a personal Apps Script URL) -----
+  // Stored under a NON-synced key so the webhook URL never leaves the device.
+  function getGcalUrl() { return (localStorage.getItem('gcalUrl') || '').trim(); }
+  function postToCalendar(title, startMs, endMs) {
+    const url = getGcalUrl();
+    if (!url) return;
+    // no-cors fire-and-forget: Apps Script runs doPost, we don't read the reply.
+    try {
+      fetch(url, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ title: title, start: startMs, end: endMs })
+      });
+    } catch (e) {}
+  }
+  (function wireGcal() {
+    const input = document.getElementById('gcalUrl');
+    const status = document.getElementById('gcalStatus');
+    if (!input) return;
+    input.value = getGcalUrl();
+    document.getElementById('gcalSave').addEventListener('click', function () {
+      localStorage.setItem('gcalUrl', input.value.trim());
+      status.style.color = '#6ee7b7';
+      status.textContent = getGcalUrl()
+        ? 'Saved. Tracked sessions will now post to your calendar.'
+        : 'Cleared — calendar sync off.';
+    });
+    document.getElementById('gcalTest').addEventListener('click', function () {
+      const v = input.value.trim();
+      if (v) localStorage.setItem('gcalUrl', v);
+      if (!getGcalUrl()) { status.style.color = '#ff8a8a'; status.textContent = 'Paste your Apps Script URL first.'; return; }
+      const now = Date.now();
+      postToCalendar('Tracker test', now, now + 60000);
+      status.style.color = '#F2C063';
+      status.textContent = 'Sent a test event — check your calendar in ~1 min for "✓ Tracker test".';
+    });
+  })();
   document.getElementById('timerStop').addEventListener('click', function () {
     stopRunning(); renderAll();
   });
