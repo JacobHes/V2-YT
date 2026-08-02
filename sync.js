@@ -70,25 +70,54 @@
       try { if (!suppressSync && matches(k)) schedulePush(); } catch (e) {}
     };
 
+    // Array of objects that all carry a stable `id` (sessions, goals, …).
+    function idArray(a) {
+      return Array.isArray(a) && a.length > 0 &&
+        a.every(function (x) { return x && typeof x === 'object' && x.id != null; });
+    }
+    // Union two id-arrays: remote order first, then any local-only items.
+    function unionById(localArr, remoteArr) {
+      const seen = {}; const out = [];
+      remoteArr.forEach(function (x) { if (x && x.id != null && !(x.id in seen)) { seen[x.id] = 1; out.push(x); } });
+      localArr.forEach(function (x) { if (x && x.id != null && !(x.id in seen)) { seen[x.id] = 1; out.push(x); } });
+      return out;
+    }
+    // Merge remote INTO local without ever deleting local data.
+    //   - id-arrays (sessions/goals) are unioned, so a just-tracked item that
+    //     hasn't uploaded yet survives a refresh instead of being wiped.
+    //   - keys that exist only locally are kept (and pushed up).
+    //   - everything else: remote wins (unchanged behaviour).
+    // Trade-off: deletions do not propagate across devices via sync — an item
+    // removed on one device may reappear from another until removed there too.
     function applyRemote(remote) {
       if (!remote || typeof remote !== 'object') return false;
       suppressSync = true;
       let changed = false;
+      let needsPush = false;
       try {
         for (const k of Object.keys(remote)) {
           if (!matches(k)) continue;
-          const incoming = JSON.stringify(remote[k]);
-          const local = localStorage.getItem(k);
-          if (local !== incoming) {
+          const rv = remote[k];
+          const localRaw = localStorage.getItem(k);
+          let lv = null;
+          if (localRaw != null) { try { lv = JSON.parse(localRaw); } catch (e) { lv = null; } }
+          let val = rv;
+          if (Array.isArray(rv) && idArray(lv) && (rv.length === 0 || idArray(rv))) {
+            val = unionById(lv, rv);
+            if (val.length !== rv.length) needsPush = true;   // local had extra items
+          }
+          const incoming = JSON.stringify(val);
+          if (localRaw !== incoming) {
             try { origSet(k, incoming); changed = true; } catch (e) {}
           }
         }
-        for (const k of listAllKeys()) {
-          if (!(k in remote)) {
-            try { origRemove(k); changed = true; } catch (e) {}
-          }
+        // Keep local-only keys (never delete). Flag them so they upload.
+        const localKeys = listAllKeys();
+        for (let i = 0; i < localKeys.length; i++) {
+          if (!(localKeys[i] in remote)) needsPush = true;
         }
       } finally { suppressSync = false; }
+      if (needsPush) schedulePush();
       if (changed && typeof onApplied === 'function') {
         try { onApplied(); } catch (e) {}
       }
