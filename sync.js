@@ -32,6 +32,9 @@
     let pushTimer = null;
     let suppressSync = false;
     let lastSyncedJson = null;
+    // Guard: never upload before the first remote fetch+merge has finished, so
+    // a sparse local state can't overwrite (wipe) the cloud during page load.
+    let initialSyncDone = false;
 
     function matches(k) {
       if (!k) return false;
@@ -126,6 +129,7 @@
 
     async function pushNow() {
       if (!supa) return;
+      if (!initialSyncDone) { schedulePush(); return; }   // wait for the initial pull+merge
       const state = collect();
       const json = JSON.stringify(state);
       if (json === lastSyncedJson) return;
@@ -142,6 +146,7 @@
       pushTimer = setTimeout(pushNow, 250);
     }
     function flushOnUnload() {
+      if (!initialSyncDone) return;   // don't overwrite the cloud before it's loaded
       const state = collect();
       const json = JSON.stringify(state);
       if (json === lastSyncedJson) return;
@@ -173,6 +178,9 @@
           schedulePush();
         }
       } catch (e) {}
+      // Remote has now been fetched and merged — uploads are safe from here.
+      initialSyncDone = true;
+      schedulePush();   // flush anything captured during load (merged/local-only)
       supa.channel('app_state_' + appKey)
         .on('postgres_changes', {
           event: '*',
