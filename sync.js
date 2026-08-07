@@ -86,36 +86,55 @@
               .map(function (x) { return String(x.id); });
     }
 
+    // Four timestamp maps, all merged max-wins across devices:
+    //   k  key   deleted at        i  item id deleted at
+    //   rk key   re-created at     ri item id re-created at
+    // Something counts as deleted only while its delete stamp is the newer of
+    // the pair. Without the revive stamps, a key that gets deleted and made
+    // again — toggl:running on every Start, a day key you re-track — would be
+    // killed off by whichever device still remembered the delete.
     function loadTomb() {
-      const t = parseVal(origGet(TOMB_KEY));
-      return { k: (t && t.k) || {}, i: (t && t.i) || {} };
+      const t = parseVal(origGet(TOMB_KEY)) || {};
+      return { k: t.k || {}, i: t.i || {}, rk: t.rk || {}, ri: t.ri || {} };
     }
     function saveTomb(t) {
       try { origSet(TOMB_KEY, JSON.stringify(t)); } catch (e) {}
     }
-    // Record deleted item ids / a deleted key so remote can't resurrect them.
-    function tombstone(ids, key, revivedKey) {
+    function isDead(t, side, token) {
+      const rev = side === 'k' ? t.rk : t.ri;
+      return has(t[side], token) && t[side][token] > (rev[token] || 0);
+    }
+    // gone: item ids that disappeared · dead: a key that was removed
+    // back: a key written again · alive: item ids present in the new value
+    function tombstone(gone, dead, back, alive) {
       const t = loadTomb(); const now = Date.now(); let dirty = false;
-      for (let i = 0; i < ids.length; i++) { t.i[ids[i]] = now; dirty = true; }
-      if (key) { t.k[key] = now; dirty = true; }
-      if (revivedKey && has(t.k, revivedKey)) { delete t.k[revivedKey]; dirty = true; }
+      gone.forEach(function (id) { t.i[id] = now; dirty = true; });
+      if (dead) { t.k[dead] = now; dirty = true; }
+      // Stamped on every write, not only when a delete is known about: a device
+      // that missed the delete would otherwise write the key with no revival to
+      // show for it, and the next device that did see the delete would win.
+      if (back) { t.rk[back] = now; dirty = true; }
+      if (alive) {
+        alive.forEach(function (id) { if (has(t.i, id)) { t.ri[id] = now; dirty = true; } });
+      }
       if (dirty) saveTomb(t);
     }
 
     localStorage.setItem = function (k, v) {
       const track = !suppressSync && k !== TOMB_KEY && matches(k);
-      let gone = [];
+      let gone = [], alive = [];
       if (track) {
+        alive = idsOf(parseVal(v));
         const before = idsOf(parseVal(origGet(k)));
         if (before.length) {
           const kept = {};
-          idsOf(parseVal(v)).forEach(function (id) { kept[id] = 1; });
+          alive.forEach(function (id) { kept[id] = 1; });
           gone = before.filter(function (id) { return !has(kept, id); });
         }
       }
       origSet(k, v);
       try {
-        if (track) { tombstone(gone, null, k); schedulePush(); }
+        if (track) { tombstone(gone, null, k, alive); schedulePush(); }
       } catch (e) {}
     };
     localStorage.removeItem = function (k) {
@@ -123,7 +142,7 @@
       const gone = track ? idsOf(parseVal(origGet(k))) : [];
       origRemove(k);
       try {
-        if (track) { tombstone(gone, k, null); schedulePush(); }
+        if (track) { tombstone(gone, k, null, null); schedulePush(); }
       } catch (e) {}
     };
 
@@ -143,8 +162,9 @@
     function mergeTomb(remoteTomb) {
       const t = loadTomb();
       let dirty = false;
+      const SIDES = ['k', 'i', 'rk', 'ri'];
       if (remoteTomb && typeof remoteTomb === 'object') {
-        ['k', 'i'].forEach(function (side) {
+        SIDES.forEach(function (side) {
           const src = remoteTomb[side];
           if (!src || typeof src !== 'object') return;
           Object.keys(src).forEach(function (id) {
@@ -154,7 +174,7 @@
         });
       }
       const cutoff = Date.now() - TOMB_TTL;
-      ['k', 'i'].forEach(function (side) {
+      SIDES.forEach(function (side) {
         Object.keys(t[side]).forEach(function (id) {
           if (t[side][id] < cutoff) { delete t[side][id]; dirty = true; }
         });
@@ -181,8 +201,8 @@
           if (k === TOMB_KEY || !matches(k)) continue;
           const rv = remote[k];
           const localRaw = localStorage.getItem(k);
-          // Key was deleted here and not re-created — don't bring it back.
-          if (localRaw == null && has(tomb.k, k)) { needsPush = true; continue; }
+          // Key was deleted here and not re-created since — don't bring it back.
+          if (localRaw == null && isDead(tomb, 'k', k)) { needsPush = true; continue; }
           let lv = null;
           if (localRaw != null) { try { lv = JSON.parse(localRaw); } catch (e) { lv = null; } }
           let val = rv;
@@ -191,7 +211,7 @@
             if (val.length !== rv.length) needsPush = true;   // local had extra items
           }
           if (Array.isArray(val) && idArray(val)) {
-            const kept = val.filter(function (x) { return !has(tomb.i, String(x.id)); });
+            const kept = val.filter(function (x) { return !isDead(tomb, 'i', String(x.id)); });
             if (kept.length !== val.length) needsPush = true; // remote had deleted items
             val = kept;
           }
@@ -207,10 +227,18 @@
             try { origSet(k, incoming); changed = true; } catch (e) {}
           }
         }
-        // Keep local-only keys (never delete). Flag them so they upload.
+        // A vanished key is absent from `remote`, so the loop above can never see
+        // it — without this sweep a Stop on one device would leave every other
+        // device still holding a running timer. Our own newer write outranks the
+        // delete via rk, so a timer we just started is safe.
         const localKeys = listAllKeys();
         for (let i = 0; i < localKeys.length; i++) {
-          if (!(localKeys[i] in remote)) needsPush = true;
+          const lk = localKeys[i];
+          if (!has(remote, lk)) needsPush = true;      // local-only → upload it
+          if (lk === TOMB_KEY) continue;
+          if (isDead(tomb, 'k', lk)) {
+            try { origRemove(lk); changed = true; needsPush = true; } catch (e) {}
+          }
         }
       } finally { suppressSync = false; }
       if (needsPush) schedulePush();
