@@ -147,6 +147,19 @@ body::after {
 .sess-del { border: 0; background: transparent; color: var(--text-tertiary); font-size: 17px; cursor: pointer; padding: 0 2px; opacity: 0.5; }
 .sess-del:hover { color: var(--danger); opacity: 1; }
 
+/* manual entry */
+.sess.manual .sess-dot { box-shadow: inset 0 0 0 2px #050506; }
+.add-btn { margin-top: 12px; width: 100%; padding: 10px; border: 1px dashed rgba(255,255,255,0.13); border-radius: 11px; background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.03em; cursor: pointer; }
+.add-btn:hover { border-color: rgba(255,255,255,0.26); color: var(--text-secondary); }
+.add-form { margin-top: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 13px; background: rgba(0,0,0,0.24); color-scheme: dark; }
+.add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+.add-row > .mng-input { flex: 1; min-width: 116px; }
+.add-gcal { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-tertiary); margin-bottom: 10px; cursor: pointer; }
+.add-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.add-preview { flex: 1; min-width: 130px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+.add-preview.bad { color: var(--danger); }
+.add-cancel { border: 0; background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 12px; cursor: pointer; padding: 8px 4px; }
+.add-cancel:hover { color: var(--text-secondary); }
 .map-note { font-size: 11px; color: var(--text-tertiary); margin-top: 12px; line-height: 1.5; display: flex; gap: 7px; }
 .map-note b { color: var(--success); font-weight: 700; }
 
@@ -243,6 +256,8 @@ body::after {
       </div>
       <div id="todayBars"></div>
       <ul class="sess-list" id="todaySessions" style="display:none"></ul>
+      <div id="todayAddWrap"></div>
+      <button class="add-btn" id="todayAdd" type="button">+ Add entry</button>
       <div class="map-note">
         <span>↳</span>
         <span><b>Auto-synced to Daily:</b> Deep Work, Studying, Meditation &amp; Gym minutes are written into today's Daily Tracker + DISCIPLINED30 for you.</span>
@@ -276,7 +291,29 @@ body::after {
         <div class="cal-detail-title" id="calDetailTitle"></div>
         <div id="calDetailBars"></div>
         <ul class="sess-list" id="calDetailSessions" style="display:none"></ul>
+        <div id="calAddWrap"></div>
+        <button class="add-btn" id="calAdd" type="button">+ Add entry</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== MANUAL ENTRY (moved into whichever card opened it) ===== -->
+  <div class="add-form" id="addForm" style="display:none">
+    <div class="add-row">
+      <input class="mng-input" id="addDate" type="date" aria-label="Date">
+      <select class="mng-input" id="addProj" aria-label="Project"></select>
+    </div>
+    <div class="add-row">
+      <input class="mng-input" id="addStart" type="time" step="60" aria-label="Start time">
+      <input class="mng-input" id="addDur" type="text" inputmode="text" placeholder="45m · 1:30 · 90" aria-label="Duration" autocomplete="off">
+    </div>
+    <label class="add-gcal" id="addGcalRow" style="display:none">
+      <input type="checkbox" id="addGcal" checked> Also post to Google Calendar
+    </label>
+    <div class="add-foot">
+      <span class="add-preview" id="addPreview"></span>
+      <button class="add-cancel" id="addCancel" type="button">Cancel</button>
+      <button class="gm-add" id="addSave" type="button">Add</button>
     </div>
   </div>
 
@@ -407,11 +444,18 @@ body::after {
     if (sec >= 1) {
       const key = dayKeyOf(run.startedAt);
       const arr = getSessions(key);
-      arr.push({ id: seq(), projectId: run.projectId, start: run.startedAt, end: end, sec: sec });
-      setSessions(key, arr);
-      syncDailyFor(key);
-      const proj = projById(run.projectId);
-      postToCalendar(proj ? proj.name : 'Tracked', run.startedAt, end);
+      // A running timer that came back from cloud sync would otherwise be
+      // stopped twice and logged twice. Same project + same start = same session.
+      const dup = arr.some(function (x) {
+        return x.projectId === run.projectId && x.start === run.startedAt;
+      });
+      if (!dup) {
+        arr.push({ id: seq(), projectId: run.projectId, start: run.startedAt, end: end, sec: sec });
+        setSessions(key, arr);
+        syncDailyFor(key);
+        const proj = projById(run.projectId);
+        postToCalendar(proj ? proj.name : 'Tracked', run.startedAt, end);
+      }
     }
     return run;
   }
@@ -560,7 +604,8 @@ body::after {
     ul.style.display = 'block';
     arr.forEach(function (s) {
       const p = projById(s.projectId) || { name: 'Unknown', color: '#888' };
-      const li = document.createElement('li'); li.className = 'sess';
+      const li = document.createElement('li'); li.className = 'sess' + (s.manual ? ' manual' : '');
+      if (s.manual) li.title = 'Added manually';
       const dot = document.createElement('span'); dot.className = 'sess-dot'; dot.style.background = p.color;
       const nm = document.createElement('span'); nm.className = 'sess-name'; nm.textContent = p.name;
       const tm = document.createElement('span'); tm.className = 'sess-time'; tm.textContent = fmtTime(s.start) + '–' + fmtTime(s.end);
@@ -766,6 +811,122 @@ body::after {
   }
   document.getElementById('mngAdd').addEventListener('click', addProject);
   document.getElementById('mngInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') addProject(); });
+
+  // ============================================================
+  //  MANUAL ENTRY  (log something you forgot to start the timer for)
+  // ============================================================
+  // Minutes to add to a UTC instant to get Prague wall-clock time.
+  function tzOffsetAt(ts) {
+    const p = {};
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: TZ, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).formatToParts(new Date(ts)).forEach(function (x) { p[x.type] = x.value; });
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - ts;
+  }
+  // A wall-clock time in TZ → epoch ms, whatever timezone the device is in.
+  // Two passes so the DST changeover days land on the right instant.
+  function msAt(key, hh, mm) {
+    const [y, mo, d] = key.split('-').map(Number);
+    const wall = Date.UTC(y, mo - 1, d, hh, mm, 0);
+    let ts = wall;
+    for (let i = 0; i < 2; i++) ts = wall - tzOffsetAt(ts);
+    return ts;
+  }
+  // "90" · "45m" · "1:30" · "1h" · "1h30" · "1.5h"  →  minutes
+  function parseDur(raw) {
+    const s = String(raw || '').trim().toLowerCase().replace(',', '.');
+    let m;
+    if ((m = s.match(/^(\d+):([0-5]\d)$/)))                             return +m[1] * 60 + +m[2];
+    if ((m = s.match(/^(\d+(?:\.\d+)?)\s*h\s*(?:(\d+)\s*m?)?$/)))       return Math.round(+m[1] * 60) + (+m[2] || 0);
+    if ((m = s.match(/^(\d+)\s*m$/)))                                   return +m[1];
+    if ((m = s.match(/^(\d+(?:\.\d+)?)$/)))                             return Math.round(+m[1]);
+    return null;
+  }
+
+  const addForm = document.getElementById('addForm');
+  const addDate = document.getElementById('addDate');
+  const addProj = document.getElementById('addProj');
+  const addStart = document.getElementById('addStart');
+  const addDur = document.getElementById('addDur');
+  const addPreview = document.getElementById('addPreview');
+  const addGcalRow = document.getElementById('addGcalRow');
+  const addGcal = document.getElementById('addGcal');
+
+  // Validate the form into a session, or an error to show under it.
+  function addPlan() {
+    const key = addDate.value;
+    const t = (addStart.value || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!key || !t) return { err: 'Pick a date and a start time.' };
+    if (key > todayKey()) return { err: "That day hasn't happened yet." };
+    const min = parseDur(addDur.value);
+    if (min == null || min <= 0) return { err: 'How long? Try 45m, 1:30 or 90.' };
+    if (min > 24 * 60) return { err: "That's longer than a day." };
+    const start = msAt(key, +t[1], +t[2]);
+    const end = start + min * 60000;
+    if (end > Date.now() + 60000) return { err: 'That would end in the future.' };
+    return { key: key, start: start, end: end, sec: min * 60 };
+  }
+  function renderAddPreview() {
+    const p = addPlan();
+    addPreview.classList.toggle('bad', !!p.err);
+    addPreview.textContent = p.err || (fmtTime(p.start) + '–' + fmtTime(p.end) + '  ·  ' + fmtHM(p.sec));
+  }
+  function openAdd(key, wrap) {
+    const cur = addProj.value;
+    addProj.innerHTML = '';
+    getProjects().forEach(function (p) {
+      const o = document.createElement('option'); o.value = p.id; o.textContent = p.name;
+      addProj.appendChild(o);
+    });
+    if (cur) addProj.value = cur;
+    addDate.value = key;
+    addDate.max = todayKey();
+    if (!addStart.value) addStart.value = '09:00';
+    if (!addDur.value) addDur.value = '30m';
+    addGcalRow.style.display = getGcalUrl() ? 'flex' : 'none';
+    wrap.appendChild(addForm);            // one form, reparented to the caller
+    addForm.style.display = 'block';
+    renderAddPreview();
+    addDur.focus(); addDur.select();
+  }
+  function closeAdd() { addForm.style.display = 'none'; }
+
+  function saveEntry() {
+    const p = addPlan();
+    if (p.err) { renderAddPreview(); return; }
+    const pid = addProj.value;
+    if (!pid) { addPreview.classList.add('bad'); addPreview.textContent = 'Pick a project.'; return; }
+    const arr = getSessions(p.key);
+    // Same guard as stopRunning: same project + same start = same session.
+    if (arr.some(function (x) { return x.projectId === pid && x.start === p.start; })) {
+      addPreview.classList.add('bad'); addPreview.textContent = 'Already logged that one.';
+      return;
+    }
+    arr.push({ id: seq(), projectId: pid, start: p.start, end: p.end, sec: p.sec, manual: true });
+    setSessions(p.key, arr);
+    syncDailyFor(p.key);
+    if (getGcalUrl() && addGcal.checked) {
+      const proj = projById(pid);
+      postToCalendar(proj ? proj.name : 'Tracked', p.start, p.end);
+    }
+    closeAdd();
+    renderAll();
+  }
+
+  document.getElementById('todayAdd').addEventListener('click', function () {
+    openAdd(todayKey(), document.getElementById('todayAddWrap'));
+  });
+  document.getElementById('calAdd').addEventListener('click', function () {
+    openAdd(selectedDay || todayKey(), document.getElementById('calAddWrap'));
+  });
+  document.getElementById('addCancel').addEventListener('click', closeAdd);
+  document.getElementById('addSave').addEventListener('click', saveEntry);
+  [addDate, addStart, addDur, addProj].forEach(function (el) {
+    el.addEventListener('input', renderAddPreview);
+  });
+  addDur.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveEntry(); });
 
   // ============================================================
   //  RENDER + SYNC
