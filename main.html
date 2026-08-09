@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+<script src="grant-client.js" defer></script>
 <style>
 :root {
   --text-primary: #FAFAFA;
@@ -257,6 +258,84 @@ body::after {
   content: ''; flex: 1; height: 1px;
   background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
 }
+
+/* ---------- Grant panel ---------- */
+.grant-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.grant-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.grant-reset {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.grant-reset:hover { color: var(--text-secondary); }
+.grant-flows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.grant-flow {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 7px 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.grant-flow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+  color: var(--text-primary);
+}
+.grant-flow:disabled { opacity: 0.4; cursor: default; }
+/* Scrolls internally so a long session never stretches the card off-screen. */
+.grant-log {
+  max-height: 380px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.grant-log:empty { display: none; }
+.grant-turn-who {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+.grant-turn-text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.grant-turn-user .grant-turn-text { color: var(--text-secondary); }
+.grant-turn-text.is-thinking { color: var(--text-tertiary); font-style: italic; }
+.grant-turn-text.is-error { color: var(--danger); }
+.grant-meta {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+.grant-meta:empty { display: none; }
 
 .gm-card {
   position: relative;

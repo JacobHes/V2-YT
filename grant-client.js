@@ -1,0 +1,466 @@
+// =============================================================
+// Grant, client side. Loaded by main.html as a plain script.
+//
+// Three jobs:
+//   1. ADAPTER  — turn what main.html already stores into the typed payload
+//                 the /api/grant contract defines. Grant reads this; he never
+//                 guesses at it, so anything we cannot honestly fill is null
+//                 rather than invented.
+//   2. TRANSPORT— POST to /api/grant and render the SSE stream as it arrives.
+//   3. PANEL    — the five flows, as a card in the existing gm-card grid.
+//
+// Deliberately reads the same localStorage keys main.html owns rather than
+// duplicating state: goals:<date>, plan:<date>, energy:<date>, debrief:<date>,
+// loops:open, plus daily:<date> from the daily tracker page.
+// =============================================================
+(function () {
+  'use strict';
+
+  var ENDPOINT = '/api/grant';
+  var HISTORY_KEY = 'grant:history';   // not in syncedPrefixes, stays local
+  var MAX_STORED_TURNS = 40;
+
+  // ---------- storage (mirrors main.html's helpers) ----------
+  function storeGet(key) {
+    try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
+  }
+  function storeSet(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+    if (typeof key === 'string' && key.indexOf('goals:') === 0) {
+      window.dispatchEvent(new CustomEvent('goals-changed'));
+    }
+  }
+  function storeListKeys(prefix) {
+    var out = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf(prefix) === 0) out.push(k);
+    }
+    return out;
+  }
+
+  // ---------- dates (must match main.html: the day flips at 06:00) ----------
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateToKey(d) {
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  function activeDate() {
+    var now = new Date();
+    if (now.getHours() < 6) {
+      var d = new Date(now);
+      d.setDate(d.getDate() - 1);
+      return dateToKey(d);
+    }
+    return dateToKey(now);
+  }
+  function tomorrowDate() {
+    var now = new Date();
+    var d = new Date(now);
+    if (now.getHours() >= 6) d.setDate(d.getDate() + 1);
+    return dateToKey(d);
+  }
+  function daysBetween(fromStr, toStr) {
+    var a = fromStr.split('-').map(Number), b = toStr.split('-').map(Number);
+    return Math.round((new Date(b[0], b[1] - 1, b[2]) - new Date(a[0], a[1] - 1, a[2])) / 86400000);
+  }
+
+  function getGoals(dateStr) {
+    var g = storeGet('goals:' + dateStr);
+    return Array.isArray(g) ? g : [];
+  }
+
+  // ---------- adapter ----------
+
+  // main.html tags energy as mover/prep/admin; the contract wants MOVER/PREP/ADMIN.
+  function toTag(energy) {
+    return energy ? String(energy).toUpperCase() : null;
+  }
+
+  // A task carries no createdAt, but rollover copies it forward by text, so the
+  // oldest goals: date holding the same text is when it first appeared. That is
+  // the number the doctrine cares about: how long it has been sitting.
+  function ageDaysFor(task, todayStr) {
+    if (!task.text) return null;
+    var earliest = null;
+    storeListKeys('goals:').forEach(function (key) {
+      var dateStr = key.slice('goals:'.length);
+      if (dateStr > todayStr) return;
+      var hit = getGoals(dateStr).some(function (g) {
+        return g.id === task.id || g.text === task.text;
+      });
+      if (hit && (earliest === null || dateStr < earliest)) earliest = dateStr;
+    });
+    return earliest === null ? null : daysBetween(earliest, todayStr);
+  }
+
+  // Grant needs to tell an aimed-but-never-fired arrow from a landed one, so the
+  // debrief can be honest about which happened.
+  function statusFor(task, isPastCutoff) {
+    if (task.done) return 'done';
+    if (task.firedAt) return 'fired';
+    if (task.arrow && isPastCutoff) return 'UNFIRED';
+    return 'open';
+  }
+
+  function breakpointFor(task) {
+    var note = task.breakpoint;
+    if (!note || typeof note !== 'object') return null;
+    var any = note.whereAmI || note.thinking || note.nextStep || note.context;
+    return any
+      ? {
+          whereAmI: note.whereAmI || '',
+          thinking: note.thinking || '',
+          nextStep: note.nextStep || '',
+          context: note.context || '',
+        }
+      : null;
+  }
+
+  // Streak = consecutive days the arrow LANDED, matching main.html's
+  // processStreak(). Task count is deliberately not what this measures.
+  function arrowStreak(todayStr) {
+    var dates = storeListKeys('goals:')
+      .map(function (k) { return k.slice('goals:'.length); })
+      .filter(function (d) { return d <= todayStr; })
+      .sort();
+    var count = 0;
+    dates.forEach(function (dateStr) {
+      var arrow = getGoals(dateStr).find(function (g) { return g.arrow; });
+      if (arrow && arrow.done) count += 1;
+      else if (dateStr < todayStr) count = 0;   // today is still in play
+    });
+    return count;
+  }
+
+  // Sleep, bedtime and meditation live on the daily tracker page under
+  // daily:<date>. Same origin, so we can read them without a round trip.
+  function trackerFor(dateStr) {
+    var day = storeGet('daily:' + dateStr) || {};
+    var out = {};
+    if (day.bedTime) out.bedtime = day.bedTime;
+    if (day.wakeTime) out.wakeTime = day.wakeTime;
+    if (day.bedTime && day.wakeTime) {
+      var bed = day.bedTime.split(':').map(Number);
+      var wake = day.wakeTime.split(':').map(Number);
+      var mins = wake[0] * 60 + wake[1] - (bed[0] * 60 + bed[1]);
+      if (mins <= 0) mins += 24 * 60;
+      out.sleepHours = Math.round((mins / 60) * 10) / 10;
+    }
+    if (day.meditation !== undefined && day.meditation !== '') {
+      out.meditationMin = Number(day.meditation);
+    }
+    var plan = storeGet('plan:' + dateStr);
+    out.planLocked = !!(plan && plan.locked);
+    return out;
+  }
+
+  // energy:<date> stores one value per day, not an hourly series, so there is
+  // no real curve to send. Null is honest; a fabricated curve would have Grant
+  // timing the arrow against noise.
+  function energyCurve() {
+    return null;
+  }
+
+  function openLoops() {
+    var loops = storeGet('loops:open');
+    return Array.isArray(loops)
+      ? loops.map(function (l) { return { text: l.text, closed: false }; })
+      : [];
+  }
+
+  /**
+   * Build the payload for one call.
+   * @param {string} mode  night_before | morning | midday | debrief | adhoc
+   * @param {string} message
+   */
+  function buildPayload(mode, message) {
+    var todayStr = activeDate();
+    // The night-before flow plans tomorrow, so it must read tomorrow's list.
+    var targetDate = mode === 'night_before' ? tomorrowDate() : todayStr;
+    var goals = getGoals(targetDate);
+    var pastCutoff = new Date().getHours() >= 21 || mode === 'debrief';
+
+    var tasks = goals.map(function (g) {
+      return {
+        id: g.id,
+        title: g.text,
+        tag: toTag(g.energy),
+        category: g.category || null,   // set from the panel; never inferred
+        ageDays: ageDaysFor(g, todayStr),
+        isArrow: !!g.arrow,
+        status: statusFor(g, pastCutoff),
+        breakpointNote: breakpointFor(g),
+      };
+    });
+
+    var arrow = goals.find(function (g) { return g.arrow; });
+
+    return {
+      mode: mode,
+      now: new Date().toISOString(),
+      energy: storeGet('energy:' + todayStr) || null,
+      tasks: tasks,
+      arrow: arrow ? arrow.id : null,
+      arrowStreak: arrowStreak(todayStr),
+      tracker: trackerFor(todayStr),
+      energyCurve: energyCurve(),
+      openLoops: openLoops(),
+      history: loadHistory(),
+      message: message || '',
+    };
+  }
+
+  // ---------- history (the app owns it; Grant has no memory between calls) ----------
+  function loadHistory() {
+    var h = storeGet(HISTORY_KEY);
+    return Array.isArray(h) ? h : [];
+  }
+  function pushHistory(role, content) {
+    var h = loadHistory();
+    h.push({ role: role, content: content });
+    storeSet(HISTORY_KEY, h.slice(-MAX_STORED_TURNS));
+  }
+  function clearHistory() { storeSet(HISTORY_KEY, []); }
+
+  // ---------- transport ----------
+
+  /**
+   * POST the payload and stream the reply.
+   * onDelta(text) fires per chunk; onDone({sectionIds, usage}) at the end.
+   */
+  async function ask(payload, onDelta, onDone, onError) {
+    var response;
+    try {
+      response = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      onError('Could not reach Grant. Check the connection.');
+      return;
+    }
+
+    // A non-streaming error (bad payload, missing key) comes back as JSON.
+    if (!response.ok) {
+      var detail = '';
+      try { detail = (await response.json()).error || ''; } catch (e) {}
+      onError(detail || ('Grant returned ' + response.status));
+      return;
+    }
+
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var meta = {};
+
+    for (;;) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      buffer += decoder.decode(chunk.value, { stream: true });
+
+      // SSE frames are separated by a blank line. Anything after the last
+      // separator is a partial frame, so it stays in the buffer.
+      var frames = buffer.split('\n\n');
+      buffer = frames.pop();
+
+      for (var i = 0; i < frames.length; i++) {
+        var lines = frames[i].split('\n');
+        var event = '';
+        var dataRaw = '';
+        for (var j = 0; j < lines.length; j++) {
+          if (lines[j].indexOf('event: ') === 0) event = lines[j].slice(7);
+          else if (lines[j].indexOf('data: ') === 0) dataRaw += lines[j].slice(6);
+        }
+        if (!event || !dataRaw) continue;
+
+        var data;
+        try { data = JSON.parse(dataRaw); } catch (e) { continue; }
+
+        if (event === 'meta') meta = data;
+        else if (event === 'delta') onDelta(data.text);
+        else if (event === 'error') { onError(data.message); return; }
+        else if (event === 'done') { onDone(Object.assign({}, meta, data)); return; }
+      }
+    }
+
+    // Stream ended without a done frame: the function was cut off mid-reply.
+    onError('Grant was cut off before finishing.');
+  }
+
+  // ---------- panel ----------
+  var els = {};
+  var busy = false;
+
+  var FLOWS = [
+    { mode: 'night_before', label: 'Plan tomorrow', prompt: 'Plan tomorrow with me.' },
+    { mode: 'morning', label: 'Morning', prompt: 'No plan locked. What am I doing today?' },
+    { mode: 'midday', label: 'Energy check', prompt: 'Energy check in.' },
+    { mode: 'adhoc', label: "I'm stuck", prompt: "I can't start. I'm stalling on the arrow." },
+    { mode: 'debrief', label: 'Debrief', prompt: 'Debrief the day.' },
+  ];
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function addTurn(role, text) {
+    var turn = el('div', 'grant-turn grant-turn-' + role);
+    turn.appendChild(el('div', 'grant-turn-who', role === 'user' ? 'You' : 'Grant'));
+    var body = el('div', 'grant-turn-text', text || '');
+    turn.appendChild(body);
+    els.log.appendChild(turn);
+    els.log.scrollTop = els.log.scrollHeight;
+    return body;
+  }
+
+  function setBusy(state) {
+    busy = state;
+    els.send.disabled = state;
+    els.input.disabled = state;
+    Array.prototype.forEach.call(els.flows.children, function (b) { b.disabled = state; });
+  }
+
+  async function run(mode, message) {
+    if (busy) return;
+    var text = (message || '').trim();
+    if (!text) return;
+
+    setBusy(true);
+    addTurn('user', text);
+    pushHistory('user', text);
+
+    var body = addTurn('grant', '');
+    body.classList.add('is-thinking');
+    body.textContent = 'thinking…';
+
+    var reply = '';
+    var started = false;
+
+    await ask(
+      buildPayload(mode, text),
+      function onDelta(delta) {
+        if (!started) { body.classList.remove('is-thinking'); body.textContent = ''; started = true; }
+        reply += delta;
+        body.textContent = reply;
+        els.log.scrollTop = els.log.scrollHeight;
+      },
+      function onDone(info) {
+        body.classList.remove('is-thinking');
+        if (reply) pushHistory('assistant', reply);
+        // Retrieval check: which doctrine sections this answer was built on.
+        els.meta.textContent = (info.sectionIds || []).length
+          ? 'doctrine: ' + info.sectionIds.join(', ')
+          : 'doctrine: none loaded';
+        setBusy(false);
+      },
+      function onError(message) {
+        body.classList.remove('is-thinking');
+        body.classList.add('is-error');
+        body.textContent = message;
+        setBusy(false);
+      }
+    );
+  }
+
+  function mount() {
+    var today = document.getElementById('gmCardToday');
+    if (!today || !today.parentNode) return;   // layout changed; fail quiet
+
+    var card = el('div', 'gm-card grant-card');
+    card.id = 'gmCardGrant';
+
+    var head = el('div', 'grant-head');
+    head.appendChild(el('span', 'grant-title', 'Grant'));
+    var reset = el('button', 'grant-reset', 'New session');
+    reset.type = 'button';
+    head.appendChild(reset);
+    card.appendChild(head);
+
+    els.flows = el('div', 'grant-flows');
+    FLOWS.forEach(function (flow) {
+      var button = el('button', 'grant-flow', flow.label);
+      button.type = 'button';
+      button.addEventListener('click', function () { run(flow.mode, flow.prompt); });
+      els.flows.appendChild(button);
+    });
+    card.appendChild(els.flows);
+
+    els.log = el('div', 'grant-log');
+    card.appendChild(els.log);
+
+    els.meta = el('div', 'grant-meta', '');
+    card.appendChild(els.meta);
+
+    var inputWrap = el('div', 'goal-input-wrap gm-input-wrap');
+    els.input = el('input', 'gm-input');
+    els.input.type = 'text';
+    els.input.placeholder = 'Ask Grant…';
+    els.input.autocomplete = 'off';
+    els.send = el('button', 'gm-add', 'Send');
+    els.send.type = 'button';
+    inputWrap.appendChild(els.input);
+    inputWrap.appendChild(els.send);
+    card.appendChild(inputWrap);
+
+    function submit() {
+      var text = els.input.value.trim();
+      if (!text) return;
+      els.input.value = '';
+      run('adhoc', text);
+    }
+    els.send.addEventListener('click', submit);
+    els.input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    });
+    reset.addEventListener('click', function () {
+      clearHistory();
+      els.log.innerHTML = '';
+      els.meta.textContent = '';
+    });
+
+    today.parentNode.insertBefore(card, today.nextSibling);
+
+    // Replay this session so a reload does not look like Grant forgot.
+    loadHistory().slice(-8).forEach(function (turn) {
+      addTurn(turn.role === 'user' ? 'user' : 'grant', turn.content);
+    });
+  }
+
+  // Exposed so the console and any future UI can drive the same code path.
+  window.Grant = {
+    buildPayload: buildPayload,
+    ask: ask,
+    run: run,
+    clearHistory: clearHistory,
+    /** Set CLIENT / INNER_WORK on a task. The jump-ship rule depends on it. */
+    setCategory: function (dateStr, id, category) {
+      var key = 'goals:' + dateStr;
+      var list = storeGet(key);
+      if (!Array.isArray(list)) return;
+      list.forEach(function (g) {
+        if (g.id !== id) return;
+        if (category) g.category = category;
+        else delete g.category;
+      });
+      storeSet(key, list);
+    },
+    /** Capture a breakpoint note when a MOVER is stopped mid-stream. */
+    setBreakpoint: function (dateStr, id, note) {
+      var key = 'goals:' + dateStr;
+      var list = storeGet(key);
+      if (!Array.isArray(list)) return;
+      list.forEach(function (g) { if (g.id === id) g.breakpoint = note; });
+      storeSet(key, list);
+    },
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mount);
+  } else {
+    mount();
+  }
+})();

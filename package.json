@@ -4,9 +4,16 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0",
     "@supabase/supabase-js": "^2.45.0"
   },
   "engines": {
     "node": ">=18"
+  },
+  "scripts": {
+    "build:knowledge": "node scripts/build-knowledge.mjs",
+    "test:retrieval": "node scripts/test-retrieval.mjs",
+    "dry-run": "node scripts/dry-run.mjs",
+    "test:adapter": "node scripts/test-adapter.mjs"
   }
 }
