@@ -277,11 +277,11 @@ body.hud .gm-age {
  * innerHTML rebuild, and the rows never leave #goalList, which keeps
  * renderRouting()'s `#goalList .gm-row` query intact. */
 body.hud #goalList { display: flex; flex-direction: column; }
-body.hud #goalList > .gm-row:has(.gm-energy-mover) { order: 1; }
-body.hud #goalList > .gm-row:has(.gm-energy-prep)  { order: 2; }
-body.hud #goalList > .gm-row:has(.gm-energy-admin) { order: 3; }
-body.hud #goalList > .gm-row:has(.gm-energy-none)  { order: 4; }
-body.hud #goalList > .gm-row.gm-row-done           { order: 5; }
+body.hud #goalList .gm-row:has(.gm-energy-mover) { order: 1; }
+body.hud #goalList .gm-row:has(.gm-energy-prep)  { order: 2; }
+body.hud #goalList .gm-row:has(.gm-energy-admin) { order: 3; }
+body.hud #goalList .gm-row:has(.gm-energy-none)  { order: 4; }
+body.hud #goalList .gm-row.gm-row-done           { order: 5; }
 body.hud #goalList > .gm-show-toggle               { order: 9; }
 
 
@@ -293,22 +293,29 @@ body.hud #goalList > .gm-show-toggle               { order: 9; }
  * puts it alone on the first line and pushes the whole control strip onto the
  * second, indented to line up under it. Nothing is hidden, moved in the DOM or
  * disabled: every control the row had, it still has. */
-@media (max-width: 620px) {
-  body.hud .gm-row { flex-wrap: wrap; row-gap: 2px; }
-  body.hud .gm-row > .gm-text { flex: 1 1 calc(100% - 52px); min-width: 0; }
-  /* .gm-energy is always the first control after the text, so indenting it
-   * indents the strip, whether or not the optional age badge is present. */
-  body.hud .gm-row > .gm-energy { margin-left: 52px; }
-  /* The strip is secondary to the task, so it reads quieter until touched. */
-  body.hud .gm-row > .gm-aim-btn,
-  body.hud .gm-row > .gm-queue-btn,
-  body.hud .gm-row > .goal-delete { opacity: 0.62; }
-  body.hud .gm-row > .gm-aim-btn.gm-aim-active,
-  body.hud .gm-row > .gm-queue-btn.gm-queue-active,
-  body.hud .gm-row > .gm-aim-btn:active,
-  body.hud .gm-row > .gm-queue-btn:active,
-  body.hud .gm-row > .goal-delete:active { opacity: 1; }
-}
+/* The row carries a handle, checkbox, text, tag, age and three icon buttons.
+ * Inline, that leaves the task itself a sliver: 175px in a 308px phone row,
+ * and less again inside a ~250px desktop column. Giving the text a basis of
+ * "everything except the handle and checkbox" puts it alone on the first line
+ * and pushes the control strip onto the second, indented beneath it.
+ *
+ * Not media-queried on purpose: what matters is the width of the row, and a
+ * three-column desktop row is narrower than a phone one. Nothing is hidden,
+ * removed from the DOM or disabled. */
+body.hud .gm-row { flex-wrap: wrap; row-gap: 2px; }
+body.hud .gm-row > .gm-text { flex: 1 1 calc(100% - 52px); min-width: 0; }
+/* .gm-energy is always the first control after the text, so indenting it
+ * indents the strip, whether or not the optional age badge is present. */
+body.hud .gm-row > .gm-energy { margin-left: 52px; }
+/* The strip is secondary to the task, so it reads quieter until touched. */
+body.hud .gm-row > .gm-aim-btn,
+body.hud .gm-row > .gm-queue-btn,
+body.hud .gm-row > .goal-delete { opacity: 0.62; }
+body.hud .gm-row > .gm-aim-btn.gm-aim-active,
+body.hud .gm-row > .gm-queue-btn.gm-queue-active,
+body.hud .gm-row > .gm-aim-btn:active,
+body.hud .gm-row > .gm-queue-btn:active,
+body.hud .gm-row > .goal-delete:active { opacity: 1; }
 
 /* A cooked day greys the movers. Keep that reading in HUD terms. */
 body.hud .gm-row.is-cooled { opacity: 0.42; border-left-color: var(--hud-text-faint); }
@@ -491,4 +498,78 @@ body.hud #gmCardGrant { border-color: rgba(110, 231, 183, 0.32); }
 
 @media (prefers-reduced-motion: reduce) {
   body.hud * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ---------- command header ---------- */
+body.hud .hud-hidden { display: none !important; }
+
+body.hud .hud-cmd { margin: 6px 0 22px; }
+body.hud .hud-cmd-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+body.hud .hud-cmd-top .hud-readout { flex: 1; align-items: center; }
+/* The energy chips and streak badge were moved here from the card; strip the
+ * spacing they carried for that context. */
+body.hud .hud-readout #gmCheckin { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; background: none; }
+body.hud .hud-readout #gmStreak { margin: 0; }
+body.hud .hud-cmd-date {
+  text-align: center;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--hud-text-dim);
+}
+body.hud .hud-cmd .hud-progress-row { margin-top: 16px; }
+/* The day bar keeps main.html's segments; the row just frames them. */
+body.hud .hud-cmd .gm-bar { flex: 1; display: flex; gap: 4px; margin: 0; }
+
+/* ---------- three panels ---------- */
+body.hud .hud-col {
+  position: relative;
+  background: var(--hud-panel);
+  border: 1px solid var(--hud-line);
+  padding: 16px 14px 12px;
+}
+body.hud .hud-col.hud-col-empty { display: none; }
+body.hud .hud-col-body { display: flex; flex-direction: column; gap: 9px; }
+body.hud .hud-col .hud-panel-head { margin-bottom: 12px; }
+body.hud .hud-col .hud-panel-foot {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(125, 200, 255, 0.14);
+}
+/* Inside a column the rows are already grouped, so the left edge carries the
+ * category and the row can lose its outer frame. */
+body.hud .hud-col .gm-row { border-top: 0; border-right: 0; border-bottom: 0; }
+
+/* Stacked by default. The arrow leads, as it does everywhere else. */
+body.hud #goalList { display: flex; flex-direction: column; gap: 12px; }
+
+@media (min-width: 900px) {
+  /* display:contents lets the two columns become flex items of the card so
+   * `order` can seat the arrow between them, which their DOM position (both
+   * inside #goalList) could never do on its own. */
+  body.hud #gmCardToday { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+  body.hud #gmCardToday > * { flex: 1 1 100%; }
+  body.hud #goalList { display: contents; }
+
+  /* min-width:0 is what actually makes three columns fit. Without it a flex
+   * item refuses to shrink below its content's min-content width, and the
+   * third column wraps onto its own row no matter what the bases add up to. */
+  body.hud .hud-col-movers { flex: 1 1 24%; min-width: 0; order: 10; }
+  body.hud #gmArrow        { flex: 1 1 34%; min-width: 0; order: 11; margin: 0; align-self: stretch; }
+  body.hud .hud-col-admin  { flex: 1 1 24%; min-width: 0; order: 12; }
+
+  body.hud #emptyState,
+  body.hud #gmPushBtn,
+  body.hud #gmCardToday > .goal-input-wrap,
+  body.hud #gmEodBtn,
+  body.hud #goalList > .gm-show-toggle { order: 20; }
 }
