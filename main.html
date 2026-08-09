@@ -11,6 +11,7 @@
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <script src="grant-client.js" defer></script>
+<script src="focus-mode.js" defer></script>
 <style>
 :root {
   --text-primary: #FAFAFA;
@@ -257,6 +258,70 @@ body::after {
 .section-title::after {
   content: ''; flex: 1; height: 1px;
   background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
+}
+
+/* ---------- Focus mode: one screen, one arrow ---------- */
+/* The arrow now leads the card, so it needs the weight the header used to carry. */
+.focus-mode #gmCardToday > .gm-arrow { margin-bottom: 16px; }
+.focus-mode #gmCardToday > .gm-cooked-banner { margin-bottom: 10px; }
+/* An empty arrow slot must not leave a gap above the header. */
+.focus-mode #gmCardToday > .gm-arrow-empty:empty { display: none; }
+
+/* Ring and ticker are reference now, not headline. */
+.focus-mode .day-ring-wrap,
+.focus-mode .ticker-row { opacity: 0.72; transition: opacity 0.25s; }
+.focus-mode .day-ring-wrap:hover,
+.focus-mode .ticker-row:hover { opacity: 1; }
+
+.focus-fold { margin-bottom: 14px; }
+.focus-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.2s;
+}
+.focus-summary::-webkit-details-marker { display: none; }
+.focus-summary:hover { background: rgba(255, 255, 255, 0.06); }
+.focus-summary-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.focus-summary-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 2px 8px;
+  min-width: 20px;
+  text-align: center;
+}
+.focus-summary-count:empty,
+.focus-summary-count.is-zero { opacity: 0.4; }
+/* Chevron, rotated on open. */
+.focus-summary::after {
+  content: '';
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--text-tertiary);
+  border-bottom: 1.5px solid var(--text-tertiary);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 0.2s;
+}
+.focus-fold[open] > .focus-summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.focus-fold[open] > .focus-summary { border-radius: 16px 16px 0 0; background: rgba(255, 255, 255, 0.05); }
+.focus-fold > .gm-card { margin-bottom: 0; border-radius: 0 0 16px 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .focus-summary, .focus-summary::after, .focus-mode .day-ring-wrap, .focus-mode .ticker-row { transition: none; }
 }
 
 /* ---------- Grant panel (Nova's visual language, main.html's tokens) ---------- */
