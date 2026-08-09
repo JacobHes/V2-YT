@@ -285,13 +285,29 @@ body.hud #goalList > .gm-row.gm-row-done           { order: 5; }
 body.hud #goalList > .gm-show-toggle               { order: 9; }
 
 
-/* On a narrow screen the row carries checkbox, text, tag, age and three icon
- * buttons. Letting the controls wrap to a second line gives the task text the
- * full width instead of squeezing it into five wrapped words. Pure layout: no
- * control is moved in the DOM, hidden or disabled. */
+/* On a narrow screen the row carries a handle, checkbox, text, tag, age and
+ * three icon buttons: 342px of content in a 308px row, which squeezed the task
+ * itself down to 175px and five wrapped words.
+ *
+ * Giving the text a flex-basis of "everything except the handle and checkbox"
+ * puts it alone on the first line and pushes the whole control strip onto the
+ * second, indented to line up under it. Nothing is hidden, moved in the DOM or
+ * disabled: every control the row had, it still has. */
 @media (max-width: 620px) {
-  body.hud .gm-row { flex-wrap: wrap; row-gap: 4px; }
-  body.hud .gm-row > .gm-text { flex: 1 1 62%; }
+  body.hud .gm-row { flex-wrap: wrap; row-gap: 2px; }
+  body.hud .gm-row > .gm-text { flex: 1 1 calc(100% - 52px); min-width: 0; }
+  /* .gm-energy is always the first control after the text, so indenting it
+   * indents the strip, whether or not the optional age badge is present. */
+  body.hud .gm-row > .gm-energy { margin-left: 52px; }
+  /* The strip is secondary to the task, so it reads quieter until touched. */
+  body.hud .gm-row > .gm-aim-btn,
+  body.hud .gm-row > .gm-queue-btn,
+  body.hud .gm-row > .goal-delete { opacity: 0.62; }
+  body.hud .gm-row > .gm-aim-btn.gm-aim-active,
+  body.hud .gm-row > .gm-queue-btn.gm-queue-active,
+  body.hud .gm-row > .gm-aim-btn:active,
+  body.hud .gm-row > .gm-queue-btn:active,
+  body.hud .gm-row > .goal-delete:active { opacity: 1; }
 }
 
 /* A cooked day greys the movers. Keep that reading in HUD terms. */
