@@ -289,6 +289,8 @@
   }
 
   // ---------- panel ----------
+  // Visual language carried over from the old Nova tile: floating orb, italic
+  // serif wordmark, accent-edged reply bubbles, animated thinking dots.
   var els = {};
   var busy = false;
 
@@ -307,14 +309,104 @@
     return node;
   }
 
-  function addTurn(role, text) {
-    var turn = el('div', 'grant-turn grant-turn-' + role);
-    turn.appendChild(el('div', 'grant-turn-who', role === 'user' ? 'You' : 'Grant'));
-    var body = el('div', 'grant-turn-text', text || '');
-    turn.appendChild(body);
-    els.log.appendChild(turn);
+  // ---------- reply formatting ----------
+  // Grant writes short paragraphs and "- " bullets. Rendering them as real
+  // paragraphs and lists is most of what makes the panel readable.
+  //
+  // Everything is HTML-escaped BEFORE any markup is added, so model output can
+  // never inject an element. Only the three patterns below become markup.
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function inline(str) {
+    return esc(str)
+      // "RULE BLOCK 2" is the doctrine citation Grant is told to name.
+      .replace(/\b(RULE BLOCK \d+)/g, '<span class="grant-rule">$1</span>')
+      .replace(/\*\*(.+?)\*\*/g, '<span class="grant-strong">$1</span>');
+  }
+
+  function formatReply(text) {
+    var blocks = String(text).trim().split(/\n{2,}/);
+    var html = '';
+
+    blocks.forEach(function (block) {
+      var lines = block.split('\n');
+      var buffer = [];
+      var items = [];
+
+      function flushText() {
+        if (buffer.length) { html += '<p>' + inline(buffer.join(' ')) + '</p>'; buffer = []; }
+      }
+      function flushList() {
+        if (items.length) { html += '<ul>' + items.join('') + '</ul>'; items = []; }
+      }
+
+      lines.forEach(function (line) {
+        var bullet = /^\s*[-*•]\s+(.*)$/.exec(line);
+        if (bullet) {
+          flushText();
+          items.push('<li>' + inline(bullet[1]) + '</li>');
+        } else if (line.trim()) {
+          flushList();
+          buffer.push(line.trim());
+        }
+      });
+      flushText();
+      flushList();
+    });
+
+    return html;
+  }
+
+  // Full section ids are long enough to wrap the footer onto three lines.
+  // The file prefix and leading numbering carry no meaning at a glance.
+  function shortSectionId(id) {
+    var slug = String(id).split('#')[1] || id;
+    slug = slug.replace(/^(part-)?[a-z0-9]+-/, '');
+    return slug.length > 30 ? slug.slice(0, 29) + '…' : slug;
+  }
+
+  function setOrb(state) {
+    if (!els.orb) return;
+    els.orb.classList.toggle('is-thinking', state === 'thinking');
+    els.orb.classList.toggle('is-done', state === 'done');
+  }
+
+  /** Append a message. Returns the bubble so a streaming reply can fill it. */
+  function addMessage(role, text) {
+    var msg = el('div', 'grant-msg grant-msg-' + role);
+    var bubble = el('div', 'grant-bubble');
+
+    if (role === 'grant') {
+      bubble.appendChild(el('span', 'grant-tag', 'Grant'));
+      var body = el('div', 'grant-body');
+      if (text) body.innerHTML = formatReply(text);
+      bubble.appendChild(body);
+      msg.appendChild(bubble);
+      els.log.appendChild(msg);
+      els.log.scrollTop = els.log.scrollHeight;
+      return { bubble: bubble, body: body };
+    }
+
+    bubble.textContent = text || '';
+    msg.appendChild(bubble);
+    els.log.appendChild(msg);
     els.log.scrollTop = els.log.scrollHeight;
-    return body;
+    return { bubble: bubble, body: bubble };
+  }
+
+  function showDots(body) {
+    body.innerHTML = '';
+    var dots = el('span', 'grant-dots');
+    dots.appendChild(el('i'));
+    dots.appendChild(el('i'));
+    dots.appendChild(el('i'));
+    body.appendChild(dots);
   }
 
   function setBusy(state) {
@@ -330,12 +422,12 @@
     if (!text) return;
 
     setBusy(true);
-    addTurn('user', text);
+    setOrb('thinking');
+    addMessage('user', text);
     pushHistory('user', text);
 
-    var body = addTurn('grant', '');
-    body.classList.add('is-thinking');
-    body.textContent = 'thinking…';
+    var slot = addMessage('grant', '');
+    showDots(slot.body);
 
     var reply = '';
     var started = false;
@@ -343,24 +435,26 @@
     await ask(
       buildPayload(mode, text),
       function onDelta(delta) {
-        if (!started) { body.classList.remove('is-thinking'); body.textContent = ''; started = true; }
+        if (!started) { slot.body.innerHTML = ''; started = true; }
         reply += delta;
-        body.textContent = reply;
+        // Re-rendering the whole reply each chunk keeps lists and paragraphs
+        // correct while they are still being written.
+        slot.body.innerHTML = formatReply(reply);
         els.log.scrollTop = els.log.scrollHeight;
       },
       function onDone(info) {
-        body.classList.remove('is-thinking');
         if (reply) pushHistory('assistant', reply);
-        // Retrieval check: which doctrine sections this answer was built on.
+        setOrb('done');
+        setTimeout(function () { setOrb(null); }, 2200);
         els.meta.textContent = (info.sectionIds || []).length
-          ? 'doctrine: ' + info.sectionIds.join(', ')
-          : 'doctrine: none loaded';
+          ? 'doctrine · ' + info.sectionIds.map(shortSectionId).join('  ·  ')
+          : 'doctrine · none loaded';
         setBusy(false);
       },
       function onError(message) {
-        body.classList.remove('is-thinking');
-        body.classList.add('is-error');
-        body.textContent = message;
+        slot.bubble.classList.add('is-error');
+        slot.body.textContent = message;
+        setOrb(null);
         setBusy(false);
       }
     );
@@ -374,7 +468,14 @@
     card.id = 'gmCardGrant';
 
     var head = el('div', 'grant-head');
-    head.appendChild(el('span', 'grant-title', 'Grant'));
+    els.orb = el('div', 'grant-orb');
+    head.appendChild(els.orb);
+
+    var wordmark = el('div', 'grant-wordmark');
+    wordmark.appendChild(el('div', 'grant-title', 'Grant'));
+    wordmark.appendChild(el('div', 'grant-role', 'your operator'));
+    head.appendChild(wordmark);
+
     var reset = el('button', 'grant-reset', 'New session');
     reset.type = 'button';
     head.appendChild(reset);
@@ -395,16 +496,17 @@
     els.meta = el('div', 'grant-meta', '');
     card.appendChild(els.meta);
 
-    var inputWrap = el('div', 'goal-input-wrap gm-input-wrap');
-    els.input = el('input', 'gm-input');
+    var composer = el('div', 'grant-composer');
+    els.input = el('input');
     els.input.type = 'text';
     els.input.placeholder = 'Ask Grant…';
     els.input.autocomplete = 'off';
-    els.send = el('button', 'gm-add', 'Send');
+    els.send = el('button', null, '↑');
     els.send.type = 'button';
-    inputWrap.appendChild(els.input);
-    inputWrap.appendChild(els.send);
-    card.appendChild(inputWrap);
+    els.send.setAttribute('aria-label', 'Send');
+    composer.appendChild(els.input);
+    composer.appendChild(els.send);
+    card.appendChild(composer);
 
     function submit() {
       var text = els.input.value.trim();
@@ -426,7 +528,7 @@
 
     // Replay this session so a reload does not look like Grant forgot.
     loadHistory().slice(-8).forEach(function (turn) {
-      addTurn(turn.role === 'user' ? 'user' : 'grant', turn.content);
+      addMessage(turn.role === 'user' ? 'user' : 'grant', turn.content);
     });
   }
 
