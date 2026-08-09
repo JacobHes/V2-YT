@@ -1,0 +1,371 @@
+/* =============================================================
+ * HUD theme: tokens and utilities.
+ *
+ * An original command-console look in the sci-fi HUD genre: dark glass
+ * panels, cyan light, thin rules, technical type. No logos, no marks, no
+ * reconstruction of anyone else's board.
+ *
+ * Nothing here is wired to the app yet. hud-preview.html is the only
+ * consumer until the look is approved.
+ *
+ * Load order note: this file only defines tokens and utility classes under
+ * .hud-* names, so it cannot collide with main.html's existing styles.
+ * ============================================================= */
+
+:root {
+  /* surfaces */
+  --hud-void: #06090f;
+  --hud-panel: rgba(12, 24, 38, 0.55);
+  --hud-panel-solid: rgba(8, 16, 26, 0.88);   /* backing under text */
+  --hud-blur: 14px;
+
+  /* rules and frames */
+  --hud-line: rgba(125, 200, 255, 0.28);
+  --hud-line-bright: rgba(150, 220, 255, 0.65);
+
+  /* text
+   * --hud-text-dim is raised from the drafted rgba(175,205,230,0.55),
+   * which measured 4.1:1 on the panel and missed the 4.5:1 floor this
+   * theme sets for itself. This value measures ~5.2:1. */
+  --hud-text: #dbeefc;
+  --hud-text-dim: rgba(190, 216, 236, 0.72);
+  --hud-text-faint: rgba(150, 185, 215, 0.30);   /* decoration only, never content */
+
+  /* category accents */
+  --acc-cyan:   #5bc8ff;   /* MOVER */
+  --acc-amber:  #ffc857;   /* PREP */
+  --acc-green:  #4fe0a0;   /* done */
+  --acc-red:    #ff6b6b;   /* ARROW / critical */
+  --acc-purple: #b06bff;   /* INNER_WORK */
+  --acc-orange: #ff9a4d;   /* ADMIN */
+
+  --hud-glow: 0 0 8px currentColor;
+
+  --hud-font: 'Rajdhani', 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --hud-font-body: 'Rajdhani', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* ---------- page ground: grid + scanlines ---------- */
+
+.hud-root {
+  position: relative;
+  min-height: 100%;
+  background-color: var(--hud-void);
+  color: var(--hud-text);
+  font-family: var(--hud-font-body);
+  /* 40px lattice, low alpha so it reads as texture rather than pattern */
+  background-image:
+    repeating-linear-gradient(to right,  rgba(125, 200, 255, 0.045) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(to bottom, rgba(125, 200, 255, 0.045) 0 1px, transparent 1px 40px);
+}
+
+/* Overlay, so scanlines sit above panels the way a display would show them. */
+.hud-root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(190, 230, 255, 0.022) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* ---------- typography ---------- */
+
+.hud-label {
+  font-family: var(--hud-font);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--hud-text-dim);
+}
+.hud-heading {
+  font-family: var(--hud-font);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--hud-text);
+}
+/* Body text stays calm: normal case, little tracking, sized to be read. */
+.hud-body {
+  font-family: var(--hud-font-body);
+  font-size: 14.5px;
+  line-height: 1.45;
+  letter-spacing: 0.005em;
+  color: var(--hud-text);
+}
+.hud-micro {
+  font-family: var(--hud-font);
+  font-size: 8.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--hud-text-faint);
+}
+.hud-glow { text-shadow: var(--hud-glow); }
+
+/* ---------- glass panel with corner brackets ---------- */
+
+.hud-panel {
+  position: relative;
+  background: var(--hud-panel);
+  backdrop-filter: blur(var(--hud-blur));
+  -webkit-backdrop-filter: blur(var(--hud-blur));
+  border: 1px solid var(--hud-line);
+  padding: 20px 18px 16px;
+  overflow: hidden;
+}
+
+/* Eight gradients in one pseudo-element paint all four brackets, which keeps
+ * ::after free for the sweep and adds no elements to the DOM. */
+.hud-panel::before {
+  content: '';
+  position: absolute;
+  /* inset 0, not -1px: the panel clips its overflow to contain the sweep, and
+   * a bracket drawn outside that box is clipped away and never appears. */
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  --b: var(--hud-line-bright);
+  background-image:
+    linear-gradient(var(--b), var(--b)), linear-gradient(var(--b), var(--b)),
+    linear-gradient(var(--b), var(--b)), linear-gradient(var(--b), var(--b)),
+    linear-gradient(var(--b), var(--b)), linear-gradient(var(--b), var(--b)),
+    linear-gradient(var(--b), var(--b)), linear-gradient(var(--b), var(--b));
+  background-repeat: no-repeat;
+  /* 2px so the bracket reads as a bracket rather than a brighter border. */
+  background-size:
+    16px 2px, 2px 16px,   /* top-left    */
+    16px 2px, 2px 16px,   /* top-right   */
+    16px 2px, 2px 16px,   /* bottom-left */
+    16px 2px, 2px 16px;   /* bottom-right*/
+  background-position:
+    left top,     left top,
+    right top,    right top,
+    left bottom,  left bottom,
+    right bottom, right bottom;
+}
+
+/* Light sweep on load: transform-driven so it stays on the GPU. */
+.hud-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(140, 215, 255, 0.10) 45%,
+    rgba(170, 230, 255, 0.16) 50%,
+    transparent
+  );
+  will-change: transform;
+  animation: hudSweep 2.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
+}
+@keyframes hudSweep {
+  from { transform: translateX(0); }
+  to   { transform: translateX(340%); }
+}
+
+/* The panel that matters: brighter frame, real glow, lifted. */
+.hud-panel-primary {
+  border-color: var(--hud-line-bright);
+  box-shadow:
+    0 0 0 1px rgba(120, 205, 255, 0.10),
+    0 0 34px -6px rgba(91, 200, 255, 0.42),
+    inset 0 0 44px -22px rgba(120, 205, 255, 0.55);
+}
+
+/* Anything with text sits on a solid backing, or the lattice shows through it. */
+.hud-inset {
+  position: relative;
+  z-index: 3;
+  background: var(--hud-panel-solid);
+  border-left: 2px solid var(--hud-line);
+  padding: 9px 12px;
+}
+
+/* ---------- section header on a rule ---------- */
+
+.hud-panel-head {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 9px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--hud-line);
+}
+.hud-panel-head .hud-count {
+  margin-left: auto;
+  font-family: var(--hud-font);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--hud-text-dim);
+}
+
+/* ---------- title with side rules and bracket glyphs ---------- */
+
+.hud-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: center;
+}
+.hud-title-row .hud-rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--hud-line) 35%, var(--hud-line));
+}
+.hud-title-row .hud-rule-r {
+  background: linear-gradient(to left, transparent, var(--hud-line) 35%, var(--hud-line));
+}
+.hud-bracket {
+  font-family: var(--hud-font);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--hud-text-faint);
+  white-space: nowrap;
+}
+.hud-title {
+  font-family: var(--hud-font);
+  font-size: clamp(19px, 4.4vw, 28px);
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--hud-text);
+  text-shadow: 0 0 14px rgba(120, 205, 255, 0.45);
+  white-space: nowrap;
+}
+
+/* ---------- progress bar ---------- */
+
+.hud-progress-row { display: flex; align-items: center; gap: 12px; }
+.hud-progress {
+  flex: 1;
+  height: 3px;
+  background: rgba(125, 200, 255, 0.12);
+  border: 1px solid var(--hud-line);
+  position: relative;
+  overflow: hidden;
+}
+.hud-progress > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(to right, rgba(91, 200, 255, 0.55), var(--acc-cyan));
+  box-shadow: 0 0 10px rgba(91, 200, 255, 0.7);
+}
+.hud-progress-value {
+  font-family: var(--hud-font);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--hud-text-dim);
+  min-width: 62px;
+  text-align: right;
+}
+
+/* ---------- status readout ---------- */
+
+.hud-readout { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.hud-readout-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--hud-font);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--hud-text-dim);
+}
+.hud-readout-item b {
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--hud-text);
+}
+
+/* ---------- list items ---------- */
+
+.hud-list { display: flex; flex-direction: column; gap: 11px; position: relative; z-index: 3; }
+.hud-item-tag {
+  display: inline-block;
+  margin-bottom: 5px;
+  font-family: var(--hud-font);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-shadow: var(--hud-glow);
+}
+.hud-item-text { color: var(--hud-text); }
+.hud-item-done .hud-item-text { color: var(--hud-text-dim); text-decoration: line-through; }
+
+/* Accents drive tags and frames, never long text. */
+.t-mover  { color: var(--acc-cyan); }
+.t-prep   { color: var(--acc-amber); }
+.t-admin  { color: var(--acc-orange); }
+.t-inner  { color: var(--acc-purple); }
+.t-done   { color: var(--acc-green); }
+.t-arrow  { color: var(--acc-red); }
+
+.hud-item-mover  { border-left-color: var(--acc-cyan); }
+.hud-item-prep   { border-left-color: var(--acc-amber); }
+.hud-item-admin  { border-left-color: var(--acc-orange); }
+.hud-item-inner  { border-left-color: var(--acc-purple); }
+.hud-item-done   { border-left-color: var(--acc-green); }
+
+/* ---------- decorative reticle ---------- */
+
+/* A static ring holds the shape; only the arcs inside it spin, so at rest it
+ * still reads as an instrument rather than a half-drawn circle. */
+.hud-reticle-wrap {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+}
+.hud-reticle-wrap::before,
+.hud-reticle-wrap::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--hud-line);
+}
+.hud-reticle-wrap::before { inset: 0; }
+.hud-reticle-wrap::after  { inset: 33%; }
+
+.hud-reticle {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 46deg,
+    rgba(91, 200, 255, 0.75) 60deg 74deg,
+    transparent 88deg 178deg,
+    rgba(91, 200, 255, 0.45) 190deg 200deg,
+    transparent 212deg 320deg,
+    rgba(91, 200, 255, 0.6) 332deg 344deg,
+    transparent 356deg 360deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%);
+  mask: radial-gradient(circle, transparent 62%, #000 64%);
+  will-change: transform;
+  animation: hudSpin 9s linear infinite;
+}
+@keyframes hudSpin { to { transform: rotate(360deg); } }
+
+/* ---------- motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-reticle { animation: none; }
+  .hud-panel::after { animation: none; opacity: 0; }
+}
