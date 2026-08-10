@@ -145,10 +145,16 @@ export function renderAppData(payload) {
  * summary. Grant has no memory between calls; the app owns this state.
  */
 export function windowHistory(history, windowSize = HISTORY_WINDOW) {
+  // A tool round-trip puts content blocks on a turn instead of a string, so
+  // both shapes have to survive the window.
   const clean = history
     .filter((turn) => turn && (turn.role === 'user' || turn.role === 'assistant'))
-    .map((turn) => ({ role: turn.role, content: String(turn.content ?? '') }))
-    .filter((turn) => turn.content.trim().length > 0);
+    .map((turn) =>
+      Array.isArray(turn.content)
+        ? { role: turn.role, content: turn.content }
+        : { role: turn.role, content: String(turn.content ?? '') }
+    )
+    .filter((turn) => (Array.isArray(turn.content) ? turn.content.length > 0 : turn.content.trim().length > 0));
 
   if (clean.length <= windowSize) return { kept: clean, overflow: [] };
 

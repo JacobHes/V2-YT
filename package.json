@@ -14,6 +14,7 @@
     "build:knowledge": "node scripts/build-knowledge.mjs",
     "test:retrieval": "node scripts/test-retrieval.mjs",
     "dry-run": "node scripts/dry-run.mjs",
-    "test:adapter": "node scripts/test-adapter.mjs"
+    "test:adapter": "node scripts/test-adapter.mjs",
+    "test:actions": "node scripts/test-actions.mjs"
   }
 }

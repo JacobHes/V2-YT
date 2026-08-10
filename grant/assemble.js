@@ -13,6 +13,7 @@
 import { SYSTEM_PROMPT, CONTEXT } from './grant-data.js';
 import { renderSections } from './retrieval.js';
 import { renderAppData } from './payload.js';
+import { TOOL_RULES } from './tools.js';
 
 // The mode says which step of the daily flow we are standing in. The doctrine
 // itself lives in the system prompt; this does not restate it.
@@ -44,7 +45,7 @@ export function buildSystem({ payload, sections, foldedSummary = null }) {
   // Block 1: the cache anchor. Must stay byte-identical across calls.
   blocks.push({
     type: 'text',
-    text: `${SYSTEM_PROMPT}\n\n---\n\n${CONTEXT}\n\n---\n\n${OUTPUT_RULES}`,
+    text: `${SYSTEM_PROMPT}\n\n---\n\n${CONTEXT}\n\n---\n\n${OUTPUT_RULES}\n\n---\n\n${TOOL_RULES}`,
     cache_control: { type: 'ephemeral' },
   });
 

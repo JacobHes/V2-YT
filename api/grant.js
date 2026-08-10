@@ -18,6 +18,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 import { selectSections } from '../grant/retrieval.js';
+import { API_TOOLS } from '../grant/tools.js';
 import { buildSystem, buildMessages } from '../grant/assemble.js';
 import { parsePayload, windowHistory, PayloadError, HISTORY_WINDOW } from '../grant/payload.js';
 
@@ -44,8 +45,21 @@ function getClient() {
 async function foldHistory(overflow) {
   if (!overflow.length) return null;
 
+  const asText = (content) =>
+    Array.isArray(content)
+      ? content
+          .map((b) =>
+            b.type === 'text' ? b.text
+            : b.type === 'tool_use' ? `[did: ${b.name}]`
+            : b.type === 'tool_result' ? '[result]'
+            : ''
+          )
+          .filter(Boolean)
+          .join(' ')
+      : String(content ?? '');
+
   const transcript = overflow
-    .map((turn) => `${turn.role === 'user' ? 'Jacob' : 'Grant'}: ${turn.content}`)
+    .map((turn) => `${turn.role === 'user' ? 'Jacob' : 'Grant'}: ${asText(turn.content)}`)
     .join('\n');
 
   try {
@@ -136,6 +150,7 @@ export default async function handler(req, res) {
       output_config: { effort: EFFORT },
       system,
       messages,
+      tools: API_TOOLS,
     });
 
     stream.on('text', (delta) => sse(res, 'delta', { text: delta }));
@@ -148,8 +163,12 @@ export default async function handler(req, res) {
       `[grant] usage in=${final.usage.input_tokens} cache_write=${final.usage.cache_creation_input_tokens} cache_read=${final.usage.cache_read_input_tokens} out=${final.usage.output_tokens} stop=${final.stop_reason}`
     );
 
+    // Tools run in the browser, where the tracker's data lives, so the turn
+    // ends here and the client sends the results back as a new request.
     sse(res, 'done', {
       stopReason: final.stop_reason,
+      assistantContent: final.content,
+      toolUse: final.content.filter((block) => block.type === 'tool_use'),
       sectionIds,
       usage: {
         input: final.usage.input_tokens,

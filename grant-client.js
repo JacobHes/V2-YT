@@ -220,6 +220,10 @@
     h.push({ role: role, content: content });
     storeSet(HISTORY_KEY, h.slice(-MAX_STORED_TURNS));
   }
+  /** Replace the whole transcript, used after a tool round-trip. */
+  function setHistory(turns) {
+    storeSet(HISTORY_KEY, turns.slice(-MAX_STORED_TURNS));
+  }
   function clearHistory() { storeSet(HISTORY_KEY, []); }
 
   // ---------- transport ----------
@@ -416,6 +420,15 @@
     Array.prototype.forEach.call(els.flows.children, function (b) { b.disabled = state; });
   }
 
+  /** Ask before a tool that is hard to undo. */
+  function confirmAction(question) {
+    return new Promise(function (resolve) {
+      resolve(window.confirm(question));
+    });
+  }
+
+  var MAX_TOOL_ROUNDS = 4;   // a stuck model must not loop on the tracker
+
   async function run(mode, message) {
     if (busy) return;
     var text = (message || '').trim();
@@ -431,33 +444,82 @@
 
     var reply = '';
     var started = false;
+    var lastInfo = null;
+    var failed = false;
+    var round = 0;
+    // First call carries the message; later rounds carry only tool results.
+    var pending = text;
 
-    await ask(
-      buildPayload(mode, text),
-      function onDelta(delta) {
-        if (!started) { slot.body.innerHTML = ''; started = true; }
-        reply += delta;
-        // Re-rendering the whole reply each chunk keeps lists and paragraphs
-        // correct while they are still being written.
-        slot.body.innerHTML = formatReply(reply);
-        els.log.scrollTop = els.log.scrollHeight;
-      },
-      function onDone(info) {
-        if (reply) pushHistory('assistant', reply);
-        setOrb('done');
-        setTimeout(function () { setOrb(null); }, 2200);
-        els.meta.textContent = (info.sectionIds || []).length
-          ? 'doctrine · ' + info.sectionIds.map(shortSectionId).join('  ·  ')
-          : 'doctrine · none loaded';
-        setBusy(false);
-      },
-      function onError(message) {
-        slot.bubble.classList.add('is-error');
-        slot.body.textContent = message;
-        setOrb(null);
-        setBusy(false);
+    while (round <= MAX_TOOL_ROUNDS && !failed) {
+      var payload = buildPayload(mode, pending);
+      payload.history = loadHistory();
+      var toolUse = null;
+      var assistantContent = null;
+
+      /* eslint-disable no-loop-func */
+      await ask(
+        payload,
+        function onDelta(delta) {
+          if (!started) { slot.body.innerHTML = ''; started = true; }
+          reply += delta;
+          slot.body.innerHTML = formatReply(reply);
+          els.log.scrollTop = els.log.scrollHeight;
+        },
+        function onDone(info) {
+          lastInfo = info;
+          toolUse = info.toolUse || [];
+          assistantContent = info.assistantContent || null;
+        },
+        function onError(message) {
+          slot.bubble.classList.add('is-error');
+          slot.body.textContent = message;
+          failed = true;
+        }
+      );
+      /* eslint-enable no-loop-func */
+
+      if (failed || !toolUse || !toolUse.length) break;
+
+      // Grant asked to change something. Do it here, where the data lives.
+      slot.body.innerHTML = formatReply(reply || '') ;
+      var note = document.createElement('div');
+      note.className = 'grant-acting';
+      note.textContent = 'working…';
+      slot.body.appendChild(note);
+
+      var outcome = await window.GrantActions.runTools(toolUse, confirmAction);
+      if (note.parentNode) note.parentNode.removeChild(note);
+
+      // The API needs the assistant turn that requested the tools, then the
+      // results, before it will continue.
+      var h = loadHistory();
+      h.push({ role: 'assistant', content: assistantContent });
+      h.push({ role: 'user', content: outcome.results });
+      setHistory(h);
+
+      if (outcome.applied.length) {
+        var done = document.createElement('div');
+        done.className = 'grant-applied';
+        done.textContent = 'applied: ' + outcome.applied.join(', ');
+        slot.body.appendChild(done);
       }
-    );
+
+      pending = '';     // the tool results are the next turn
+      round += 1;
+    }
+
+    if (!failed) {
+      if (reply) pushHistory('assistant', reply);
+      setOrb('done');
+      setTimeout(function () { setOrb(null); }, 2200);
+      var ids = (lastInfo && lastInfo.sectionIds) || [];
+      els.meta.textContent = ids.length
+        ? 'doctrine · ' + ids.map(shortSectionId).join('  ·  ')
+        : 'doctrine · none loaded';
+    } else {
+      setOrb(null);
+    }
+    setBusy(false);
   }
 
   function mount() {

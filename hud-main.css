@@ -660,3 +660,14 @@ body.hud .gm-row.is-urgent.gm-row-done .gm-text { color: var(--hud-text-dim); }
 .hud-tagmenu-mover { border-left-color: var(--acc-green); color: var(--acc-green); }
 .hud-tagmenu-prep  { border-left-color: var(--acc-amber); color: var(--acc-amber); }
 .hud-tagmenu-admin { border-left-color: var(--acc-orange); color: var(--acc-orange); }
+
+/* Grant acting on the tracker */
+.grant-acting, .grant-applied {
+  margin-top: 8px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.grant-acting { color: var(--hud-text-dim, #9ab); }
+.grant-applied { color: var(--acc-green, #4fe0a0); }
