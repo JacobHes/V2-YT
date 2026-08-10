@@ -575,3 +575,88 @@ body.hud #goalList { display: flex; flex-direction: column; gap: 12px; }
   body.hud #gmEodBtn,
   body.hud #goalList > .gm-show-toggle { order: 20; }
 }
+
+/* ---------- row controls ---------- */
+/* The queue bolt did nothing the row needed; hidden rather than cut out of
+ * main.html's JS, so the behaviour is one line away if it is ever wanted. */
+body.hud .gm-queue-btn { display: none !important; }
+/* Its amber row tint went with it, and amber now means urgent. */
+body.hud .gm-row.gm-row-queued { background: var(--hud-panel-solid); }
+body.hud .gm-row.gm-row-queued .gm-text { color: var(--hud-text); }
+
+body.hud .hud-urgent-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--hud-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--hud-text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.62;
+  transition: color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+body.hud .hud-urgent-btn:hover { opacity: 1; }
+body.hud .hud-urgent-btn.is-on {
+  opacity: 1;
+  color: var(--acc-orange);
+  border-color: var(--acc-orange);
+  background: rgba(255, 154, 77, 0.14);
+  text-shadow: var(--hud-glow);
+}
+
+/* Urgent takes the whole card, in the same language as everything else:
+ * cut frame, tinted glass, a lit edge. */
+body.hud .gm-row.is-urgent {
+  border-color: rgba(255, 154, 77, 0.45);
+  border-left-color: var(--acc-orange) !important;
+  background: linear-gradient(180deg, rgba(255, 154, 77, 0.13), rgba(255, 154, 77, 0.05));
+  box-shadow: 0 0 22px -8px rgba(255, 154, 77, 0.65);
+}
+body.hud .gm-row.is-urgent .gm-text { color: #ffd9b8; }
+/* A finished task is finished, however urgent it once was. */
+body.hud .gm-row.is-urgent.gm-row-done {
+  background: var(--hud-panel-solid);
+  box-shadow: none;
+  border-color: rgba(125, 200, 255, 0.14);
+  border-left-color: var(--hud-text-faint) !important;
+}
+body.hud .gm-row.is-urgent.gm-row-done .gm-text { color: var(--hud-text-dim); }
+
+/* ---------- energy tag menu ---------- */
+.hud-tagmenu {
+  position: absolute;
+  z-index: 60;
+  min-width: 128px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 16, 26, 0.97);
+  border: 1px solid var(--hud-line-bright);
+  box-shadow: 0 0 34px -10px rgba(91, 200, 255, 0.5);
+}
+.hud-tagmenu-item {
+  border: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--hud-text-dim);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.hud-tagmenu-item + .hud-tagmenu-item { border-top: 1px solid rgba(125, 200, 255, 0.12); }
+.hud-tagmenu-item:hover { background: rgba(125, 200, 255, 0.10); color: var(--hud-text); }
+.hud-tagmenu-item.is-current { color: var(--hud-text); }
+.hud-tagmenu-mover { border-left-color: var(--acc-green); color: var(--acc-green); }
+.hud-tagmenu-prep  { border-left-color: var(--acc-amber); color: var(--acc-amber); }
+.hud-tagmenu-admin { border-left-color: var(--acc-orange); color: var(--acc-orange); }
