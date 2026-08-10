@@ -473,7 +473,6 @@
 
     var wordmark = el('div', 'grant-wordmark');
     wordmark.appendChild(el('div', 'grant-title', 'Grant'));
-    wordmark.appendChild(el('div', 'grant-role', 'your operator'));
     head.appendChild(wordmark);
 
     var reset = el('button', 'grant-reset', 'New session');

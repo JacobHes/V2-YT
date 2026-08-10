@@ -34,14 +34,23 @@
 
   // ---------- command header ----------
 
-  // Mirrors the modes Grant runs on, derived from the clock rather than
-  // invented: aiming happens at night, firing in the morning.
-  function dayMode() {
-    var h = new Date().getHours();
-    if (h >= 21 || h < 6) return 'Night Before';
-    if (h < 11) return 'Morning';
-    if (h < 17) return 'Day';
-    return 'Debrief';
+  // main.html treats the day as flipping at 06:00, so a task added at 01:00
+  // still belongs to the previous day. The header has to agree with it.
+  function activeDate() {
+    var now = new Date();
+    var d = new Date(now);
+    if (now.getHours() < 6) d.setDate(d.getDate() - 1);
+    return d;
+  }
+
+  var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function dayName() { return DAYS[activeDate().getDay()]; }
+  function dateLine() {
+    var d = activeDate();
+    return MONTHS[d.getMonth()] + ' ' + d.getDate();
   }
 
   function bedtimeLeft() {
@@ -92,7 +101,7 @@
     var row = el('div', 'hud-title-row');
     row.appendChild(el('span', 'hud-rule'));
     row.appendChild(el('span', 'hud-bracket', '‹‹ /'));
-    var h1 = el('h1', 'hud-title', dayMode());
+    var h1 = el('h1', 'hud-title', dayName());
     h1.id = 'hudTitle';
     row.appendChild(h1);
     row.appendChild(el('span', 'hud-bracket', '/ ››'));
@@ -126,16 +135,13 @@
   function syncHeader() {
     if (!header) return;
     var titleEl = byId('hudTitle');
-    if (titleEl) titleEl.textContent = dayMode();
+    if (titleEl) titleEl.textContent = dayName();
     var bed = byId('hudBedtime');
     if (bed) bed.textContent = bedtimeLeft();
 
     // Mirror the counts main.html already renders rather than recomputing them.
-    var date = byId('todayLabel');
     var dateOut = byId('hudDate');
-    if (date && dateOut) {
-      dateOut.textContent = date.textContent.replace(/^Today\s*[—-]\s*/i, '').trim();
-    }
+    if (dateOut) dateOut.textContent = dateLine();
     var num = byId('gmProgressNum');
     var total = byId('gmProgressTotal');
     var value = byId('hudProgressValue');
@@ -270,7 +276,7 @@
 
     window.addEventListener('goals-changed', syncHeader);
     window.addEventListener('storage', syncHeader);
-    setInterval(syncHeader, 60000);   // bedtime countdown and mode rollover
+    setInterval(syncHeader, 60000);   // bedtime countdown and the 06:00 day rollover
   }
 
   if (document.readyState === 'loading') {

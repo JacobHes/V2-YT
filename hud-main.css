@@ -231,10 +231,10 @@ body.hud .gm-row {
   border-left: 2px solid var(--hud-line);
 }
 body.hud .gm-row.gm-row-arrow { border-left-color: var(--acc-red); }
-body.hud .gm-row:has(.gm-energy-mover) { border-left-color: var(--acc-cyan); }
+body.hud .gm-row:has(.gm-energy-mover) { border-left-color: var(--acc-green); }
 body.hud .gm-row:has(.gm-energy-prep)  { border-left-color: var(--acc-amber); }
 body.hud .gm-row:has(.gm-energy-admin) { border-left-color: var(--acc-orange); }
-body.hud .gm-row.gm-row-done           { border-left-color: var(--acc-green); }
+body.hud .gm-row.gm-row-done           { border-left-color: var(--hud-text-faint); }
 
 body.hud .gm-text { font-family: var(--font); font-size: 14.5px; letter-spacing: 0.005em; }
 body.hud .gm-handle { color: var(--hud-text-faint); }
@@ -259,7 +259,7 @@ body.hud .gm-energy {
 /* The task itself gets the space. min-width:0 lets it shrink inside the flex
  * row instead of forcing the controls to wrap. */
 body.hud .gm-row > .gm-text { flex: 1 1 auto; min-width: 0; }
-body.hud .gm-energy-mover { color: var(--acc-cyan); }
+body.hud .gm-energy-mover { color: var(--acc-green); }
 body.hud .gm-energy-prep  { color: var(--acc-amber); }
 body.hud .gm-energy-admin { color: var(--acc-orange); }
 body.hud .gm-energy-none  { color: var(--hud-text-faint); text-shadow: none; }
@@ -481,6 +481,8 @@ body.hud .day-ring-percent {
 
 /* ---------- Grant panel: frame only, internals untouched ---------- */
 body.hud #gmCardGrant { border-color: rgba(110, 231, 183, 0.32); }
+/* The role line under the wordmark said nothing the name did not. */
+.grant-role { display: none; }
 
 /* ---------- desktop: give the page a console width ---------- */
 @media (min-width: 900px) {
