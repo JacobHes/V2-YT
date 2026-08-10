@@ -805,3 +805,71 @@ body.hud .arrow-steps-add:hover { background: rgba(255, 107, 107, 0.2); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- work time left ---------- */
+body.hud .hud-workring {
+  position: relative;
+  width: 62px;
+  /* 62 for the dial plus room for the caption. The page sets border-box, so
+   * padding here would eat the dial rather than sit under it. */
+  height: 76px;
+  flex-shrink: 0;
+}
+body.hud .hud-workring svg {
+  width: 62px;
+  height: 62px;
+  transform: rotate(-90deg);   /* start the arc at twelve o'clock */
+  overflow: visible;
+}
+body.hud .hud-workring-track {
+  fill: none;
+  stroke: rgba(125, 200, 255, 0.14);
+  stroke-width: 3;
+}
+body.hud .hud-workring-fill {
+  fill: none;
+  stroke: var(--acc-cyan);
+  stroke-width: 3;
+  stroke-linecap: butt;
+  filter: drop-shadow(0 0 5px rgba(91, 200, 255, 0.75));
+  transition: stroke-dashoffset 0.6s ease, stroke 0.3s;
+}
+/* Under an hour it stops being information and starts being a warning. */
+body.hud .hud-workring[data-state='low'] .hud-workring-fill {
+  stroke: var(--acc-amber);
+  filter: drop-shadow(0 0 5px rgba(255, 200, 87, 0.75));
+}
+body.hud .hud-workring[data-state='over'] .hud-workring-fill { stroke: transparent; filter: none; }
+body.hud .hud-workring-value {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 62px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--hud-text);
+  pointer-events: none;
+}
+body.hud .hud-workring[data-state='low'] .hud-workring-value { color: var(--acc-amber); }
+body.hud .hud-workring[data-state='over'] .hud-workring-value { color: var(--hud-text-faint); }
+body.hud .hud-workring-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 62px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--hud-text-faint);
+}
+@media (prefers-reduced-motion: reduce) {
+  body.hud .hud-workring-fill { transition: none; }
+}

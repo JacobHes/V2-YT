@@ -22,7 +22,18 @@
 (function () {
   'use strict';
 
-  var BEDTIME_HOUR = 23;   // his stated non-negotiable, sleep around 11 PM
+  // Defaults, overridable from the console without a deploy:
+  //   localStorage.setItem('hud:workStart', '9')
+  //   localStorage.setItem('hud:workEnd', '17')
+  //   localStorage.setItem('hud:bedtime', '22')
+  var DEFAULTS = { workStart: 9, workEnd: 17, bedtime: 22 };
+
+  function setting(name) {
+    var raw = null;
+    try { raw = localStorage.getItem('hud:' + name); } catch (e) {}
+    var n = raw === null ? NaN : parseFloat(raw);
+    return isFinite(n) ? n : DEFAULTS[name];
+  }
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -53,13 +64,47 @@
     return MONTHS[d.getMonth()] + ' ' + d.getDate();
   }
 
-  function bedtimeLeft() {
+  function minutesUntil(hour) {
     var now = new Date();
-    var bed = new Date(now);
-    bed.setHours(BEDTIME_HOUR, 0, 0, 0);
-    if (bed <= now) return 'past';
-    var mins = Math.round((bed - now) / 60000);
-    return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
+    var mark = new Date(now);
+    var h = Math.floor(hour);
+    mark.setHours(h, Math.round((hour - h) * 60), 0, 0);
+    return Math.round((mark - now) / 60000);
+  }
+
+  function fmtHm(mins) {
+    if (mins <= 0) return '0m';
+    return mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + 'm';
+  }
+
+  function bedtimeLeft() {
+    var mins = minutesUntil(setting('bedtime'));
+    return mins <= 0 ? 'past' : fmtHm(mins);
+  }
+
+  /**
+   * Work time left in the day's work window.
+   * A fixed window, not the calendar: the app cannot read the calendar, and
+   * the context file says it is often not real anyway. This number is true
+   * because it only claims to be the clock against a window you set.
+   */
+  function workLeft() {
+    var start = setting('workStart');
+    var end = setting('workEnd');
+    var total = Math.max(1, Math.round((end - start) * 60));
+    var toEnd = minutesUntil(end);
+    var toStart = minutesUntil(start);
+
+    if (toEnd <= 0) return { mins: 0, total: total, state: 'over', label: 'Done' };
+    if (toStart > 0) return { mins: total, total: total, state: 'before', label: fmtHm(total) };
+
+    var left = Math.min(toEnd, total);
+    return {
+      mins: left,
+      total: total,
+      state: left <= 60 ? 'low' : 'ok',
+      label: fmtHm(left),
+    };
   }
 
   var header = null;
@@ -91,10 +136,7 @@
     readout.appendChild(bed);
 
     top.appendChild(readout);
-    var reticle = el('div', 'hud-reticle-wrap');
-    reticle.setAttribute('aria-hidden', 'true');
-    reticle.appendChild(el('div', 'hud-reticle'));
-    top.appendChild(reticle);
+    top.appendChild(buildWorkRing());
     header.appendChild(top);
 
     // Centred title: mode plus the date main.html already computed.
@@ -127,6 +169,58 @@
     syncHeader();
   }
 
+  var RING_R = 21;
+  var RING_C = 2 * Math.PI * RING_R;
+
+  function buildWorkRing() {
+    var wrap = el('div', 'hud-workring');
+    wrap.id = 'hudWorkRing';
+
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 52 52');
+    svg.setAttribute('aria-hidden', 'true');
+
+    function circle(cls) {
+      var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', '26');
+      c.setAttribute('cy', '26');
+      c.setAttribute('r', String(RING_R));
+      c.setAttribute('class', cls);
+      return c;
+    }
+    svg.appendChild(circle('hud-workring-track'));
+    var fill = circle('hud-workring-fill');
+    fill.id = 'hudWorkRingFill';
+    fill.setAttribute('stroke-dasharray', String(RING_C));
+    fill.setAttribute('stroke-dashoffset', String(RING_C));
+    svg.appendChild(fill);
+    wrap.appendChild(svg);
+
+    var value = el('div', 'hud-workring-value', '');
+    value.id = 'hudWorkRingValue';
+    wrap.appendChild(value);
+
+    var caption = el('div', 'hud-workring-caption', 'Work');
+    wrap.appendChild(caption);
+    return wrap;
+  }
+
+  function syncWorkRing() {
+    var wrap = byId('hudWorkRing');
+    var fill = byId('hudWorkRingFill');
+    var value = byId('hudWorkRingValue');
+    if (!wrap || !fill || !value) return;
+
+    var w = workLeft();
+    var frac = Math.max(0, Math.min(1, w.mins / w.total));
+    fill.setAttribute('stroke-dashoffset', String(RING_C * (1 - frac)));
+    value.textContent = w.label;
+    wrap.dataset.state = w.state;
+    wrap.title =
+      'Work window ' + setting('workStart') + ':00 to ' + setting('workEnd') + ':00. ' +
+      (w.state === 'over' ? 'Window closed.' : fmtHm(w.mins) + ' left.');
+  }
+
   function pad2(v) {
     var n = parseInt(String(v).replace(/\D+/g, ''), 10);
     return isNaN(n) ? '--' : (n < 10 ? '0' + n : String(n));
@@ -138,6 +232,7 @@
     if (titleEl) titleEl.textContent = dayName();
     var bed = byId('hudBedtime');
     if (bed) bed.textContent = bedtimeLeft();
+    syncWorkRing();
 
     // Mirror the counts main.html already renders rather than recomputing them.
     var dateOut = byId('hudDate');
