@@ -806,70 +806,124 @@ body.hud .arrow-steps-add:hover { background: rgba(255, 107, 107, 0.2); }
   white-space: nowrap;
 }
 
-/* ---------- work time left ---------- */
+/* ---------- work time left: the dial ---------- */
 body.hud .hud-workring {
   position: relative;
-  width: 62px;
-  /* 62 for the dial plus room for the caption. The page sets border-box, so
-   * padding here would eat the dial rather than sit under it. */
-  height: 76px;
+  width: 116px;
+  height: 116px;
   flex-shrink: 0;
 }
 body.hud .hud-workring svg {
-  width: 62px;
-  height: 62px;
-  transform: rotate(-90deg);   /* start the arc at twelve o'clock */
+  width: 116px;
+  height: 116px;
   overflow: visible;
+  /* Start every arc at twelve o'clock. */
+  transform: rotate(-90deg);
 }
+
+/* Graduation collar: one dashed circle instead of sixty tick elements. */
+body.hud .hud-dial-ticks {
+  fill: none;
+  stroke: rgba(125, 200, 255, 0.30);
+  stroke-width: 4;
+  stroke-dasharray: 1.2 6.6;
+}
+
+/* Instrument dressing: two arc sets turning against each other. */
+body.hud .hud-dial-spin {
+  transform-origin: 60px 60px;
+  will-change: transform;
+}
+body.hud .hud-dial-spin-cw  { animation: hudDialCW 14s linear infinite; }
+body.hud .hud-dial-spin-ccw { animation: hudDialCCW 9s linear infinite; }
+@keyframes hudDialCW  { to { transform: rotate(360deg); } }
+@keyframes hudDialCCW { to { transform: rotate(-360deg); } }
+
+body.hud .hud-dial-arc { fill: none; stroke: var(--acc-cyan); }
+body.hud .hud-dial-arc-a {
+  stroke-width: 1.5;
+  stroke-opacity: 0.75;
+  /* Three arcs of different lengths, so the rotation is legible. */
+  stroke-dasharray: 46 26 22 40 12 180;
+}
+body.hud .hud-dial-arc-b {
+  stroke-width: 1;
+  stroke-opacity: 0.45;
+  stroke-dasharray: 8 14 30 60;
+}
+
+/* The measurement. */
 body.hud .hud-workring-track {
   fill: none;
-  stroke: rgba(125, 200, 255, 0.14);
-  stroke-width: 3;
+  stroke: rgba(125, 200, 255, 0.13);
+  stroke-width: 5;
 }
 body.hud .hud-workring-fill {
   fill: none;
   stroke: var(--acc-cyan);
-  stroke-width: 3;
+  stroke-width: 5;
   stroke-linecap: butt;
-  filter: drop-shadow(0 0 5px rgba(91, 200, 255, 0.75));
-  transition: stroke-dashoffset 0.6s ease, stroke 0.3s;
+  filter: drop-shadow(0 0 7px rgba(91, 200, 255, 0.85));
+  transition: stroke-dashoffset 0.7s ease, stroke 0.3s;
 }
+body.hud .hud-dial-core {
+  fill: rgba(8, 16, 26, 0.55);
+  stroke: rgba(125, 200, 255, 0.20);
+  stroke-width: 1;
+}
+
 /* Under an hour it stops being information and starts being a warning. */
 body.hud .hud-workring[data-state='low'] .hud-workring-fill {
   stroke: var(--acc-amber);
-  filter: drop-shadow(0 0 5px rgba(255, 200, 87, 0.75));
+  filter: drop-shadow(0 0 7px rgba(255, 200, 87, 0.85));
 }
+body.hud .hud-workring[data-state='low'] .hud-dial-arc { stroke: var(--acc-amber); }
+body.hud .hud-workring[data-state='low'] .hud-dial-ticks { stroke: rgba(255, 200, 87, 0.32); }
 body.hud .hud-workring[data-state='over'] .hud-workring-fill { stroke: transparent; filter: none; }
-body.hud .hud-workring-value {
+body.hud .hud-workring[data-state='over'] .hud-dial-arc { stroke-opacity: 0.2; }
+
+body.hud .hud-workring-centre {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 62px;
-  height: 62px;
+  inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--hud-text);
+  gap: 2px;
   pointer-events: none;
 }
-body.hud .hud-workring[data-state='low'] .hud-workring-value { color: var(--acc-amber); }
-body.hud .hud-workring[data-state='over'] .hud-workring-value { color: var(--hud-text-faint); }
-body.hud .hud-workring-caption {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 62px;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
+body.hud .hud-workring-value {
+  font-family: 'Rajdhani', var(--font);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--hud-text);
+  text-shadow: 0 0 12px rgba(120, 205, 255, 0.55);
+}
+body.hud .hud-workring[data-state='low'] .hud-workring-value {
+  color: var(--acc-amber);
+  text-shadow: 0 0 12px rgba(255, 200, 87, 0.55);
+}
+body.hud .hud-workring[data-state='over'] .hud-workring-value {
   color: var(--hud-text-faint);
+  text-shadow: none;
+}
+body.hud .hud-workring-caption {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  /* faint is for decoration; this is a label inside a dial and has to read */
+  color: var(--hud-text-dim);
+}
+
+@media (max-width: 620px) {
+  body.hud .hud-workring,
+  body.hud .hud-workring svg { width: 96px; height: 96px; }
+  body.hud .hud-workring-value { font-size: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  body.hud .hud-dial-spin { animation: none; }
   body.hud .hud-workring-fill { transition: none; }
 }

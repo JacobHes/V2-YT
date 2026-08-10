@@ -169,39 +169,60 @@
     syncHeader();
   }
 
-  var RING_R = 21;
-  var RING_C = 2 * Math.PI * RING_R;
+  // The dial is drawn in a 120 unit box and scaled by CSS, so the layers stay
+  // aligned at any size. Only the progress arc carries information; the
+  // rotating rings are instrument dressing.
+  var RING_R = 46.0;
+  var RING_C = 289.03;
+
+  function svgEl(name, attrs) {
+    var node = document.createElementNS('http://www.w3.org/2000/svg', name);
+    Object.keys(attrs || {}).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+    return node;
+  }
+  function ring(r, cls, extra) {
+    return svgEl('circle', Object.assign({ cx: 60, cy: 60, r: r, class: cls }, extra || {}));
+  }
 
   function buildWorkRing() {
     var wrap = el('div', 'hud-workring');
     wrap.id = 'hudWorkRing';
 
-    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 52 52');
+    var svg = svgEl('svg', { viewBox: '0 0 120 120' });
     svg.setAttribute('aria-hidden', 'true');
 
-    function circle(cls) {
-      var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      c.setAttribute('cx', '26');
-      c.setAttribute('cy', '26');
-      c.setAttribute('r', String(RING_R));
-      c.setAttribute('class', cls);
-      return c;
-    }
-    svg.appendChild(circle('hud-workring-track'));
-    var fill = circle('hud-workring-fill');
+    // Tick collar: a dashed circle reads as graduation without 60 elements.
+    svg.appendChild(ring(56, 'hud-dial-ticks'));
+
+    // Two counter-rotating arc sets, different radii and speeds.
+    var outer = svgEl('g', { class: 'hud-dial-spin hud-dial-spin-cw' });
+    outer.appendChild(ring(52, 'hud-dial-arc hud-dial-arc-a'));
+    svg.appendChild(outer);
+
+    var inner = svgEl('g', { class: 'hud-dial-spin hud-dial-spin-ccw' });
+    inner.appendChild(ring(34, 'hud-dial-arc hud-dial-arc-b'));
+    svg.appendChild(inner);
+
+    // The measurement itself.
+    var track = svgEl('g', { class: 'hud-dial-progress' });
+    track.appendChild(ring(RING_R, 'hud-workring-track'));
+    var fill = ring(RING_R, 'hud-workring-fill', {
+      'stroke-dasharray': String(RING_C),
+      'stroke-dashoffset': String(RING_C),
+    });
     fill.id = 'hudWorkRingFill';
-    fill.setAttribute('stroke-dasharray', String(RING_C));
-    fill.setAttribute('stroke-dashoffset', String(RING_C));
-    svg.appendChild(fill);
+    track.appendChild(fill);
+    svg.appendChild(track);
+
+    svg.appendChild(ring(26, 'hud-dial-core'));
     wrap.appendChild(svg);
 
+    var centre = el('div', 'hud-workring-centre');
     var value = el('div', 'hud-workring-value', '');
     value.id = 'hudWorkRingValue';
-    wrap.appendChild(value);
-
-    var caption = el('div', 'hud-workring-caption', 'Work');
-    wrap.appendChild(caption);
+    centre.appendChild(value);
+    centre.appendChild(el('div', 'hud-workring-caption', 'Work left'));
+    wrap.appendChild(centre);
     return wrap;
   }
 
