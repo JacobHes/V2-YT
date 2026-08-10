@@ -190,6 +190,9 @@
         isArrow: !!g.arrow,
         status: statusFor(g, pastCutoff),
         breakpointNote: breakpointFor(g),
+        steps: Array.isArray(g.steps)
+          ? g.steps.map(function (x) { return { text: x.text, done: !!x.done }; })
+          : null,
       };
     });
 
@@ -211,6 +214,13 @@
   }
 
   // ---------- history (the app owns it; Grant has no memory between calls) ----------
+  //
+  // grant:history  is the session in progress.
+  // grant:sessions is the archive: [{id, startedAt, endedAt, title, turns}].
+  // "New session" files the current one instead of throwing it away.
+  var SESSIONS_KEY = 'grant:sessions';
+  var MAX_SESSIONS = 30;
+
   function loadHistory() {
     var h = storeGet(HISTORY_KEY);
     return Array.isArray(h) ? h : [];
@@ -224,7 +234,38 @@
   function setHistory(turns) {
     storeSet(HISTORY_KEY, turns.slice(-MAX_STORED_TURNS));
   }
-  function clearHistory() { storeSet(HISTORY_KEY, []); }
+
+  function loadSessions() {
+    var s = storeGet(SESSIONS_KEY);
+    return Array.isArray(s) ? s : [];
+  }
+
+  function turnText(turn) {
+    if (Array.isArray(turn.content)) {
+      return turn.content
+        .map(function (b) { return b.type === 'text' ? b.text : ''; })
+        .filter(Boolean).join(' ');
+    }
+    return String(turn.content || '');
+  }
+
+  /** File the running session and start an empty one. */
+  function archiveSession() {
+    var turns = loadHistory();
+    if (turns.length) {
+      var first = turns.find(function (t) { return t.role === 'user'; });
+      var title = first ? turnText(first).slice(0, 60) : 'Session';
+      var sessions = loadSessions();
+      sessions.push({
+        id: 'gs' + Date.now().toString(36),
+        startedAt: Date.now(),
+        title: title,
+        turns: turns,
+      });
+      storeSet(SESSIONS_KEY, sessions.slice(-MAX_SESSIONS));
+    }
+    storeSet(HISTORY_KEY, []);
+  }
 
   // ---------- transport ----------
 
@@ -522,6 +563,36 @@
     setBusy(false);
   }
 
+  function renderHistoryList() {
+    if (!els.history) return;
+    els.history.textContent = '';
+    var sessions = loadSessions().slice().reverse();
+    if (!sessions.length) {
+      els.history.appendChild(el('div', 'grant-history-empty', 'No past sessions yet.'));
+      return;
+    }
+    sessions.forEach(function (session) {
+      var item = el('button', 'grant-history-item');
+      item.type = 'button';
+      var when = new Date(session.startedAt);
+      item.appendChild(el('span', 'grant-history-when',
+        when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' +
+        String(when.getHours()).padStart(2, '0') + ':' + String(when.getMinutes()).padStart(2, '0')));
+      item.appendChild(el('span', 'grant-history-title', session.title));
+      item.addEventListener('click', function () {
+        // Read-only replay: the running session is not touched.
+        els.log.textContent = '';
+        session.turns.forEach(function (turn) {
+          var text = turnText(turn);
+          if (text) addMessage(turn.role === 'user' ? 'user' : 'grant', text);
+        });
+        els.meta.textContent = 'viewing an archived session, read only';
+        els.history.classList.remove('is-open');
+      });
+      els.history.appendChild(item);
+    });
+  }
+
   function mount() {
     var today = document.getElementById('gmCardToday');
     if (!today || !today.parentNode) return;   // layout changed; fail quiet
@@ -537,10 +608,16 @@
     wordmark.appendChild(el('div', 'grant-title', 'Grant'));
     head.appendChild(wordmark);
 
+    var historyBtn = el('button', 'grant-reset', 'History');
+    historyBtn.type = 'button';
+    head.appendChild(historyBtn);
     var reset = el('button', 'grant-reset', 'New session');
     reset.type = 'button';
     head.appendChild(reset);
     card.appendChild(head);
+
+    els.history = el('div', 'grant-history');
+    card.appendChild(els.history);
 
     els.flows = el('div', 'grant-flows');
     FLOWS.forEach(function (flow) {
@@ -580,9 +657,14 @@
       if (e.key === 'Enter') { e.preventDefault(); submit(); }
     });
     reset.addEventListener('click', function () {
-      clearHistory();
+      archiveSession();
       els.log.innerHTML = '';
       els.meta.textContent = '';
+      renderHistoryList();
+    });
+    historyBtn.addEventListener('click', function () {
+      els.history.classList.toggle('is-open');
+      if (els.history.classList.contains('is-open')) renderHistoryList();
     });
 
     today.parentNode.insertBefore(card, today.nextSibling);
@@ -598,7 +680,8 @@
     buildPayload: buildPayload,
     ask: ask,
     run: run,
-    clearHistory: clearHistory,
+    archiveSession: archiveSession,
+    loadSessions: loadSessions,
     /** Set CLIENT / INNER_WORK on a task. The jump-ship rule depends on it. */
     setCategory: function (dateStr, id, category) {
       var key = 'goals:' + dateStr;

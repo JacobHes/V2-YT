@@ -46,6 +46,7 @@ export function parsePayload(body) {
       isArrow: Boolean(task?.isArrow),
       status: task?.status ?? null,
       breakpointNote: task?.breakpointNote ?? null,
+      steps: Array.isArray(task?.steps) ? task.steps : null,
     })),
     arrow: body.arrow ?? null,
     arrowStreak: Number.isFinite(body.arrowStreak) ? body.arrowStreak : 0,
@@ -75,9 +76,15 @@ function formatTask(task) {
   const arrow = task.isArrow ? ' [ARROW]' : '';
   const head = `- [${task.id}] ${task.title} (${bits || 'untagged'}${age}${status})${arrow}`;
   const note = formatBreakpointNote(task.breakpointNote);
+  const lines = [head];
   // The breakpoint note is the clarity-tax killer. Reading it back on resume is
   // the whole point of having captured it, so it goes right under its task.
-  return note ? `${head}\n    breakpoint note: ${note}` : head;
+  if (note) lines.push(`    breakpoint note: ${note}`);
+  if (task.steps && task.steps.length) {
+    lines.push('    breakdown:');
+    task.steps.forEach((s) => lines.push(`      [${s.done ? 'x' : ' '}] ${s.text}`));
+  }
+  return lines.join('\n');
 }
 
 function formatTracker(tracker) {

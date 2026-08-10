@@ -157,6 +157,29 @@
       return ok({ task_id: input.task_id });
     },
 
+    add_step: function (input) {
+      var f = locate(input.task_id);
+      if (!f) return fail('no task with that id');
+      var text = String(input.text || '').trim();
+      if (!text) return fail('text was empty');
+      if (!Array.isArray(f.task.steps)) f.task.steps = [];
+      f.task.steps.push({ id: genId(), text: text, done: false });
+      if (!write(f.key, f.list)) return fail('could not save');
+      return ok({ task_id: input.task_id, steps: f.task.steps.length });
+    },
+
+    complete_step: function (input) {
+      var f = locate(input.task_id);
+      if (!f) return fail('no task with that id');
+      var steps = Array.isArray(f.task.steps) ? f.task.steps : [];
+      var want = String(input.text || '').trim().toLowerCase();
+      var step = steps.find(function (s) { return String(s.text).trim().toLowerCase() === want; });
+      if (!step) return fail('no step with that text');
+      step.done = !!input.done;
+      if (!write(f.key, f.list)) return fail('could not save');
+      return ok({ task_id: input.task_id, text: step.text, done: step.done });
+    },
+
     push_task: function (input) {
       var f = locate(input.task_id);
       if (!f) return fail('no task with that id');

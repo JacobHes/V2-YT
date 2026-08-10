@@ -123,6 +123,32 @@ export const TOOLS = [
     },
   },
   {
+    name: 'add_step',
+    description:
+      'Add a step to a task\'s breakdown. Use this on the arrow when it is really several actions that batch together.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string' },
+        text: { type: 'string' },
+      },
+      required: ['task_id', 'text'],
+    },
+  },
+  {
+    name: 'complete_step',
+    description: 'Tick a step of a task\'s breakdown off by its text, or untick it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string' },
+        text: { type: 'string', description: 'The step text, matched case-insensitively.' },
+        done: { type: 'boolean' },
+      },
+      required: ['task_id', 'text', 'done'],
+    },
+  },
+  {
     name: 'push_task',
     description: 'Move a task to another day.',
     confirm: true,
