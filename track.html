@@ -4,13 +4,17 @@
 <script src="lock.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#E6DBC2">
 <title>Track · Dashboard</title>
 
 <!-- Shared dashboard scripts. Keep this order. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+
+<link rel="stylesheet" href="lab-theme.css">
+<link rel="stylesheet" href="lab-pages.css">
+<link rel="stylesheet" href="lab-track.css">
 
 <style>
 :root {
@@ -190,6 +194,7 @@ body::after {
 .cal-cell.h4 .cal-daynum, .cal-cell.h3 .cal-daynum { color: var(--text-primary); }
 .cal-detail { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
 .cal-detail-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; }
+.cal-legend { display: none; }
 
 /* ===== manage projects ===== */
 .mng-toggle { background: transparent; border: 0; color: var(--text-tertiary); font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; padding: 4px 0; }
@@ -215,6 +220,7 @@ body::after {
   transition: transform .1s, filter .15s;
 }
 .gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.gm-add-quiet { background: transparent; border: 1px solid rgba(255,255,255,0.14); color: var(--text-secondary); box-shadow: none; }
 
 @media (max-width: 480px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 84px; }
@@ -223,7 +229,7 @@ body::after {
 }
 </style>
 </head>
-<body>
+<body class="lab">
 <div class="page">
 
   <h1 class="dash-title">Track</h1>
@@ -239,7 +245,7 @@ body::after {
       </div>
       <div class="timer-clock" id="timerClock">0:00:00</div>
       <div class="timer-since" id="timerSince"></div>
-      <button class="timer-stop" id="timerStop" type="button">■ STOP</button>
+      <button class="timer-stop" id="timerStop" type="button">STOP</button>
 
       <div class="chips-label" id="chipsLabel">Tap a project to start</div>
       <div class="chip-grid" id="chipGrid"></div>
@@ -287,6 +293,13 @@ body::after {
         <button class="cal-nav" id="calNext" type="button" aria-label="Next month">›</button>
       </div>
       <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend" aria-label="Shading key">
+        <span class="cal-legend-title">Hours logged</span>
+        <span class="cal-legend-item"><i class="cal-key h1"></i>under 1h</span>
+        <span class="cal-legend-item"><i class="cal-key h2"></i>1 to 2.5h</span>
+        <span class="cal-legend-item"><i class="cal-key h3"></i>2.5 to 4.5h</span>
+        <span class="cal-legend-item"><i class="cal-key h4"></i>4.5h and over</span>
+      </div>
       <div class="cal-detail" id="calDetail" style="display:none">
         <div class="cal-detail-title" id="calDetailTitle"></div>
         <div id="calDetailBars"></div>
@@ -308,7 +321,7 @@ body::after {
       <input class="mng-input" id="addDur" type="text" inputmode="text" placeholder="45m · 1:30 · 90" aria-label="Duration" autocomplete="off">
     </div>
     <label class="add-gcal" id="addGcalRow" style="display:none">
-      <input type="checkbox" id="addGcal" checked> Also post to Google Calendar
+      <input type="checkbox" class="lab-switch" id="addGcal" checked> Also post to Google Calendar
     </label>
     <div class="add-foot">
       <span class="add-preview" id="addPreview"></span>
@@ -320,7 +333,7 @@ body::after {
   <!-- ===== MANAGE ===== -->
   <div class="section">
     <div class="gm-card">
-      <button class="mng-toggle" id="mngToggle" type="button">⚙ Manage projects</button>
+      <button class="mng-toggle" id="mngToggle" type="button">Manage projects</button>
       <div class="mng-body" id="mngBody">
         <div id="mngList"></div>
         <div class="mng-add">
@@ -329,7 +342,7 @@ body::after {
           <button class="gm-add" id="mngAdd" type="button">Add</button>
         </div>
 
-        <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08)">
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border, rgba(255,255,255,0.08))">
           <div class="gm-eyebrow" style="margin-bottom:6px">Google Calendar</div>
           <div style="font-size:12px;color:var(--text-tertiary,#76746E);line-height:1.5;margin-bottom:10px">
             Paste your Apps Script URL. Every tracked session then lands on your calendar as a green ✓ event, next to your planned blocks.
@@ -337,7 +350,7 @@ body::after {
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <input class="mng-input" id="gcalUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:180px" autocomplete="off">
             <button class="gm-add" id="gcalSave" type="button">Save</button>
-            <button class="gm-add" id="gcalTest" type="button" style="background:transparent;border:1px solid rgba(255,255,255,0.14)">Test</button>
+            <button class="gm-add gm-add-quiet" id="gcalTest" type="button">Test</button>
           </div>
           <div id="gcalStatus" style="font-size:12px;margin-top:8px;color:var(--text-tertiary,#76746E)"></div>
         </div>

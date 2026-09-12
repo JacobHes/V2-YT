@@ -1,0 +1,433 @@
+/* =============================================================
+ * Lab theme applied to caffeine.html: intake, the energy curve, the plan.
+ *
+ * Everything is scoped under body.lab, so removing that one class returns
+ * the page to its previous look. Nothing here renames or removes a selector
+ * the page's JS uses; it restyles elements that already exist.
+ *
+ * The chart is drawn by the page's JS as inline SVG with hardcoded colours
+ * written as presentation attributes. CSS wins over those, so the rules
+ * below select on the attribute values the JS writes. Where the JS writes an
+ * inline style (the ring stroke, the state word, the intake bar) the rule
+ * carries !important; that is the only way to reach it without touching
+ * the script.
+ *
+ * Requires lab-theme.css and lab-pages.css to be loaded first.
+ * ============================================================= */
+
+/* The page's two accents. Caffeine is ochre, energy is the stamp green. */
+body.lab {
+  --caf: var(--acc-prep);
+  --energy: var(--acc-done);
+}
+
+/* ---------- title on a rule ---------- */
+body.lab .dash-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 18px;
+  font-family: var(--lab-display);
+  font-size: clamp(17px, 5vw, 23px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  background: none;
+  -webkit-text-fill-color: var(--lab-ink);
+  color: var(--lab-ink);
+  white-space: nowrap;
+}
+body.lab .dash-title::before,
+body.lab .dash-title::after {
+  content: '';
+  flex: 1 1 0;
+  min-width: 12px;
+  height: 1px;
+  background: var(--lab-rule);
+}
+
+/* Section titles: a tick, the label, a faint rule to the edge. */
+body.lab .section-title::before { background: var(--lab-rule); opacity: 1; }
+body.lab .section-title::after { background: var(--lab-rule-faint); }
+
+/* ---------- the energy ring and its state ---------- */
+body.lab .ring-track { stroke: var(--lab-rule-faint); stroke-width: 6; }
+body.lab .ring-fill {
+  stroke: var(--lab-ink) !important;
+  stroke-width: 6;
+  stroke-linecap: butt;
+  filter: none;
+}
+/* The JS paints the ring by level. Map each of its three colours to an ink. */
+body.lab .ring-fill[style*="#6BE3A4"],
+body.lab .ring-fill[style*="107, 227, 164"] { stroke: var(--acc-done) !important; }
+body.lab .ring-fill[style*="#F2C063"],
+body.lab .ring-fill[style*="242, 192, 99"] { stroke: var(--acc-prep) !important; }
+body.lab .ring-fill[style*="#FF8A8A"],
+body.lab .ring-fill[style*="255, 138, 138"] { stroke: var(--lab-red) !important; }
+
+body.lab .ring-num {
+  font-family: var(--lab-display);
+  font-size: 30px;
+  letter-spacing: 0;
+  color: var(--lab-ink);
+}
+body.lab .energy-state {
+  font-family: var(--lab-display);
+  font-size: 20px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink) !important;
+}
+body.lab .energy-state[style*="#6BE3A4"],
+body.lab .energy-state[style*="107, 227, 164"] { color: var(--acc-done) !important; }
+body.lab .energy-state[style*="#F2C063"],
+body.lab .energy-state[style*="242, 192, 99"] { color: var(--acc-prep) !important; }
+body.lab .energy-state[style*="#FF8A8A"],
+body.lab .energy-state[style*="255, 138, 138"] { color: var(--lab-red) !important; }
+body.lab .energy-when {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  color: var(--lab-ink-dim);
+}
+body.lab .energy-hint {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+/* A green dot said nothing the words do not. */
+body.lab .energy-hint .dot { display: none; }
+body.lab .energy-desc {
+  font-family: var(--lab-type);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--lab-ink-dim);
+}
+
+/* ---------- chart mode: three typed labels in one box, the chosen one inked ---------- */
+body.lab .seg-toggle {
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+}
+body.lab .seg-toggle button {
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 0;
+  border-left: 1px solid var(--lab-rule-faint);
+  background: transparent;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: none;
+}
+body.lab .seg-toggle button:first-child { border-left: 0; }
+body.lab .seg-toggle button.on {
+  background: var(--lab-ink);
+  color: var(--lab-sheet);
+}
+
+/* ---------- the curve: a recorder trace in ink on paper ---------- */
+/* Night: a faint wash either side of the waking day. */
+body.lab #energyChart rect[fill="rgba(255,255,255,0.025)"] { fill: var(--lab-ink); fill-opacity: 0.06; }
+/* Gridlines at 25, 50, 75, 100. */
+body.lab #energyChart line[stroke="rgba(255,255,255,0.05)"] { stroke: var(--lab-rule-faint); }
+/* Line mode: the area under the trace was a green gradient. A flat wash. */
+body.lab #energyChart path[fill="url(#eg)"] { fill: var(--lab-ink); fill-opacity: 0.07; }
+/* The trace itself, in line and stack mode. The glow goes. */
+body.lab #energyChart path[stroke="#6BE3A4"] {
+  stroke: var(--lab-ink);
+  stroke-width: 2.5;
+  filter: none !important;
+}
+/* Stack mode: the no-caffeine baseline dashed in pencil, the caffeine band in ochre. */
+body.lab #energyChart path[fill="rgba(255,255,255,0.06)"] { fill: var(--lab-ink); fill-opacity: 0.05; }
+body.lab #energyChart path[stroke="rgba(255,255,255,0.25)"] { stroke: var(--lab-ink-dim); stroke-width: 1.5; }
+body.lab #energyChart path[fill="url(#cg)"] { fill: var(--acc-prep); fill-opacity: 0.32; }
+/* Bars mode: one bar an hour, inked by level. Square corners. */
+body.lab #energyChart rect[fill="#6BE3A4"] { fill: var(--acc-done); rx: 0; }
+body.lab #energyChart rect[fill="#F2C063"] { fill: var(--acc-prep); rx: 0; }
+body.lab #energyChart rect[fill="#FF8A8A"] { fill: var(--lab-red); rx: 0; }
+/* Now: a solid ink rule with a hollow dot on the trace. */
+body.lab #energyChart line[stroke="rgba(255,255,255,0.5)"] { stroke: var(--lab-ink); stroke-width: 1.5; }
+body.lab #energyChart circle[fill="#fff"] {
+  fill: var(--lab-sheet);
+  stroke: var(--lab-ink);
+  stroke-width: 2;
+  r: 5;
+}
+/* Scrub: the same in pencil, dashed, while the finger is on the chart. */
+body.lab #energyChart line[stroke="rgba(107,227,164,0.7)"] { stroke: var(--lab-ink-dim); }
+body.lab #energyChart circle[fill="#0e0e10"] {
+  fill: var(--lab-sheet);
+  stroke: var(--lab-ink);
+  stroke-width: 2;
+}
+body.lab .axis {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--lab-ink-dim);
+}
+
+/* ---------- the plan band: peak, crash, cutoff, typed on the second sheet ---------- */
+body.lab .plan-band {
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  background: var(--lab-sheet-2);
+  gap: 12px 26px;
+}
+body.lab .plan-item .k {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--lab-ink-dim);
+}
+body.lab .plan-item .v {
+  font-family: var(--lab-display);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--lab-ink);
+}
+body.lab .plan-item .v.green { color: var(--acc-done); }
+body.lab .plan-item .v.amber { color: var(--acc-prep); }
+body.lab .plan-item .v.red   { color: var(--lab-red); }
+/* The cutoff carries a sky blue inline in the markup. Prussian blue instead. */
+body.lab #cutoffVal { color: var(--acc-mover) !important; }
+
+/* ---------- smart timing tiles and the tips ---------- */
+body.lab .mini {
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  padding: 14px 15px 15px;
+}
+body.lab .mini .k {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--lab-ink-dim);
+}
+body.lab .mini .v {
+  font-family: var(--lab-display);
+  font-size: 22px;
+  letter-spacing: 0.02em;
+  color: var(--lab-ink);
+}
+body.lab .mini.peak .v   { color: var(--acc-done); }
+body.lab .mini.crash .v  { color: var(--acc-prep); }
+body.lab .mini.cutoff .v { color: var(--acc-mover); }
+body.lab .mini .s {
+  font-family: var(--lab-type);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--lab-ink-dim);
+}
+body.lab .tips { counter-reset: tip; }
+body.lab .tip {
+  font-family: var(--lab-type);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--lab-ink);
+  border-top: 1px solid var(--lab-rule-faint);
+  padding: 11px 0;
+}
+/* The emoji bullets were pictures. A typed index instead. */
+body.lab .tip .ic { display: none; }
+body.lab .tip::before {
+  counter-increment: tip;
+  content: counter(tip, decimal-leading-zero);
+  flex-shrink: 0;
+  min-width: 22px;
+  padding-top: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--lab-ink-dim);
+}
+
+/* ---------- today's intake: the figure, the bar, the verdict ---------- */
+body.lab .daily-num {
+  font-family: var(--lab-display);
+  letter-spacing: 0;
+  color: var(--lab-ink);
+}
+body.lab .daily-of {
+  font-family: var(--lab-type);
+  font-size: 15px;
+  color: var(--lab-ink-dim);
+}
+body.lab .daily-unit {
+  font-family: var(--lab-type);
+  letter-spacing: 0.14em;
+  color: var(--lab-ink-dim);
+}
+body.lab .daily-active {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acc-prep);
+}
+body.lab .bar-track {
+  height: 12px;
+  border-radius: 0;
+  border: 1px solid var(--lab-rule);
+  background: var(--lab-sheet-2);
+}
+/* The JS paints the fill as a gradient by band. Flat ink, mapped by band. */
+body.lab .bar-fill {
+  border-radius: 0;
+  background: var(--acc-done) !important;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.lab .bar-fill[style*="#F2C063"],
+body.lab .bar-fill[style*="242, 192, 99"] { background: var(--acc-prep) !important; }
+body.lab .bar-fill[style*="#FF6B6B"],
+body.lab .bar-fill[style*="255, 107, 107"] { background: var(--lab-red) !important; }
+body.lab .daily-msg { font-family: var(--lab-type); font-size: 13.5px; }
+body.lab .daily-msg.good { color: var(--acc-done); }
+body.lab .daily-msg.warn { color: var(--acc-prep); }
+body.lab .daily-msg.bad  { color: var(--lab-red); }
+body.lab .daily-note {
+  font-family: var(--lab-type);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lab-ink-dim);
+}
+
+/* ---------- log a drink: a line to type on, results as ruled rows ---------- */
+body.lab .gm-input {
+  min-height: 40px;
+  padding: 9px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 14.5px;
+  box-shadow: inset 0 -1px 0 transparent;
+  transition: none;
+}
+body.lab .gm-input:focus { background: transparent; border-color: var(--lab-rule); box-shadow: inset 0 -1px 0 var(--lab-ink); }
+body.lab .gm-input::placeholder { color: var(--lab-pencil); }
+
+body.lab .results { margin-top: 6px; }
+body.lab .result {
+  min-height: 44px;
+  padding: 9px 4px;
+  margin-bottom: 0;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule-faint);
+  border-radius: 0;
+  transition: none;
+}
+body.lab .result:last-child { border-bottom: 0; }
+body.lab .result:hover { background: var(--lab-sheet-2); border-color: var(--lab-rule-faint); }
+/* The cup, leaf and bolt pictures were decoration. The name and the category say it. */
+body.lab .result-emoji { display: none; }
+body.lab .result-name { font-family: var(--lab-type); font-size: 14.5px; color: var(--lab-ink); }
+body.lab .result-cat {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .result-mg {
+  font-family: var(--lab-type);
+  font-size: 13.5px;
+  color: var(--acc-prep);
+}
+body.lab .result-mg small { color: var(--lab-ink-dim); font-weight: 400; }
+body.lab .results-empty {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .custom-row { border-top: 1px solid var(--lab-rule-faint); }
+/* Add is the one button on the page; lab-pages.css inks it. Square it up. */
+body.lab .gm-add {
+  min-height: 40px;
+  padding: 9px 16px;
+  transition: none;
+}
+body.lab .gm-add:active { transform: none; }
+
+/* ---------- today's log: ruled rows, the dose in ochre ---------- */
+body.lab .log-row {
+  min-height: 48px;
+  padding: 10px 4px;
+  margin-bottom: 0;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule-faint);
+  border-radius: 0;
+}
+body.lab .log-row:last-child { border-bottom: 0; }
+body.lab .log-emoji { display: none; }
+body.lab .log-name { font-family: var(--lab-type); font-size: 14.5px; font-weight: 400; color: var(--lab-ink); }
+body.lab .log-name b { font-family: var(--lab-type); color: var(--acc-prep); }
+body.lab .log-meta {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--lab-ink-dim);
+}
+body.lab .log-meta .sep { opacity: 0.6; }
+body.lab .log-time {
+  font-family: var(--lab-type);
+  font-size: 12px;
+  color: var(--lab-ink);
+}
+body.lab .log-del {
+  min-width: 36px;
+  min-height: 40px;
+  padding: 0 4px;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 18px;
+  opacity: 0.55;
+  transition: none;
+}
+body.lab .log-del:hover { opacity: 1; color: var(--lab-red); }
+
+/* ---------- phones ---------- */
+@media (max-width: 480px) {
+  body.lab .dash-title { letter-spacing: 0.16em; gap: 10px; }
+  /* Not enough width for a rule on both sides of the title on a phone. */
+  body.lab .dash-title::before { display: none; }
+  body.lab .energy-head { gap: 14px; }
+  /* Tighter tracking so a two-word tile label stays on one line and the figures share a baseline. */
+  body.lab .mini .k { letter-spacing: 0.08em; }
+  /* The plan band reads as three typed lines, key left, value right. */
+  body.lab .plan-band {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 2px 14px;
+  }
+  body.lab .plan-item {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 40px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--lab-rule-faint);
+  }
+  body.lab .plan-item:last-child { border-bottom: 0; }
+  body.lab .plan-item .v { text-align: right; }
+}

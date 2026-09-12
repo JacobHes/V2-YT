@@ -16,10 +16,14 @@ Open any `.html` file directly in your browser — no build step, no install.
 |---|---|
 | [index.html](index.html) | Goals tracker (Day Ring, Goal Ticker, To Do list) — the home page |
 | [health.html](health.html) | Supplement / daily stack tracker |
-| [po-water.html](po-water.html) | Water intake tracker |
 | [finance.html](finance.html) | Finances |
 | [gym.html](gym.html) | Progressive overload gym tracker |
-| [topbar.js](topbar.js) | Shared top bar — auto-injected into pages that `<script src="topbar.js">` |
+| [daily.html](daily.html) | Daily log and the 30-day challenge |
+| [track.html](track.html) | Time tracking by project, auto-fills the daily log |
+| [caffeine.html](caffeine.html) | Caffeine intake and timing |
+| [guide.html](guide.html) | The manual: what each page is for and how the pieces connect |
+| [topbar.js](topbar.js) | Shared top bar with the menu drawer and the bottom tabs — auto-injected into pages that `<script src="topbar.js">` |
+| lab-theme.css, lab-pages.css, lab-main.css, lab-*.css | The look: a 1940s laboratory document. Tokens, the shared page layer, and one thin file per page |
 
 Each app stores its own state in browser `localStorage`. No accounts, no server.
 

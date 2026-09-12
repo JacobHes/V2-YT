@@ -1,0 +1,461 @@
+/* =============================================================
+ * Lab theme applied to daily.html.
+ *
+ * Every rule sits under body.lab, so removing that one class returns the
+ * page to its previous look. Nothing here renames or removes a selector the
+ * page's JavaScript renders; it only restyles what already exists.
+ *
+ * lab-pages.css has already retuned the --bg / --text-1..4 / --good --warn
+ * --bad --accent family, so most of the palette arrives before a rule here
+ * runs. The accent is Prussian blue (--acc-mover) throughout: the ring, the
+ * habit bars, the day number, the strip tints.
+ *
+ * Requires lab-theme.css and lab-pages.css to be loaded first.
+ * ============================================================= */
+
+/* ---------- desk ---------- */
+body.lab .shell { padding-bottom: 24px; }
+
+/* ---------- day navigator: a typed date in a box ---------- */
+body.lab .day-pill {
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+body.lab .day-nav {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 0;
+  color: var(--lab-ink);
+  font-size: 18px;
+}
+body.lab .day-nav:hover:not(:disabled) { background: var(--lab-ink); color: var(--lab-sheet); }
+body.lab .day-nav:disabled { opacity: 0.3; }
+body.lab .day-label {
+  padding: 0 10px;
+  min-width: 128px;
+  border-left: 1px solid var(--lab-rule);
+  border-right: 1px solid var(--lab-rule);
+  line-height: 40px;
+}
+body.lab .day-label.is-today { color: var(--acc-done); }
+
+/* ---------- header: the title on a rule, the saved stamp ---------- */
+body.lab .header { gap: 12px; }
+body.lab .title { margin: 0; }
+/* Saved is a state, so it gets a stamp. The page fades it in and out. */
+body.lab .saved-flag {
+  display: inline-block;
+  padding: 3px 9px 2px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--lab-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: var(--acc-done);
+  transform: rotate(-4deg);
+  mix-blend-mode: multiply;
+  white-space: nowrap;
+}
+body.lab .saved-flag.show { opacity: 0.9; }
+
+/* ---------- section eyebrows: a poster label between two rules ---------- */
+body.lab .divider { border-top: 0; margin: 24px 0 14px; }
+body.lab .divider::before,
+body.lab .divider::after { background: var(--lab-rule); }
+body.lab .divider span {
+  font-family: var(--lab-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+
+/* ---------- sheets ---------- */
+body.lab .card { padding: 18px 18px 16px; }
+body.lab .d30-card {
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+  padding: 18px 18px 16px;
+}
+
+/* ---------- form fields: a typed label over a line ---------- */
+body.lab .field label {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .input-wrap input {
+  min-height: 40px;
+  padding: 9px 4px;
+  font-size: 14.5px;
+}
+body.lab .input-wrap input[type="number"] { padding-right: 36px; }
+body.lab .input-wrap input:focus { border-color: var(--lab-rule); box-shadow: inset 0 -1px 0 var(--lab-ink); }
+/* The unit is information, so it is read in ink, not pencil. */
+body.lab .unit {
+  right: 4px;
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--lab-ink-dim);
+}
+
+/* ---------- sleep readout: an inset on the sheet ---------- */
+body.lab .sleep-readout {
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule-faint);
+  border-radius: 0;
+  padding: 10px 12px;
+}
+body.lab .sleep-readout .sleep-label {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--lab-ink-dim);
+}
+body.lab .sleep-readout .sleep-val {
+  font-family: var(--lab-display);
+  font-size: 18px;
+  color: var(--lab-ink);
+}
+body.lab .sleep-readout .sleep-val.empty { color: var(--lab-pencil); }
+
+/* ---------- social total ---------- */
+body.lab .sm-total { border-top: 1px solid var(--lab-rule-faint); }
+body.lab .sm-total-label,
+body.lab .sm-cost-label {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .sm-total-val {
+  font-family: var(--lab-display);
+  font-size: 18px;
+  color: var(--lab-ink);
+}
+body.lab .sm-cost-val {
+  font-family: var(--lab-type);
+  font-size: 13px;
+  color: var(--acc-prep);
+}
+
+/* ---------- the switch, drawn on the page's own tick buttons ----------
+ * The habit tick and the D30 "Plan" tick are <button>s that toggle a class.
+ * They are restyled to read as the theme's pill switch: paper off, green on.
+ * Label left, switch right, the way .lab-switch-row lays it out. */
+body.lab .habit,
+body.lab .d30-hrow {
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--lab-rule-faint);
+}
+body.lab .habit-name,
+body.lab .d30-hname {
+  flex: 1 1 auto;
+  min-width: 0;
+  order: 1;
+  font-family: var(--lab-type);
+  font-size: 14.5px;
+  font-weight: 400;
+  color: var(--lab-ink);
+}
+body.lab .habit-check,
+body.lab .d30-check.clickable {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  order: 2;
+  flex-shrink: 0;
+  width: 46px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--lab-rule);
+  border-radius: 13px;
+  background: var(--lab-paper-deep);
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+body.lab .habit-check::after,
+body.lab .d30-check.clickable::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+body.lab .habit-check:hover,
+body.lab .d30-check.clickable:hover { border-color: var(--lab-ink-dim); }
+body.lab .habit-check.checked,
+body.lab .d30-check.clickable.on {
+  background: var(--lab-switch-on);
+  border-color: var(--lab-switch-on);
+  color: transparent;
+  box-shadow: none;
+}
+body.lab .habit-check.checked::after,
+body.lab .d30-check.clickable.on::after { transform: translateX(20px); border-color: transparent; }
+
+/* ---------- DISCIPLINED30 ---------- */
+body.lab .d30-head {
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  border-bottom: 3px double var(--lab-rule);
+}
+body.lab .d30-name {
+  font-family: var(--lab-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--lab-ink);
+}
+body.lab .d30-daynum {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--acc-mover);
+}
+
+/* The ring: ink on paper. Prussian blue over a faint track, square ends. */
+body.lab .d30-ring-bg { stroke: var(--lab-rule-faint); }
+body.lab .d30-ring-fill { stroke: var(--acc-mover); stroke-linecap: butt; filter: none; }
+body.lab .d30-ring-pct {
+  font-family: var(--lab-display);
+  font-size: 22px;
+  color: var(--lab-ink);
+}
+body.lab .d30-ring-sub {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--lab-ink-dim);
+}
+
+/* Per-habit bars: a ruled track, a solid fill. */
+body.lab .d30-bar-name {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--lab-ink-dim);
+}
+body.lab .d30-bar-track {
+  height: 8px;
+  border-radius: 0;
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule-faint);
+  box-sizing: border-box;
+}
+body.lab .d30-bar-fill { border-radius: 0; background: var(--acc-mover); }
+body.lab .d30-bar-pct {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  color: var(--lab-ink);
+}
+/* On a desk there is room for the whole habit name beside its bar. */
+@media (min-width: 600px) {
+  body.lab .d30-bar-name { width: 128px; }
+}
+
+/* Today's five. */
+body.lab .d30-today { border-top: 1px solid var(--lab-rule-faint); }
+body.lab .d30-today-label {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--lab-ink-dim);
+}
+body.lab .d30-today-pct {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--lab-ink);
+}
+body.lab .d30-hrow.is-done .d30-hname { color: var(--acc-done); }
+/* A timed habit's tick is read-only: it inks itself when the minutes reach
+ * the goal. A tally box beside the minutes, not a switch. */
+body.lab .d30-check:not(.clickable) {
+  order: 2;
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  padding: 0;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: transparent;
+  font-family: var(--lab-type);
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: none;
+  cursor: default;
+  opacity: 1;
+}
+body.lab .d30-check:not(.clickable).on { background: var(--lab-ink); border-color: var(--lab-ink); color: var(--lab-sheet); box-shadow: none; }
+body.lab .d30-min-wrap { order: 3; gap: 5px; }
+body.lab .d30-min {
+  width: 58px;
+  min-height: 40px;
+  padding: 9px 4px;
+  font-size: 14.5px;
+}
+body.lab .d30-min-unit {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+
+/* The 30-day strip: tally cells. Empty is paper, part-done is a tint of the
+ * accent stepping darker, complete is stamped green. The day being viewed
+ * has an ink frame; days not yet reached are pencilled in with a dashed edge.
+ * Cells are taller than wide so a thumb has 40px to land on. */
+body.lab .d30-strip { gap: 4px; margin-top: 14px; }
+body.lab .d30-cell {
+  aspect-ratio: auto;
+  min-height: 40px;
+  border-radius: 0;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule-faint);
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--lab-ink-dim);
+  box-sizing: border-box;
+}
+body.lab .d30-cell.p25  { background: color-mix(in srgb, var(--acc-mover) 30%, var(--lab-sheet)); border-color: var(--lab-rule-faint); color: var(--lab-ink); }
+body.lab .d30-cell.p50  { background: color-mix(in srgb, var(--acc-mover) 45%, var(--lab-sheet)); border-color: transparent; color: var(--lab-ink); }
+body.lab .d30-cell.p75  { background: color-mix(in srgb, var(--acc-mover) 72%, var(--lab-sheet)); border-color: transparent; color: var(--lab-sheet); }
+body.lab .d30-cell.p100 { background: var(--acc-done); border-color: var(--acc-done); color: var(--lab-sheet); }
+body.lab .d30-cell.future { opacity: 1; background: transparent; border: 1px dashed var(--lab-rule-faint); color: var(--lab-pencil); }
+body.lab .d30-cell.current { border-color: var(--lab-ink); outline: 2px solid var(--lab-ink); outline-offset: 1px; }
+body.lab .d30-cell.tappable:hover { border-color: var(--lab-ink); }
+
+/* ---------- energy curve: a segmented typed control ---------- */
+body.lab .en-row { padding: 8px 0; border-bottom: 1px solid var(--lab-rule-faint); }
+body.lab .en-label {
+  font-family: var(--lab-type);
+  font-size: 14.5px;
+  font-weight: 400;
+  color: var(--lab-ink);
+}
+body.lab .en-btns {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+}
+body.lab .en-btn {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 0;
+  border-left: 1px solid var(--lab-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s;
+}
+body.lab .en-btn:first-child { border-left: 0; }
+body.lab .en-btn:hover { background: var(--lab-sheet-2); color: var(--lab-ink); }
+/* The chosen level is inked in its own colour. */
+body.lab .en-btn.low.on  { background: var(--lab-red);  border-color: var(--lab-ink); color: var(--lab-sheet); }
+body.lab .en-btn.med.on  { background: var(--acc-prep); border-color: var(--lab-ink); color: var(--lab-sheet); }
+body.lab .en-btn.high.on { background: var(--acc-done); border-color: var(--lab-ink); color: var(--lab-sheet); }
+
+body.lab .peak-readout { margin-top: 16px; }
+body.lab .peak-line { font-family: var(--lab-type); font-size: 14.5px; line-height: 1.5; color: var(--lab-ink); }
+body.lab .peak-line .peak-window { color: var(--acc-done); }
+body.lab .peak-hint {
+  font-family: var(--lab-type);
+  font-size: 13px;
+  font-style: normal;
+  line-height: 1.5;
+  color: var(--lab-ink-dim);
+}
+body.lab .peak-bar-label { font-family: var(--lab-type); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lab-ink-dim); }
+body.lab .peak-bar-track {
+  height: 8px;
+  border-radius: 0;
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule-faint);
+  box-sizing: border-box;
+}
+body.lab .peak-bar-fill { border-radius: 0; background: var(--acc-mover); }
+body.lab .peak-bar-fill.is-peak { background: var(--acc-done); }
+body.lab .peak-bar-val { font-family: var(--lab-type); font-size: 11px; color: var(--lab-ink); }
+
+/* ---------- past days: a ledger ---------- */
+body.lab .hist-row {
+  padding: 10px 4px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--lab-rule-faint);
+  font-family: var(--lab-type);
+  font-size: 13px;
+}
+body.lab .hist-row:hover { background: var(--lab-sheet-2); }
+body.lab .hist-row:hover .hist-date { color: var(--lab-ink); }
+body.lab .hist-date { font-family: var(--lab-type); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lab-ink-dim); }
+body.lab .hist-stats { font-family: var(--lab-type); font-size: 12px; color: var(--lab-ink-dim); }
+body.lab .hist-stats .hist-stat { color: var(--lab-ink-dim); }
+body.lab .hist-stats .hist-stat b { color: var(--lab-ink); }
+body.lab .hist-exec { font-family: var(--lab-display); font-size: 14px; color: var(--lab-ink); }
+body.lab .hist-empty {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.lab * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

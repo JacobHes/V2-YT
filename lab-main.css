@@ -65,10 +65,10 @@ body.lab .dash-title::after {
 
 body.lab .section-title {
   font-family: var(--lab-type);
-  font-size: 10px;
-  letter-spacing: 0.2em;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--lab-pencil);
+  color: var(--lab-ink-dim);
 }
 
 /* ---------- cards become sheets in a stack ---------- */
@@ -90,7 +90,7 @@ body.lab .gm-card.gm-all-done::after { z-index: 3; }
 /* ---------- header: date, progress, streak ---------- */
 body.lab .gm-eyebrow {
   font-family: var(--lab-type);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--lab-ink-dim);
@@ -138,7 +138,7 @@ body.lab .gm-bar > .gm-bar-seg-done {
 /* ---------- energy check-in: a row of typed checkboxes ---------- */
 body.lab .gm-checkin-label {
   font-family: var(--lab-type);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--lab-ink-dim);
@@ -149,7 +149,7 @@ body.lab .gm-checkin-btns button {
   background: transparent;
   color: var(--lab-ink-dim);
   font-family: var(--lab-type);
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   padding: 2px 4px;
@@ -206,32 +206,6 @@ body.lab .gm-arrow button {
   box-shadow: none;
 }
 body.lab .gm-arrow button:hover { background: var(--lab-red); color: var(--lab-sheet); }
-/* Stamped once an arrow is aimed. */
-body.lab .gm-arrow:not(.gm-arrow-empty)::after {
-  content: 'Priority';
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  z-index: 4;
-  display: inline-block;
-  padding: 3px 9px 2px;
-  border: 2px solid currentColor;
-  border-radius: 3px;
-  font-family: var(--lab-display);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  line-height: 1.1;
-  color: var(--lab-red);
-  opacity: 0.88;
-  transform: rotate(-6deg);
-  mix-blend-mode: multiply;
-  -webkit-mask-image: var(--lab-stamp-mask);
-  mask-image: var(--lab-stamp-mask);
-  pointer-events: none;
-}
-
 /* ---------- task rows: ruled lines with a coloured edge ---------- */
 body.lab .gm-row {
   border-radius: 0;
@@ -248,7 +222,7 @@ body.lab .gm-row:has(.gm-energy-prep)  { border-left-color: var(--acc-prep); }
 body.lab .gm-row:has(.gm-energy-admin) { border-left-color: var(--acc-admin); }
 body.lab .gm-row.gm-row-done           { border-left-color: var(--lab-rule-faint); }
 
-body.lab .gm-text { font-family: var(--lab-type); font-size: 14px; letter-spacing: 0; color: var(--lab-ink); }
+body.lab .gm-text { font-family: var(--lab-type); font-size: 14.5px; letter-spacing: 0; color: var(--lab-ink); }
 body.lab .gm-row-done .gm-text { color: var(--lab-pencil); text-decoration: line-through; }
 body.lab .gm-handle { color: var(--lab-pencil); }
 body.lab .gm-check {
@@ -270,7 +244,7 @@ body.lab .gm-energy {
   background: transparent;
   padding: 1px 5px;
   font-family: var(--lab-type);
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -287,7 +261,7 @@ body.lab .gm-age {
   border: 1px solid var(--lab-red);
   color: var(--lab-red);
   font-family: var(--lab-type);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.06em;
   padding: 1px 4px;
   flex-shrink: 0;
@@ -393,11 +367,11 @@ body.lab .gm-status {
 }
 body.lab .empty-state {
   font-family: var(--lab-type);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--lab-pencil);
+  color: var(--lab-ink-dim);
 }
 
 /* ---------- notices ---------- */
@@ -677,44 +651,7 @@ body.lab .grant-log::-webkit-scrollbar-thumb { background: var(--lab-rule-faint)
 /* ---------- command header: the letterhead ---------- */
 body.lab .hud-hidden { display: none !important; }
 
-body.lab .hud-cmd { position: relative; margin: 0 0 22px; padding-top: 42px; }
-/* Letterhead, left. */
-body.lab .hud-cmd::before {
-  content: 'Project Y  \00b7  Daily work sheet';
-  position: absolute;
-  top: 8px;
-  left: 0;
-  font-family: var(--lab-type);
-  font-size: 9.5px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--lab-ink-dim);
-}
-/* Classification, right. */
-body.lab .hud-cmd::after {
-  content: 'Restricted';
-  position: absolute;
-  top: 0;
-  right: 2px;
-  display: inline-block;
-  padding: 3px 9px 2px;
-  border: 2px solid currentColor;
-  border-radius: 3px;
-  font-family: var(--lab-display);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  line-height: 1.1;
-  color: var(--lab-red);
-  opacity: 0.88;
-  transform: rotate(-5deg);
-  mix-blend-mode: multiply;
-  -webkit-mask-image: var(--lab-stamp-mask);
-  mask-image: var(--lab-stamp-mask);
-  pointer-events: none;
-}
-
+body.lab .hud-cmd { position: relative; margin: 0 0 22px; }
 body.lab .hud-cmd-top {
   display: flex;
   align-items: flex-start;
@@ -728,7 +665,7 @@ body.lab .hud-readout-item {
   align-items: baseline;
   gap: 7px;
   font-family: var(--lab-type);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--lab-ink-dim);
@@ -758,7 +695,7 @@ body.lab .hud-cmd-date {
   text-align: center;
   margin-top: 10px;
   font-family: var(--lab-type);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--lab-ink-dim);
@@ -766,7 +703,7 @@ body.lab .hud-cmd-date {
 body.lab .hud-cmd .hud-progress-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
 body.lab .hud-label {
   font-family: var(--lab-type);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--lab-ink-dim);
@@ -811,12 +748,12 @@ body.lab .hud-heading {
 body.lab .hud-count {
   margin-left: auto;
   font-family: var(--lab-type);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.1em;
   color: var(--lab-ink-dim);
 }
 body.lab .hud-col .hud-panel-foot {
-  display: flex;
+  display: none;
   gap: 14px;
   margin-top: 10px;
   padding-top: 6px;
@@ -1158,58 +1095,11 @@ body.lab .hud-workring-value {
 body.lab .hud-workring[data-state='low'] .hud-workring-value { color: var(--lab-red); }
 body.lab .hud-workring-caption {
   font-family: var(--lab-type);
-  font-size: 7.5px;
+  font-size: 8.5px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--lab-pencil);
 }
-
-/* ---------- the shared bars, on this page only ---------- */
-body.lab .topbar {
-  background: var(--lab-paper-deep);
-  border-bottom: 1px solid var(--lab-rule);
-  font-family: var(--lab-type);
-}
-body.lab .topbar-water-pill {
-  background: var(--lab-sheet);
-  border: 1px solid var(--lab-rule);
-  border-right: 0;
-  border-radius: 2px 0 0 2px;
-  color: var(--lab-ink);
-}
-body.lab .topbar-water-pill .topbar-pill-dot { border-radius: 1px; background: var(--acc-mover); }
-body.lab .topbar-water-pill.warn .topbar-pill-dot { background: var(--acc-prep); }
-body.lab .topbar-water-pill.miss .topbar-pill-dot { background: var(--lab-red); animation: none; }
-body.lab .topbar-pill-count { font-family: var(--lab-type); color: var(--lab-ink); }
-body.lab .topbar-water-add {
-  border: 1px solid var(--lab-ink);
-  border-radius: 0 2px 2px 0;
-  background: var(--lab-ink);
-  color: var(--lab-sheet);
-  font-family: var(--lab-type);
-}
-body.lab .topbar-water-add.flash { background: var(--acc-mover); }
-body.lab .topbar-finance-btn {
-  border: 1px solid var(--lab-rule);
-  border-radius: 2px;
-  background: var(--lab-sheet);
-}
-body.lab .topbar-finance-icon { filter: grayscale(100%) brightness(0.35); opacity: 0.9; }
-
-body.lab .bottombar {
-  background: var(--lab-paper-deep);
-  border-top: 1px solid var(--lab-rule);
-  font-family: var(--lab-type);
-}
-body.lab .bottombar-tab {
-  color: var(--lab-ink-dim);
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-body.lab .bottombar-tab-icon { filter: grayscale(100%) brightness(0.4); opacity: 0.7; }
-body.lab .bottombar-tab.active { color: var(--lab-ink); box-shadow: inset 0 2px 0 var(--lab-ink); }
-body.lab .bottombar-tab.active .bottombar-tab-icon { filter: grayscale(100%) brightness(0.15); opacity: 1; }
 
 /* ---------- phones ---------- */
 @media (max-width: 480px) {

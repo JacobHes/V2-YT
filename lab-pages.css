@@ -1,0 +1,258 @@
+/* =============================================================
+ * Lab theme, shared page layer. Loaded after lab-theme.css by every page
+ * except main.html, which has lab-main.css instead.
+ *
+ * The pages were built from two template families. Each family drives its
+ * look from a handful of variables, so retuning those under body.lab carries
+ * the palette through most of a page before a single component rule runs.
+ * Component rules below cover what the families share. Each page then has a
+ * thin lab-<page>.css for its own shapes.
+ * ============================================================= */
+
+/* ---------- family A: --text-primary, --success ... (index, track, caffeine, health, finance) ---------- */
+/* ---------- family B: --bg, --text-1 ... (daily, gym) ---------- */
+body.lab {
+  --text-primary: var(--lab-ink);
+  --text-secondary: var(--lab-ink-dim);
+  --text-tertiary: var(--lab-ink-dim);
+  --text-quaternary: var(--lab-pencil);
+  --success: var(--acc-done);
+  --warning: var(--acc-prep);
+  --danger: var(--lab-red);
+  --accent: var(--acc-mover);
+  --accent-glow: transparent;
+  --font: var(--lab-type);
+  --font-mono: var(--lab-type);
+
+  --bg: var(--lab-paper);
+  --bg-deep: var(--lab-paper-deep);
+  --bg-card: var(--lab-sheet);
+  --bg-secondary: var(--lab-sheet-2);
+  --bg-input: transparent;
+  --bg-input-focus: transparent;
+  --bg-dropdown: var(--lab-sheet);
+  --glass-bg: var(--lab-sheet);
+  --glass-border: var(--lab-rule);
+  --glass-border-strong: var(--lab-ink);
+  --glass-shadow: 2px 2px 0 var(--lab-sheet-2), 3px 3px 0 var(--lab-rule-faint);
+  --text-1: var(--lab-ink);
+  --text-2: var(--lab-ink-dim);
+  --text-3: var(--lab-ink-dim);
+  --text-4: var(--lab-pencil);
+  --border: var(--lab-rule-faint);
+  --border-soft: var(--lab-rule-faint);
+  --border-strong: var(--lab-rule);
+  --good: var(--acc-done);
+  --warn: var(--acc-prep);
+  --bad: var(--lab-red);
+  --info: var(--acc-mover);
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 0px;
+  color-scheme: light;
+
+  background-color: var(--lab-paper);
+  background-image:
+    var(--lab-noise),
+    radial-gradient(ellipse at center, transparent 58%, rgba(70, 52, 24, 0.18) 100%);
+  background-attachment: fixed;
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  -webkit-font-smoothing: auto;
+}
+html:has(body.lab) { background: var(--lab-paper); }
+
+/* The template's drifting washes and film grain. Off. */
+body.lab::before,
+body.lab::after { display: none; }
+
+/* ---------- shared components ---------- */
+
+/* Page titles: the poster face on a rule. */
+body.lab .dash-title,
+body.lab .title,
+body.lab h1.page-title {
+  font-family: var(--lab-display);
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: none;
+  -webkit-text-fill-color: var(--lab-ink);
+  color: var(--lab-ink);
+}
+body.lab .dash-sub {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+
+body.lab .section-title,
+body.lab .section-title-text,
+body.lab .gm-eyebrow,
+body.lab .sf-eyebrow {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+
+/* Cards become sheets in a stack. */
+body.lab .card,
+body.lab .gm-card,
+body.lab .timer-card,
+body.lab .tile {
+  background: var(--lab-sheet);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+}
+
+/* Rules and dividers. */
+body.lab .divider,
+body.lab .section-divider,
+body.lab hr {
+  border: 0;
+  border-top: 1px solid var(--lab-rule-faint);
+  background: none;
+}
+
+/* Form controls: typed, on a line. */
+body.lab input[type="text"],
+body.lab input[type="number"],
+body.lab input[type="search"],
+body.lab input[type="email"],
+body.lab input[type="date"],
+body.lab input[type="time"],
+body.lab input:not([type]),
+body.lab textarea,
+body.lab select {
+  font-family: var(--lab-type);
+  color: var(--lab-ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 transparent;
+  outline: none;
+}
+body.lab input:focus,
+body.lab textarea:focus,
+body.lab select:focus { box-shadow: inset 0 -1px 0 var(--lab-ink); border-color: var(--lab-rule); }
+body.lab ::placeholder { color: var(--lab-pencil); opacity: 1; }
+
+/* Buttons: typed labels in a box. Pages promote their one primary action. */
+body.lab button,
+body.lab .btn,
+body.lab .gm-add,
+body.lab .add-btn,
+body.lab .quick-add-btn {
+  font-family: var(--lab-type);
+  border-radius: 2px;
+  box-shadow: none;
+  text-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+}
+body.lab .gm-add,
+body.lab .add-btn,
+body.lab .quick-add-btn,
+body.lab .po-btn-primary,
+body.lab .set-save {
+  border: 1px solid var(--lab-ink);
+  background: var(--lab-ink);
+  color: var(--lab-sheet);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+body.lab .gm-add:hover,
+body.lab .add-btn:hover,
+body.lab .quick-add-btn:hover,
+body.lab .po-btn-primary:hover,
+body.lab .set-save:hover { background: var(--lab-ink-dim); filter: none; transform: none; }
+body.lab .po-btn-secondary {
+  border: 1px solid var(--lab-ink);
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Empty states: typed, quiet. */
+body.lab .empty,
+body.lab .empty-state {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+
+/* Native checkboxes anywhere become square ink boxes unless a page makes
+ * them switches. */
+body.lab input[type="checkbox"]:not(.lab-switch) {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  box-shadow: none;
+  cursor: pointer;
+}
+body.lab input[type="checkbox"]:not(.lab-switch):checked { background: var(--lab-ink); border-color: var(--lab-ink); }
+body.lab input[type="checkbox"]:not(.lab-switch):checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--lab-sheet);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  animation: none;
+}
+
+/* Modals: a sheet lifted off the desk. */
+body.lab .modal,
+body.lab .po-modal,
+body.lab .pw,
+body.lab .wiz {
+  border-radius: 0;
+  border: 1px solid var(--lab-ink);
+  outline: 1px solid var(--lab-ink);
+  outline-offset: 4px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  box-shadow: 0 24px 60px rgba(30, 20, 5, 0.35);
+}
+body.lab .modal-bg,
+body.lab .po-modal-bg,
+body.lab .pw-bg { background: rgba(30, 22, 10, 0.55); backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* SVG rings: ink on paper. */
+body.lab .ring-track,
+body.lab .day-ring-track { stroke: var(--lab-rule-faint); }
+body.lab .ring-fill,
+body.lab .day-ring-fill { filter: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.lab * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

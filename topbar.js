@@ -1,179 +1,192 @@
-﻿// =============================================================
-// Persistent dashboard top bar.
+// =============================================================
+// Shared chrome: the top bar with the menu, and the bottom tab bar.
 // Drop this on any page with:
 //     <script src="topbar.js" defer></script>
-// It self-injects HTML + CSS, reads progress from the same
-// localStorage keys the dashboard's tabs already use, and a
-// water "+1" button writes to localStorage and (if configured)
-// pushes a merged update to the Supabase health row so the
-// new bottle appears on every device within ~1 second.
+// It injects its own HTML and CSS. It holds no data and talks to nothing.
+//
+// The look is the lab theme's: walnut bars, a chalkboard drawer, typed
+// labels. Tokens come from lab-theme.css; every var() carries a fallback so
+// a page that has not loaded the theme yet still gets a usable bar.
 // =============================================================
 (function () {
   'use strict';
 
-  // -------- Supabase config (same project as the rest of the dashboard) --------
-  // For your audience's standalone, replace these with placeholders
-  // and have them paste their own values, just like the other pages.
-  // Prefer Vercel env vars (served via /api/config → window.DASH_*),
-  // otherwise fall back to these defaults.
-  const TOPBAR_SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://bbillwahmyolgsiumxuf.supabase.co';
-  const TOPBAR_SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_mgM66JU6rRQxXKBlbnfp1A_tngIl22h';
+  // Every page, in the order the drawer lists them. `blurb` is the one line
+  // that says what the page is for; the manual (guide.html) says the rest.
+  const PAGES = [
+    { href: 'main.html',     key: 'main',     label: 'Main',          blurb: "Today's arrow, the task list, plan tomorrow" },
+    { href: 'daily.html',    key: 'daily',    label: 'Daily tracker', blurb: 'The daily log and the 30-day challenge' },
+    { href: 'track.html',    key: 'track',    label: 'Track',         blurb: 'Time tracking by project' },
+    { href: 'finance.html',  key: 'finance',  label: 'Finance',       blurb: 'Net worth, subscriptions, spending' },
+    { href: 'gym.html',      key: 'fitness',  label: 'Fitness',       blurb: 'Progressive overload log' },
+    { href: 'health.html',   key: 'health',   label: 'Supplements',   blurb: 'The daily stack and WHOOP' },
+    { href: 'caffeine.html', key: 'caffeine', label: 'Caffeine',      blurb: 'Intake and the crash curve' },
+    { href: 'index.html',    key: 'hub',      label: 'Hub',           blurb: 'Every page as a tile' },
+    { href: 'guide.html',    key: 'guide',    label: 'How this works', blurb: 'What each page is for and how the pieces connect' },
+  ];
 
   // -------- CSS --------
   const css = `
 .topbar {
-  position: sticky; top: 0; z-index: 40;
-  display: flex; justify-content: flex-end; align-items: center;
-  gap: 8px;
-  padding: max(10px, env(safe-area-inset-top)) 14px 8px;
-  background: #0a0a0b;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: max(10px, env(safe-area-inset-top)) 16px 10px;
+  background: var(--lab-wood, #2B2219);
+  border-bottom: 1px solid var(--lab-wood-edge, #1A140E);
+  box-shadow: 0 1px 0 rgba(233, 226, 208, 0.08) inset;
+  font-family: var(--lab-type, 'American Typewriter', 'Courier New', monospace);
 }
-.topbar-water-wrap {
-  display: flex; align-items: stretch;
-}
-.topbar-water-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 14px;
-  background: rgba(125, 211, 252, 0.08);
-  border: 1px solid rgba(125, 211, 252, 0.16);
-  border-right: none;
-  border-radius: 12px 0 0 12px;
+.topbar-brand {
+  display: inline-flex; align-items: baseline; gap: 10px;
+  min-width: 0;
+  color: var(--lab-chalk, #E9E2D0);
   text-decoration: none;
-  color: #FAFAFA;
   -webkit-tap-highlight-color: transparent;
 }
-.topbar-water-pill .topbar-pill-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #7DD3FC; flex-shrink: 0;
-}
-.topbar-water-pill.warn .topbar-pill-dot { background: #fbbf24; }
-.topbar-water-pill.miss .topbar-pill-dot {
-  background: #ff8a8a;
-  animation: topbar-miss-pulse 1.6s ease-in-out infinite;
-}
-@keyframes topbar-miss-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50%      { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
-}
-.topbar-pill-count {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+.topbar-brand-name {
+  font-family: var(--lab-display, Futura, 'Trebuchet MS', sans-serif);
   font-size: 13px; font-weight: 700;
-  color: #FAFAFA;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.22em; text-transform: uppercase;
   white-space: nowrap;
 }
-.topbar-water-add {
-  width: 44px;
-  border: 1px solid rgba(125, 211, 252, 0.16);
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.28), rgba(110, 231, 183, 0.28));
-  color: #FFFFFF;
-  font-family: inherit; font-size: 20px; font-weight: 700; line-height: 1;
+.topbar-brand-page {
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--lab-chalk-dim, rgba(233,226,208,0.62));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar-menu-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 40px; padding: 8px 12px;
+  border: 1px solid rgba(233, 226, 208, 0.35);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--lab-chalk, #E9E2D0);
+  font-family: inherit; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
   cursor: pointer;
-  border-radius: 0 12px 12px 0;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, transform 0.10s;
 }
-.topbar-water-add:active { transform: scale(0.94); }
-.topbar-water-add.flash {
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.7), rgba(110, 231, 183, 0.7));
-}
-.topbar-finance-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 44px; height: 42px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
-}
-.topbar-finance-btn:hover { background: rgba(255, 255, 255, 0.08); }
-.topbar-finance-icon {
-  font-size: 20px; line-height: 1;
-  filter: grayscale(100%) brightness(1.4);
-  opacity: 0.85;
-}
+.topbar-menu-btn:hover { border-color: var(--lab-chalk, #E9E2D0); }
+.topbar-menu-lines { display: inline-flex; flex-direction: column; gap: 4px; width: 18px; }
+.topbar-menu-lines i { display: block; height: 2px; background: currentColor; }
 
-/* Bottom tab bar — Instagram-style */
+/* The drawer: a chalkboard slid over the desk. */
+.nav-backdrop {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(20, 14, 6, 0.55);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.nav-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 61;
+  width: min(360px, 100%);
+  display: flex; flex-direction: column;
+  padding: max(14px, env(safe-area-inset-top)) 0 max(18px, env(safe-area-inset-bottom));
+  background: var(--lab-board, #1E2822);
+  border-left: 1px solid rgba(233, 226, 208, 0.12);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.45);
+  font-family: var(--lab-type, 'American Typewriter', 'Courier New', monospace);
+  color: var(--lab-chalk, #E9E2D0);
+  transform: translateX(100%);
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
+body.nav-open .nav-drawer { transform: translateX(0); }
+body.nav-open { overflow: hidden; }
+.nav-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 18px 14px 22px;
+  border-bottom: 1px solid rgba(233, 226, 208, 0.16);
+}
+.nav-title {
+  font-family: var(--lab-display, Futura, 'Trebuchet MS', sans-serif);
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--lab-chalk-dim, rgba(233,226,208,0.62));
+}
+.nav-close {
+  min-width: 40px; min-height: 40px;
+  border: 1px solid rgba(233, 226, 208, 0.35); border-radius: 2px;
+  background: transparent; color: var(--lab-chalk, #E9E2D0);
+  font-family: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-list { list-style: none; margin: 0; padding: 8px 0; }
+.nav-item a {
+  display: block;
+  padding: 13px 22px 12px;
+  text-decoration: none;
+  color: var(--lab-chalk, #E9E2D0);
+  border-left: 3px solid transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item a:hover { background: rgba(233, 226, 208, 0.06); }
+.nav-item a:focus { outline: none; }
+.nav-item a:focus-visible { outline: 1px solid var(--lab-chalk, #E9E2D0); outline-offset: -4px; }
+.topbar-menu-btn:focus, .nav-close:focus { outline: none; }
+.topbar-menu-btn:focus-visible, .nav-close:focus-visible { outline: 1px solid var(--lab-chalk, #E9E2D0); outline-offset: 2px; }
+.nav-item.active a { border-left-color: var(--lab-chalk, #E9E2D0); background: rgba(233, 226, 208, 0.08); }
+.nav-item-label {
+  display: block;
+  font-family: var(--lab-display, Futura, 'Trebuchet MS', sans-serif);
+  font-size: 15px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+.nav-item-blurb {
+  display: block; margin-top: 3px;
+  font-size: 12px; line-height: 1.4;
+  color: var(--lab-chalk-dim, rgba(233,226,208,0.62));
+}
+.nav-item.guide { margin-top: 8px; border-top: 1px solid rgba(233, 226, 208, 0.16); padding-top: 8px; }
+
+/* Bottom tab bar. Four typed labels, no pictures. */
 .bottombar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
   display: flex; justify-content: space-around; align-items: stretch;
-  padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
-  background: #0a0a0b;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  padding: 0 0 env(safe-area-inset-bottom);
+  background: var(--lab-wood, #2B2219);
+  border-top: 1px solid var(--lab-wood-edge, #1A140E);
+  box-shadow: 0 1px 0 rgba(233, 226, 208, 0.08) inset;
+  font-family: var(--lab-type, 'American Typewriter', 'Courier New', monospace);
 }
 .bottombar-tab {
   flex: 1;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px;
-  padding: 6px 0 4px;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 50px; padding: 8px 4px;
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 0.04em;
+  color: var(--lab-chalk-dim, rgba(233,226,208,0.62));
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  box-shadow: inset 0 2px 0 transparent;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s;
 }
-.bottombar-tab-icon {
-  font-size: 24px; line-height: 1;
-  filter: grayscale(100%) brightness(1.2);
-  opacity: 0.55;
-  transition: opacity 0.15s, filter 0.15s, transform 0.10s;
-}
 .bottombar-tab.active {
-  color: #FAFAFA;
+  color: var(--lab-chalk, #E9E2D0);
+  box-shadow: inset 0 2px 0 var(--lab-chalk, #E9E2D0);
 }
-.bottombar-tab.active .bottombar-tab-icon {
-  filter: grayscale(100%) brightness(1.6);
-  opacity: 1;
-}
-.bottombar-tab:active .bottombar-tab-icon { transform: scale(0.92); }
 
-/* Push page content above the fixed bottom bar */
-body.has-bottombar {
-  padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
-}
+/* Room for the fixed bars. The top value is measured after injection. */
+body.has-topbar { padding-top: var(--topbar-h, 56px) !important; }
+body.has-bottombar { padding-bottom: calc(66px + env(safe-area-inset-bottom)) !important; }
 
 @media (max-width: 480px) {
-  .topbar { padding-left: 10px; padding-right: 10px; gap: 6px; }
-  .topbar-water-pill { padding: 8px 11px; gap: 6px; }
-  .topbar-pill-count { font-size: 12px; }
-  .topbar-water-add { width: 40px; font-size: 18px; }
-  .topbar-finance-btn { width: 40px; height: 38px; }
-  .topbar-finance-icon { font-size: 18px; }
-  .bottombar-tab-icon { font-size: 22px; }
-  .bottombar-tab { font-size: 10px; }
+  .topbar { padding-left: 12px; padding-right: 12px; }
+  .topbar-brand-page { display: none; }
 }
 
-/* === Global mobile lockdown ===
-   1) Hide the right-side scrollbar on phones (iOS uses overlay scrollbars anyway).
-   2) Stop iOS auto-text-size-adjust.
-   3) touch-action: pan-y prevents pinch-zoom while still allowing vertical scroll.
-   4) overscroll-behavior on every common modal class stops scroll chaining —
-      scrolling inside a settings popup won't drag the page behind it.
-   5) When body has .topbar-modal-open, the page can't scroll at all (locked).
-*/
-html, body {
-  -webkit-text-size-adjust: 100%;
-}
+/* === Global mobile lockdown === */
+html, body { -webkit-text-size-adjust: 100%; }
 @media (max-width: 768px) {
   html { touch-action: pan-y; }
   ::-webkit-scrollbar { width: 0; height: 0; display: none; }
   html, body { scrollbar-width: none; -ms-overflow-style: none; }
 }
-.modal-bg, .modal, .po-modal-bg, .po-modal, .wt-overlay, .wt-viewer {
-  overscroll-behavior: contain;
-}
-body.topbar-modal-open {
-  overflow: hidden;
-  touch-action: none;
-}
-/* On phones, blow the modals up to full screen and let them be the only
-   scrolling element. Way less "is this scrolling the page or the modal?"
-   confusion. */
+.modal-bg, .modal, .po-modal-bg, .po-modal, .wt-overlay, .wt-viewer { overscroll-behavior: contain; }
+body.topbar-modal-open { overflow: hidden; touch-action: none; }
 @media (max-width: 480px) {
   .modal-bg, .po-modal-bg {
     padding: 0 !important;
@@ -186,6 +199,7 @@ body.topbar-modal-open {
     max-height: 100vh !important;
     height: 100vh !important;
     border-radius: 0 !important;
+    outline: 0 !important;
     padding-top: max(20px, env(safe-area-inset-top)) !important;
     padding-bottom: max(28px, env(safe-area-inset-bottom)) !important;
     overflow-y: auto !important;
@@ -194,68 +208,102 @@ body.topbar-modal-open {
 }
 `;
 
+  // -------- page identity --------
+  function pathName() { return (window.location.pathname || '').toLowerCase(); }
+  function currentPage() {
+    const p = pathName();
+    for (const page of PAGES) {
+      if (p.endsWith('/' + page.href) || p.endsWith(page.href)) return page;
+    }
+    return PAGES.find(x => x.key === 'hub');   // "/" and anything unknown
+  }
+  // Finance keeps its own internal tab bar at the foot; the top bar still
+  // goes on so the menu is reachable from there.
+  function isFinancePage() { return currentPage().key === 'finance'; }
+  // The bottom tabs map to these pages. Hub and main share the first tab.
+  function bottomTabKey() {
+    const k = currentPage().key;
+    if (k === 'hub') return 'main';
+    return k;
+  }
+
   // -------- HTML --------
-  const topbarHtml = `
-<header class="topbar" id="topbar" role="navigation" aria-label="Quick actions">
-  <div class="topbar-water-wrap">
-    <a href="health.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
-      <span class="topbar-pill-dot"></span>
-      <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
-    </a>
-    <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
-  </div>
-  <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
-    <span class="topbar-finance-icon">📊</span>
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function topbarHtml(page) {
+    return `
+<header class="topbar" id="topbar" role="banner">
+  <a href="index.html" class="topbar-brand" aria-label="Hub">
+    <span class="topbar-brand-name">Dashboard</span>
+    <span class="topbar-brand-page">${escapeHtml(page.label)}</span>
   </a>
-</header>
-`;
+  <button type="button" class="topbar-menu-btn" id="topbarMenu" aria-controls="navDrawer" aria-expanded="false">
+    <span class="topbar-menu-lines" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span>Menu</span>
+  </button>
+</header>`;
+  }
+
+  function drawerHtml(page) {
+    const items = PAGES.map(p => `
+    <li class="nav-item${p.key === page.key ? ' active' : ''}${p.key === 'guide' ? ' guide' : ''}">
+      <a href="${p.href}"${p.key === page.key ? ' aria-current="page"' : ''}>
+        <span class="nav-item-label">${escapeHtml(p.label)}</span>
+        <span class="nav-item-blurb">${escapeHtml(p.blurb)}</span>
+      </a>
+    </li>`).join('');
+    return `
+<div class="nav-backdrop" id="navBackdrop"></div>
+<nav class="nav-drawer" id="navDrawer" aria-label="Pages" aria-hidden="true">
+  <div class="nav-head">
+    <span class="nav-title">Pages</span>
+    <button type="button" class="nav-close" id="navClose" aria-label="Close menu">&times;</button>
+  </div>
+  <ul class="nav-list">${items}
+  </ul>
+</nav>`;
+  }
 
   const bottombarHtml = `
 <nav class="bottombar" id="bottombar" role="navigation" aria-label="Main tabs">
-  <a href="index.html" class="bottombar-tab" data-page="main">
-    <span class="bottombar-tab-icon">🏠</span>
-    <span>Main</span>
-  </a>
-  <a href="health.html" class="bottombar-tab" data-page="health">
-    <span class="bottombar-tab-icon">💊</span>
-    <span>Health</span>
-  </a>
-  <a href="gym.html" class="bottombar-tab" data-page="fitness">
-    <span class="bottombar-tab-icon">💪</span>
-    <span>Fitness</span>
-  </a>
-  <a href="track.html" class="bottombar-tab" data-page="track">
-    <span class="bottombar-tab-icon">⏱️</span>
-    <span>Track</span>
-  </a>
-</nav>
-`;
+  <a href="index.html" class="bottombar-tab" data-page="main">Main</a>
+  <a href="health.html" class="bottombar-tab" data-page="health">Health</a>
+  <a href="gym.html" class="bottombar-tab" data-page="fitness">Fitness</a>
+  <a href="track.html" class="bottombar-tab" data-page="track">Track</a>
+</nav>`;
 
-  // Pages where we suppress the app chrome: finance has its own internal
-  // 4-tab bottom nav and self-contained back button.
-  function isFinancePage() {
-    const p = (window.location.pathname || '').toLowerCase();
-    return p.endsWith('/finance.html') || p.endsWith('finance.html');
+  // -------- drawer behaviour --------
+  function setOpen(open) {
+    document.body.classList.toggle('nav-open', open);
+    const btn = document.getElementById('topbarMenu');
+    const drawer = document.getElementById('navDrawer');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (drawer) drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (open) {
+      const first = drawer && drawer.querySelector('.nav-item a');
+      if (first) first.focus({ preventScroll: true });
+    } else if (btn) {
+      btn.focus({ preventScroll: true });
+    }
   }
-  // When the water tracker is iframed inside health.html, the embedded
-  // page shouldn't render its own chrome again.
-  function isEmbedded() {
-    try { return window.self !== window.top; } catch (e) { return true; }
-  }
-  function shouldShowChrome() {
-    return !isFinancePage() && !isEmbedded();
-  }
-  function currentPageKey() {
-    const p = (window.location.pathname || '').toLowerCase();
-    if (p.endsWith('health.html')) return 'health';
-    if (p.endsWith('gym.html')) return 'fitness';
-    if (p.endsWith('track.html')) return 'track';
-    return 'main'; // index.html, /, or anything else falls back to main
+  function wireDrawer() {
+    const btn = document.getElementById('topbarMenu');
+    const close = document.getElementById('navClose');
+    const backdrop = document.getElementById('navBackdrop');
+    if (btn) btn.addEventListener('click', () => setOpen(!document.body.classList.contains('nav-open')));
+    if (close) close.addEventListener('click', () => setOpen(false));
+    if (backdrop) backdrop.addEventListener('click', () => setOpen(false));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setOpen(false);
+    });
   }
 
   function injectStyleAndHTML() {
     if (document.getElementById('topbar') || document.getElementById('bottombar')) return;
-    if (!shouldShowChrome()) return;
+
+    const page = currentPage();
 
     const style = document.createElement('style');
     style.id = 'topbar-style';
@@ -263,172 +311,44 @@ body.topbar-modal-open {
     document.head.appendChild(style);
 
     const topWrap = document.createElement('div');
-    topWrap.innerHTML = topbarHtml.trim();
+    topWrap.innerHTML = topbarHtml(page).trim();
     document.body.insertBefore(topWrap.firstChild, document.body.firstChild);
 
-    const bottomWrap = document.createElement('div');
-    bottomWrap.innerHTML = bottombarHtml.trim();
-    document.body.appendChild(bottomWrap.firstChild);
+    const drawerWrap = document.createElement('div');
+    drawerWrap.innerHTML = drawerHtml(page).trim();
+    while (drawerWrap.firstChild) document.body.appendChild(drawerWrap.firstChild);
 
-    // Highlight the active bottom tab.
-    const active = currentPageKey();
-    document.querySelectorAll('.bottombar-tab').forEach((t) => {
-      t.classList.toggle('active', t.getAttribute('data-page') === active);
-    });
-
-    // Reserve room above the fixed bottom bar so page content can scroll
-    // past it without being hidden.
-    document.body.classList.add('has-bottombar');
-  }
-
-  // -------- Active-date helpers (match the goals page 6 AM rollover) --------
-  function activeDateKey() {
-    const now = new Date();
-    const d = new Date(now);
-    if (now.getHours() < 6) d.setDate(d.getDate() - 1);
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getDate()).padStart(2, '0');
-  }
-  function calendarDateKey() {
-    const d = new Date();
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getDate()).padStart(2, '0');
-  }
-
-  // -------- Read progress from localStorage --------
-  function getGoalsProgress() {
-    const key = 'goals:' + activeDateKey();
-    let goals = [];
-    try { goals = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {}
-    const total = Array.isArray(goals) ? goals.length : 0;
-    const done = total ? goals.filter(g => g && g.done).length : 0;
-    return { done, total };
-  }
-
-  function getStackProgress() {
-    let items = [];
-    try { items = JSON.parse(localStorage.getItem('stack:items')) || []; } catch (e) {}
-    let taken = {};
-    try { taken = JSON.parse(localStorage.getItem('stack:taken:' + activeDateKey())) || {}; } catch (e) {}
-    const total = Array.isArray(items) ? items.length : 0;
-    const done = total ? items.filter(i => i && taken[i.id]).length : 0;
-    return { done, total };
-  }
-
-  function getWaterProgress() {
-    let state = null;
-    try { state = JSON.parse(localStorage.getItem('po_water_v1')); } catch (e) {}
-    if (!state) return { done: 0, total: 0 };
-    const todayKey = calendarDateKey();
-    const done = (state.logs || {})[todayKey] || 0;
-    const p = state.profile || { weightKg: 75 };
-    const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
-    const base = wKg * 35;
-    const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
-    const caffeine = Math.max(0, (state.caffeineMgPerDay || 0) - 200) * 1.5;
-    const subs = (state.substances || []).reduce((s, x) => {
-      const dose = (x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0;
-      return s + Math.max(0, dose * ((x && x.mlPerUnit) || 0));
-    }, 0);
-    let adjust = 0;
-    if (p.sex === 'm') adjust += 200;
-    if ((p.age || 0) >= 50) adjust += 100;
-    const totalMl = base + exercise + caffeine + subs + adjust;
-    let unitVol;
-    if (state.unit === 'glass') unitVol = state.glassMl || 250;
-    else if (state.unit === 'oz') unitVol = 30;
-    else if (state.unit === 'ml') unitVol = 1;
-    else unitVol = state.bottleMl || 500;
-    const total = Math.max(1, Math.ceil(totalMl / unitVol));
-    return { done, total };
-  }
-
-  function classifyStatus(done, total) {
-    if (total === 0) return 'idle';
-    if (done >= total) return 'good';
-    if (done >= total * 0.5) return 'warn';
-    // Past 6pm and still under half → flag as missed
-    const h = new Date().getHours();
-    if (h >= 18 && done < total * 0.5) return 'miss';
-    return 'warn';
-  }
-
-  function setPillStatus(pillEl, status) {
-    pillEl.classList.remove('good', 'warn', 'miss');
-    if (status === 'warn' || status === 'miss') pillEl.classList.add(status);
-  }
-
-  function render() {
-    const waterEl = document.getElementById('topbarWater');
-    if (!waterEl) return; // not injected yet
-
-    const w = getWaterProgress();
-    const countEl = document.getElementById('topbarWaterCount');
-    if (countEl) countEl.textContent = w.total ? w.done + '/' + w.total : '0/0';
-    setPillStatus(waterEl, classifyStatus(w.done, w.total));
-  }
-
-  // -------- Water +1 (works from any page) --------
-  function defaultWaterState() {
-    return {
-      unit: 'bottle', bottleMl: 500, glassMl: 250, weightUnit: 'kg',
-      profile: { weightKg: 75, age: 25, sex: 'm', activityHrsPerWeek: 5 },
-      caffeineMgPerDay: 200, substances: [], logs: {}
-    };
-  }
-
-  async function pushWaterMergedToSupabase(localWater) {
-    // Only do this when we're NOT on the health page — health page
-    // has its own sync that already detects the localStorage change.
-    if (window.location.pathname.endsWith('/health.html') ||
-        window.location.pathname.endsWith('health.html')) return;
-
-    if (!window.supabase || !TOPBAR_SUPABASE_URL || !TOPBAR_SUPABASE_KEY) return;
-    if (TOPBAR_SUPABASE_URL.indexOf('PASTE-') === 0) return;
-
-    try {
-      const supa = window.supabase.createClient(TOPBAR_SUPABASE_URL, TOPBAR_SUPABASE_KEY);
-      const { data } = await supa
-        .from('app_state').select('data').eq('key', 'health').maybeSingle();
-      const current = (data && data.data) || {};
-      const merged = Object.assign({}, current, { po_water_v1: localWater });
-      await supa.from('app_state').upsert(
-        { key: 'health', data: merged, updated_at: new Date().toISOString() },
-        { onConflict: 'key' }
-      );
-    } catch (e) { /* offline — local change will sync next time user visits health */ }
-  }
-
-  function addWater() {
-    let state = null;
-    try { state = JSON.parse(localStorage.getItem('po_water_v1')); } catch (e) {}
-    if (!state || typeof state !== 'object') state = defaultWaterState();
-    state.logs = state.logs || {};
-    const k = calendarDateKey();
-    state.logs[k] = (state.logs[k] || 0) + 1;
-    try { localStorage.setItem('po_water_v1', JSON.stringify(state)); } catch (e) {}
-    render();
-
-    const btn = document.getElementById('topbarWaterAdd');
-    if (btn) {
-      btn.classList.add('flash');
-      setTimeout(() => btn.classList.remove('flash'), 220);
+    if (!isFinancePage()) {
+      const bottomWrap = document.createElement('div');
+      bottomWrap.innerHTML = bottombarHtml.trim();
+      document.body.appendChild(bottomWrap.firstChild);
+      const active = bottomTabKey();
+      document.querySelectorAll('.bottombar-tab').forEach((t) => {
+        t.classList.toggle('active', t.getAttribute('data-page') === active);
+      });
+      document.body.classList.add('has-bottombar');
     }
 
-    pushWaterMergedToSupabase(state);
+    wireDrawer();
+    reserveTop();
+    window.addEventListener('resize', reserveTop);
+  }
+
+  // Measure the bar and push the page down by exactly that much, plus a
+  // little air, so no page has to know the bar's height.
+  function reserveTop() {
+    const bar = document.getElementById('topbar');
+    if (!bar) return;
+    document.documentElement.style.setProperty('--topbar-h', (bar.offsetHeight + 14) + 'px');
+    document.body.classList.add('has-topbar');
   }
 
   // -------- Mobile lockdown helpers --------
-  // Belt-and-suspenders zoom prevention — iOS Safari sometimes ignores
-  // user-scalable=no, so we also kill the gesture events directly.
   function blockGesture(e) { e.preventDefault(); }
   function lockGestures() {
     document.addEventListener('gesturestart', blockGesture, { passive: false });
     document.addEventListener('gesturechange', blockGesture, { passive: false });
     document.addEventListener('gestureend', blockGesture, { passive: false });
-    // Also kill the iOS double-tap-to-zoom on any tap.
     let lastTouch = 0;
     document.addEventListener('touchend', (e) => {
       const now = Date.now();
@@ -437,53 +357,29 @@ body.topbar-modal-open {
     }, { passive: false });
   }
 
-  // Watch every known modal-bg / overlay class — when any one of them
-  // gets `.show` or `.is-open`, lock the body scroll. When the last
-  // one closes, unlock.
+  // Lock body scroll while any known modal overlay is open.
   function startModalLock() {
-    const MODAL_SELECTORS = [
-      '.modal-bg', '.po-modal-bg', '.wt-overlay', '.wt-viewer', '.wt-cam'
-    ];
+    const MODAL_SELECTORS = ['.modal-bg', '.po-modal-bg', '.wt-overlay', '.wt-viewer', '.wt-cam'];
     function anyOpen() {
       for (const sel of MODAL_SELECTORS) {
         const els = document.querySelectorAll(sel);
         for (const el of els) {
-          if (el.classList.contains('show') || el.classList.contains('is-open')) {
-            return true;
-          }
+          if (el.classList.contains('show') || el.classList.contains('is-open')) return true;
         }
       }
       return false;
     }
-    function sync() {
-      document.body.classList.toggle('topbar-modal-open', anyOpen());
-    }
+    function sync() { document.body.classList.toggle('topbar-modal-open', anyOpen()); }
     const observer = new MutationObserver(sync);
-    // Observe class changes anywhere in body — modal toggles are rare so
-    // a global subtree observer is cheap.
-    observer.observe(document.body, {
-      attributes: true, attributeFilter: ['class'], subtree: true
-    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
     sync();
   }
 
   // -------- Boot --------
   function boot() {
     injectStyleAndHTML();
-    const btn = document.getElementById('topbarWaterAdd');
-    if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); addWater(); });
-    render();
     lockGestures();
     startModalLock();
-
-    // Re-render when localStorage changes from another tab/window OR when
-    // the page becomes visible (sync may have pulled in the background).
-    window.addEventListener('storage', render);
-    window.addEventListener('focus', render);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
-
-    // Periodic refresh so counts stay current after midnight rollover etc.
-    setInterval(render, 30 * 1000);
   }
 
   if (document.readyState === 'loading') {

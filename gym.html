@@ -5,8 +5,8 @@
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0b">
-<title>Progressive Overload Coach</title>
+<meta name="theme-color" content="#E6DBC2">
+<title>Fitness · Dashboard</title>
 <script src="topbar.js" defer></script>
 
 <!-- =============================================================
@@ -18,7 +18,7 @@
      ============================================================= -->
 <script>
 const CONFIG = {
-  appTitle: "Progressive Overload Coach",
+  appTitle: "Gym Log",
 
   // Weight unit shown everywhere. "kg" or "lb".
   units: "kg",
@@ -92,6 +92,9 @@ const CONFIG = {
   ]
 };
 </script>
+<link rel="stylesheet" href="lab-theme.css">
+<link rel="stylesheet" href="lab-pages.css">
+<link rel="stylesheet" href="lab-gym.css">
 
 <style>
 :root {
@@ -1267,7 +1270,7 @@ img, video, canvas, svg { max-width: 100%; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body class="lab">
 
 <div class="po-shell">
   <button class="po-day-pill" type="button" id="dayPill" title="Tap to switch the day filter to today's split">
@@ -1286,7 +1289,7 @@ img, video, canvas, svg { max-width: 100%; }
         <span class="wt-unit" id="wtUnit">kg</span>
       </div>
       <div class="wt-delta hidden" id="wtDelta"></div>
-      <div class="wt-streak hidden" id="wtStreak">🔥<span id="wtStreakNum">0 day streak</span></div>
+      <div class="wt-streak hidden" id="wtStreak"><span id="wtStreakNum">0 day streak</span></div>
 
       <div class="wt-empty" id="wtEmpty">Log your first weight to start tracking.</div>
 
@@ -1435,7 +1438,7 @@ img, video, canvas, svg { max-width: 100%; }
   </div>
 
   <div class="po-header">
-    <h1 class="po-title" id="appTitle">Progressive Overload Coach</h1>
+    <h1 class="po-title" id="appTitle">Gym Log</h1>
     <button class="po-icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -1603,7 +1606,7 @@ img, video, canvas, svg { max-width: 100%; }
       <div class="po-modal-seg" id="exDaySeg"></div>
     </div>
     <label class="po-bw-toggle">
-      <input type="checkbox" id="exBw">
+      <input type="checkbox" id="exBw" class="lab-switch">
       Bodyweight (track reps only, no weight)
     </label>
     <div class="po-field" id="exStartWeightField">
@@ -3592,9 +3595,9 @@ img, video, canvas, svg { max-width: 100%; }
   </div>
   <div class="nv-body" id="nvBody"></div>
   <div class="nv-quick">
-    <button class="nv-chip" data-q="Give me an overview of how everything is going — bodyweight trend, training consistency, and what to focus on next.">📊 Overview</button>
-    <button class="nv-chip" data-q="How is my bodyweight trending and am I on track?">⚖️ Weight</button>
-    <button class="nv-chip" data-q="Look at my recent workouts — am I progressing and what should I push next?">💪 Lifts</button>
+    <button class="nv-chip" data-q="Give me an overview of how everything is going — bodyweight trend, training consistency, and what to focus on next.">Overview</button>
+    <button class="nv-chip" data-q="How is my bodyweight trending and am I on track?">Weight</button>
+    <button class="nv-chip" data-q="Look at my recent workouts — am I progressing and what should I push next?">Lifts</button>
   </div>
   <div class="nv-foot">
     <input class="nv-input" id="nvInput" type="text" placeholder="Ask Nova…" autocomplete="off">

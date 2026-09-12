@@ -1,0 +1,280 @@
+/* =============================================================
+ * Lab theme applied to index.html, the hub.
+ *
+ * Everything is scoped under body.lab, so removing that one class returns
+ * the page to its previous look. Nothing here renames or removes a selector
+ * the page's JS uses; it restyles elements that already exist.
+ *
+ * The bento layout (four columns, big/wide/small spans, the two collapse
+ * points) is the page's own and is left alone.
+ *
+ * Requires lab-theme.css and lab-pages.css to be loaded first.
+ * ============================================================= */
+
+/* ---------- head: the title on a rule, the settings button beside it ---------- */
+body.lab .hub-head {
+  gap: 14px;
+  margin-bottom: 22px;
+}
+body.lab .dash-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--lab-display);
+  font-size: clamp(17px, 5vw, 23px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  background: none;
+  -webkit-text-fill-color: var(--lab-ink);
+  color: var(--lab-ink);
+  white-space: nowrap;
+}
+body.lab .dash-title::before,
+body.lab .dash-title::after {
+  content: '';
+  flex: 1 1 0;
+  min-width: 12px;
+  height: 1px;
+  background: var(--lab-rule);
+}
+
+/* The settings control: a typed label in a box, like every other button. */
+body.lab .gear-btn {
+  width: auto;
+  height: auto;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: none;
+}
+body.lab .gear-btn:hover { background: var(--lab-ink); color: var(--lab-sheet); }
+body.lab .gear-btn:active { transform: none; }
+
+/* ---------- tiles: every one a sheet ---------- */
+body.lab .tile {
+  --accent: var(--lab-ink);
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+  transition: border-color 0.15s;
+}
+/* The per-tile colour wash. Off. */
+body.lab .tile::before { display: none; }
+body.lab .tile:hover {
+  transform: none;
+  border-color: var(--lab-ink);
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+}
+
+body.lab .tile-num {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .tile-title {
+  font-family: var(--lab-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+  margin: 0 0 6px;
+}
+body.lab .tile.big .tile-title { font-size: 26px; }
+body.lab .tile-sub {
+  font-family: var(--lab-type);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  color: var(--lab-ink-dim);
+}
+body.lab .tile-arrow {
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 18px;
+}
+
+@media (max-width: 720px) {
+  body.lab .tile.big .tile-title { font-size: 20px; }
+}
+@media (max-width: 480px) {
+  /* The title, a trailing rule and the button share one row on a phone.
+   * Fixed size and tighter tracking so the title never clips; the rule
+   * gives way first. */
+  body.lab .dash-title { font-size: 17px; letter-spacing: 0.12em; gap: 10px; }
+  body.lab .dash-title::before { display: none; }
+  body.lab .dash-title::after { min-width: 0; }
+  body.lab .gear-btn { padding: 9px 12px; }
+}
+
+/* ---------- settings modal: a sheet lifted off the desk ---------- */
+body.lab .modal { padding: 22px 22px 26px; }
+body.lab .modal-head {
+  padding-bottom: 8px;
+  margin-bottom: 18px;
+  border-bottom: 3px double var(--lab-rule);
+}
+body.lab .modal-title {
+  font-family: var(--lab-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+body.lab .modal-close {
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 18px;
+  padding: 0;
+}
+body.lab .modal-close:hover { background: var(--lab-ink); color: var(--lab-sheet); }
+
+body.lab .field { margin-bottom: 16px; }
+body.lab .field-label {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+  margin-bottom: 4px;
+}
+/* A form field: a line to type on, nothing else. */
+body.lab .set-input {
+  padding: 9px 4px;
+  min-height: 40px;
+  font-size: 14.5px;
+  transition: none;
+}
+
+/* Unit and sex choices: typed labels in one box, the chosen one inked in. */
+body.lab .seg {
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+}
+body.lab .seg button {
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 0;
+  border-left: 1px solid var(--lab-rule-faint);
+  background: transparent;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: none;
+}
+body.lab .seg button:first-child { border-left: 0; }
+body.lab .seg button.on {
+  background: var(--lab-ink);
+  color: var(--lab-sheet);
+}
+
+/* Save is the one primary action on the page; lab-pages.css inks it. */
+body.lab .set-save {
+  min-height: 44px;
+  padding: 12px;
+  margin-top: 4px;
+  box-shadow: none;
+  transition: none;
+}
+body.lab .set-save:active { transform: none; }
+body.lab .set-status {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--acc-done);
+}
+body.lab .section-divider { height: 0; margin: 22px 0 16px; }
+
+/* WHOOP: the second sheet in the stack, inset. */
+body.lab .whoop-box {
+  margin-top: 6px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  background: var(--lab-sheet-2);
+}
+body.lab .whoop-status {
+  font-family: var(--lab-type);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--lab-ink);
+}
+body.lab .whoop-status .dot {
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--lab-ink-dim);
+  background: transparent;
+  box-shadow: none;
+}
+body.lab .whoop-status.on .dot {
+  border-color: var(--acc-done);
+  background: var(--acc-done);
+  box-shadow: none;
+}
+body.lab .whoop-sync {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--lab-ink-dim);
+}
+body.lab .whoop-stat .v {
+  font-family: var(--lab-display);
+  font-size: 22px;
+  color: var(--lab-ink);
+}
+body.lab .whoop-stat .l {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--lab-ink-dim);
+  margin-top: 6px;
+}
+body.lab .whoop-btn {
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: none;
+}
+body.lab .whoop-btn:hover { background: var(--lab-ink); color: var(--lab-sheet); }

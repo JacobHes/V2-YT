@@ -5,12 +5,15 @@
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
-<meta name="color-scheme" content="dark">
-<title>Daily Stack — Customizable Template</title>
+<meta name="theme-color" content="#E6DBC2">
+<meta name="color-scheme" content="light">
+<title>Supplements · Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+<link rel="stylesheet" href="lab-theme.css">
+<link rel="stylesheet" href="lab-pages.css">
+<link rel="stylesheet" href="lab-health.css">
 <style>
 :root {
   --bg: #050506;
@@ -121,21 +124,8 @@ main {
   font-weight: 300;
 }
 
-.water-embed { margin-top: 56px; }
-.water-iframe {
-  display: block;
-  width: 100%;
-  height: 880px;
-  border: 0;
-  background: transparent;
-  border-radius: 16px;
-  overflow: hidden;
-  color-scheme: dark;
-}
 @media (max-width: 480px) {
-  .water-embed { margin-top: 40px; }
-  .water-iframe { height: 780px; }
-}
+    }
 
 .stack-card {
   background: var(--bg-card);
@@ -505,7 +495,7 @@ main {
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
 </style>
 </head>
-<body>
+<body class="lab">
 
 <main>
 
@@ -744,9 +734,9 @@ main {
 
     function ringStroke(score) {
       // green > yellow > red
-      if (score >= 67) return '#6BE3A4';
-      if (score >= 34) return '#F2C063';
-      return '#FF8A8A';
+      if (score >= 67) return 'var(--acc-done, #6BE3A4)';
+      if (score >= 34) return 'var(--acc-prep, #F2C063)';
+      return 'var(--lab-red, #FF8A8A)';
     }
     function recoveryLabel(score) {
       if (score >= 67) return 'Go hard today';
@@ -929,11 +919,6 @@ main {
       </div>
     </div>
   </div>
-
-  <section id="water" class="water-embed">
-    <div class="section-title">Water Tracker</div>
-    <iframe src="po-water.html" class="water-iframe" loading="lazy" title="Water Tracker"></iframe>
-  </section>
 
   <div class="attribution">// editable template · all data stays in your browser</div>
 </main>
@@ -1391,7 +1376,7 @@ main {
           <div class="stack-result-icon">${s.icon || '💊'}</div>
           <div class="stack-result-body">
             <div class="stack-result-name">${escapeHtml(s.name)}</div>
-            <div class="stack-result-meta">${escapeHtml(s.dose)} · ${winMeta.icon} ${winMeta.title.toLowerCase()} · ${escapeHtml(s.note)}</div>
+            <div class="stack-result-meta">${escapeHtml(s.dose)} · ${winMeta.title.toLowerCase()} · ${escapeHtml(s.note)}</div>
           </div>
         </button>`;
     }).join('');

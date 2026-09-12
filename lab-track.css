@@ -1,0 +1,508 @@
+/* =============================================================
+ * Lab theme applied to track.html.
+ *
+ * Every rule sits under body.lab, so dropping that one class returns the
+ * page to its previous look. Nothing here renames or removes a selector the
+ * page's JavaScript uses; it only restyles what is already rendered.
+ *
+ * Requires lab-theme.css and lab-pages.css before it. The shared layer
+ * already carries the ground, the cards, the titles, the typed inputs and
+ * the generic button reset. This file covers the timer, the project
+ * switches, the bars, the session rows, the manual-entry form, the calendar
+ * heat and the manage panel.
+ * ============================================================= */
+
+/* ---------- section titles: a short rule, the label, a faint rule ---------- */
+body.lab .section-title::before { background: var(--lab-rule); opacity: 1; }
+body.lab .section-title::after { background: var(--lab-rule-faint); }
+
+/* ---------- project colour is the user's: a swatch with an ink edge ---------- */
+body.lab .timer-dot,
+body.lab .chip-dot,
+body.lab .pbar-name .dot,
+body.lab .sess-dot {
+  border-radius: 1px;
+  border: 1px solid var(--lab-ink);
+  box-shadow: none;
+  mix-blend-mode: multiply;
+}
+body.lab .timer-dot { width: 14px; height: 14px; }
+body.lab .chip-dot { width: 11px; height: 11px; }
+body.lab .pbar-name .dot,
+body.lab .sess-dot { width: 10px; height: 10px; }
+
+/* ---------- the timer sheet ---------- */
+body.lab .timer-state {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .timer-active-proj { gap: 10px; margin-bottom: 8px; }
+body.lab .timer-active-name {
+  font-family: var(--lab-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+/* Running is a state, so it gets the stamp. */
+body.lab .timer-active-proj::after {
+  content: 'Running';
+  display: inline-block;
+  padding: 3px 8px 2px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--lab-display);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: var(--lab-red);
+  opacity: 0.9;
+  transform: rotate(-4deg);
+  mix-blend-mode: multiply;
+  -webkit-mask-image: var(--lab-stamp-mask);
+  mask-image: var(--lab-stamp-mask);
+  -webkit-mask-size: 160px 160px;
+  mask-size: 160px 160px;
+}
+body.lab .timer-clock {
+  font-family: var(--lab-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--lab-ink-dim);
+  text-shadow: none;
+}
+body.lab .timer-clock.running { color: var(--lab-ink); text-shadow: none; }
+body.lab .timer-since {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+
+/* The one primary action on the page. Red, because it stops something. */
+body.lab .timer-stop {
+  margin: 16px auto 4px;
+  min-height: 44px;
+  padding: 12px 44px;
+  border: 1px solid var(--lab-red);
+  border-radius: 2px;
+  background: var(--lab-red);
+  color: var(--lab-sheet);
+  font-family: var(--lab-type);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  box-shadow: none;
+  text-shadow: none;
+}
+body.lab .timer-stop:hover {
+  background: var(--lab-ink);
+  border-color: var(--lab-ink);
+  filter: none;
+  transform: none;
+}
+
+/* ---------- project switches ----------
+ * Each chip is a switch: the swatch, the name, and a pill that is paper when
+ * off and green when running. The button keeps its class and its click
+ * handler; the pill is drawn by the two pseudo-elements. */
+body.lab .chips-label {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+  margin: 20px 0 10px;
+}
+body.lab .chip-grid { gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+body.lab .chip {
+  position: relative;
+  min-height: 44px;
+  padding: 8px 46px 8px 10px;
+  gap: 8px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  box-shadow: none;
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+body.lab .chip:hover { background: var(--lab-sheet-2); }
+body.lab .chip:active { transform: none; }
+body.lab .chip::before {
+  content: '';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  width: 32px;
+  height: 18px;
+  margin-top: -9px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 9px;
+  background: var(--lab-paper-deep);
+  box-sizing: border-box;
+  transition: background 0.18s, border-color 0.18s;
+}
+body.lab .chip::after {
+  content: '';
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 50%;
+  background: var(--lab-sheet);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+body.lab .chip.active {
+  border-color: var(--lab-ink);
+  background: var(--lab-sheet);
+  box-shadow: inset 0 0 0 1px var(--lab-ink);
+}
+body.lab .chip.active::before { background: var(--lab-switch-on); border-color: var(--lab-switch-on); }
+body.lab .chip.active::after { transform: translateX(14px); border-color: transparent; }
+
+/* ---------- totals and per-project bars ---------- */
+body.lab .tot-big {
+  font-family: var(--lab-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--lab-ink);
+}
+body.lab .pbar-name {
+  width: 92px;
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--lab-ink-dim);
+}
+body.lab .pbar-track {
+  height: 10px;
+  border-radius: 0;
+  border: 1px solid var(--lab-rule-faint);
+  background: var(--lab-sheet-2);
+}
+/* The fill keeps the project's colour, pressed into the paper rather than lit. */
+body.lab .pbar-fill { border-radius: 0; mix-blend-mode: multiply; }
+body.lab .pbar-val {
+  font-family: var(--lab-type);
+  font-size: 11.5px;
+  color: var(--lab-ink);
+}
+
+/* ---------- session rows ---------- */
+body.lab .sess-list { border-top: 1px solid var(--lab-rule-faint); }
+body.lab .sess {
+  gap: 10px;
+  padding: 4px 0;
+  min-height: 44px;
+  border-bottom: 1px solid var(--lab-rule-faint);
+}
+body.lab .sess-name { font-family: var(--lab-type); font-size: 14px; color: var(--lab-ink); }
+/* A hand-entered session used to carry a dark ring in its dot. Say it instead. */
+body.lab .sess.manual .sess-dot { box-shadow: none; }
+body.lab .sess.manual .sess-name::after {
+  content: 'manual';
+  margin-left: 8px;
+  padding: 1px 5px 0;
+  border: 1px solid var(--lab-rule);
+  border-radius: 2px;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .sess-time { font-family: var(--lab-type); font-size: 11px; letter-spacing: 0.04em; color: var(--lab-ink-dim); }
+body.lab .sess-dur { font-family: var(--lab-type); font-size: 13px; font-weight: 700; color: var(--lab-ink); }
+body.lab .sess-del,
+body.lab .mng-del {
+  min-width: 36px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 20px;
+  line-height: 1;
+  opacity: 1;
+}
+body.lab .sess-del:hover,
+body.lab .mng-del:hover { color: var(--lab-red); }
+
+/* ---------- manual entry ---------- */
+/* An add affordance is a dashed box, not the page's primary. */
+body.lab .add-btn {
+  min-height: 40px;
+  border: 1px dashed var(--lab-rule);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--lab-ink-dim);
+}
+body.lab .add-btn:hover {
+  border-style: solid;
+  border-color: var(--lab-ink);
+  background: var(--lab-sheet-2);
+  color: var(--lab-ink);
+}
+body.lab .add-form {
+  padding: 14px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  background: var(--lab-sheet-2);
+  color-scheme: light;
+}
+body.lab .add-gcal {
+  justify-content: space-between;
+  min-height: 44px;
+  margin: 0 0 6px;
+  font-family: var(--lab-type);
+  font-size: 12.5px;
+  color: var(--lab-ink);
+}
+body.lab .add-gcal .lab-switch { order: 2; }
+body.lab .add-preview {
+  font-family: var(--lab-type);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--lab-ink-dim);
+}
+body.lab .add-preview.bad { color: var(--lab-red); }
+body.lab .add-cancel {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+body.lab .add-cancel:hover { color: var(--lab-ink); text-decoration: underline; }
+body.lab .map-note {
+  font-family: var(--lab-type);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lab-ink-dim);
+}
+body.lab .map-note b { color: var(--acc-done); }
+
+/* ---------- boxed buttons: Add, Save, Test ----------
+ * The shared layer inks .gm-add. Here STOP is the primary, so these are
+ * typed labels in a box. */
+body.lab .gm-add {
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  box-shadow: none;
+}
+body.lab .gm-add:hover { background: var(--lab-ink); color: var(--lab-sheet); filter: none; transform: none; }
+body.lab .gm-add-quiet { border-color: var(--lab-rule); color: var(--lab-ink-dim); }
+body.lab .gm-add-quiet:hover { border-color: var(--lab-ink); }
+
+/* ---------- calendar: ink washed onto the paper ---------- */
+body.lab .cal-head { margin-bottom: 12px; }
+body.lab .cal-title {
+  font-family: var(--lab-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+body.lab .cal-nav {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  font-size: 18px;
+}
+body.lab .cal-nav:hover { background: var(--lab-ink); color: var(--lab-sheet); }
+body.lab .cal-nav:disabled { opacity: 0.3; background: var(--lab-sheet); color: var(--lab-ink); }
+body.lab .cal-grid { gap: 4px; }
+body.lab .cal-dow {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--lab-ink-dim);
+  padding-bottom: 4px;
+}
+body.lab .cal-cell {
+  border-radius: 0;
+  border: 1px solid var(--lab-rule-faint);
+  background: var(--lab-sheet);
+  gap: 1px;
+  transition: none;
+}
+body.lab .cal-cell:not(.empty):not(.future):hover { border-color: var(--lab-ink); }
+body.lab .cal-cell.empty { border: 0; background: transparent; box-shadow: none; }
+body.lab .cal-cell.future { opacity: 0.4; }
+body.lab .cal-cell.today { border-color: var(--lab-ink); box-shadow: inset 0 0 0 1px var(--lab-ink); }
+body.lab .cal-cell.selected { border-color: var(--lab-red); box-shadow: inset 0 0 0 1px var(--lab-red); }
+body.lab .cal-daynum { font-family: var(--lab-type); font-size: 12px; font-weight: 700; color: var(--lab-ink); }
+body.lab .cal-hrs { font-family: var(--lab-type); font-size: 10.5px; color: var(--lab-ink-dim); }
+/* Four densities. The thresholds are the page's own: under 1h, under 2.5h,
+ * under 4.5h, and beyond. The legend keys reuse the same rules. */
+body.lab .cal-cell.h1, body.lab .cal-key.h1 { background: rgba(33, 28, 22, 0.10); }
+body.lab .cal-cell.h2, body.lab .cal-key.h2 { background: rgba(33, 28, 22, 0.24); }
+body.lab .cal-cell.h3, body.lab .cal-key.h3 { background: rgba(33, 28, 22, 0.42); }
+body.lab .cal-cell.h4, body.lab .cal-key.h4 { background: rgba(33, 28, 22, 0.68); }
+body.lab .cal-cell.h3 .cal-daynum, body.lab .cal-cell.h3 .cal-hrs { color: var(--lab-ink); }
+body.lab .cal-cell.h4 .cal-daynum, body.lab .cal-cell.h4 .cal-hrs { color: var(--lab-sheet); }
+body.lab .cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 12px;
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .cal-legend-title { font-weight: 700; }
+body.lab .cal-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+body.lab .cal-key {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--lab-rule-faint);
+  background: var(--lab-sheet);
+}
+body.lab .cal-detail { border-top: 1px solid var(--lab-rule-faint); }
+body.lab .cal-detail-title {
+  font-family: var(--lab-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+
+/* ---------- manage projects ---------- */
+body.lab .mng-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+body.lab .mng-toggle:hover,
+body.lab .gm-card:has(.mng-body.open) .mng-toggle { background: var(--lab-ink); color: var(--lab-sheet); }
+body.lab .mng-body { margin-top: 14px; }
+body.lab .mng-row {
+  gap: 10px;
+  padding: 4px 0;
+  min-height: 48px;
+  border-bottom: 1px solid var(--lab-rule-faint);
+}
+body.lab .mng-swatch,
+body.lab .mng-color {
+  border: 1px solid var(--lab-ink);
+  border-radius: 1px;
+  background: transparent;
+  padding: 0;
+  mix-blend-mode: multiply;
+}
+body.lab .mng-swatch { width: 26px; height: 26px; }
+body.lab .mng-color { width: 40px; height: 40px; }
+body.lab .mng-swatch::-webkit-color-swatch-wrapper,
+body.lab .mng-color::-webkit-color-swatch-wrapper { padding: 0; }
+body.lab .mng-swatch::-webkit-color-swatch,
+body.lab .mng-color::-webkit-color-swatch { border: 0; border-radius: 0; }
+body.lab .mng-name {
+  font-family: var(--lab-type);
+  font-size: 14px;
+  color: var(--lab-ink);
+  border-radius: 0;
+  padding: 4px;
+  margin: 0;
+  border-bottom: 1px solid transparent;
+}
+body.lab .mng-name[contenteditable="true"]:focus {
+  outline: none;
+  background: transparent;
+  border-bottom-color: var(--lab-ink);
+}
+body.lab .mng-map {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acc-done);
+}
+body.lab .mng-add { margin-top: 14px; }
+body.lab .mng-input { padding: 9px 6px; font-size: 14px; }
+/* The shared layer lists every input type but url. The webhook field is one. */
+body.lab input[type="url"] {
+  font-family: var(--lab-type);
+  color: var(--lab-ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 transparent;
+  outline: none;
+}
+/* The page colours this line from JS at runtime in the old palette. The
+ * words already carry the state, so the ink does not have to. */
+body.lab #gcalStatus { color: var(--lab-ink) !important; font-family: var(--lab-type); }
+
+/* ---------- desktop: two columns under the timer ---------- */
+@media (min-width: 900px) {
+  body.lab .page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+    align-items: start;
+  }
+  body.lab .page > .dash-title,
+  body.lab .page > .dash-sub,
+  body.lab .page > div:first-of-type { grid-column: 1 / -1; }
+}
+
+/* ---------- phones ---------- */
+@media (max-width: 480px) {
+  body.lab .pbar-name { width: 88px; font-size: 10.5px; }
+  body.lab .chip-grid { grid-template-columns: 1fr 1fr; }
+  /* No room beside the name on a phone row; the tag goes under it. */
+  body.lab .sess.manual .sess-name { white-space: normal; }
+  body.lab .sess.manual .sess-name::after { display: block; width: fit-content; margin: 3px 0 0; }
+  body.lab .sess-time { font-size: 10.5px; letter-spacing: 0; }
+}

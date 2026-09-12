@@ -1,0 +1,808 @@
+/* =============================================================
+ * Lab theme applied to finance.html.
+ *
+ * Every rule is scoped under body.lab, so removing that one class returns
+ * the page to its previous look. Nothing here renames or removes a selector
+ * the page's JavaScript uses; it only restyles elements that already exist.
+ *
+ * finance.html's own <style> loads after this file, so each rule here
+ * outranks the page rule it replaces by specificity (the body.lab prefix).
+ * !important appears only where the page uses it, or where the page's JS
+ * writes the value as an inline style.
+ *
+ * Layout rules (the tab switching, the add-form grids, the phone stacking)
+ * are the page's and are left alone.
+ *
+ * Requires lab-theme.css and lab-pages.css first.
+ * ============================================================= */
+
+/* ---------- ground ---------- */
+html:has(body.lab) { color-scheme: light; }
+body.lab input[type="date"],
+body.lab .date-field input[type="date"] { color-scheme: light; }
+body.lab input[type="date"]::-webkit-calendar-picker-indicator { filter: none; opacity: 0.8; }
+
+/* The top bar's brand link already goes to the hub; the page's own Back
+ * link said the same thing twice. */
+body.lab .fin-back-btn { display: none; }
+
+body.lab .shell { padding: 12px 16px calc(72px + env(safe-area-inset-bottom)); }
+
+/* Tap targets. Every button on the page is at least 40px tall. */
+body.lab button { min-height: 40px; }
+
+/* ---------- section titles: the visible tab's heading, in the poster face ---------- */
+body.lab .section-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  font-family: var(--lab-display);
+  font-size: clamp(16px, 4.5vw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+body.lab .section-title::before { display: none; }
+body.lab .section-title::after { content: ''; flex: 1; height: 1px; background: var(--lab-rule); }
+body.lab .section-title-text {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+/* The lightning bolt before every title. Gone. */
+body.lab .section-title-text::before { content: none; }
+
+/* ---------- cards ---------- */
+/* lab-pages.css makes .card a sheet; the page's highlight line goes. */
+body.lab .card::before { display: none; }
+body.lab .nw-subcard { background: var(--lab-sheet) !important; }
+
+/* Eyebrow labels: typed, small caps, the floor for anything read. */
+body.lab .label,
+body.lab .ord-add-eyebrow,
+body.lab .wish-add-eyebrow,
+body.lab .ord-section-label,
+body.lab .wish-section-label,
+body.lab .wish-hero-eyebrow,
+body.lab .wish-hero-pct-label,
+body.lab .ord-deduct-chooser-title,
+body.lab .nw-donut-sub,
+body.lab .nw-stat-label,
+body.lab .nw-chart-head,
+body.lab .nw-activity-h {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .label span:last-child { font-family: var(--lab-display); font-variant-numeric: tabular-nums; }
+
+/* Large figures: the poster face, tabular numerals. */
+body.lab #netWorthTotal,
+body.lab #subsTotal,
+body.lab .wish-hero-num,
+body.lab .wish-hero-pct-num,
+body.lab .ord-card-amt,
+body.lab .wish-row-amt,
+body.lab .nw-donut-num,
+body.lab .nw-stat-val,
+body.lab .ticker-item-amt,
+body.lab .sub-row > div:nth-child(2) > div:first-child,
+body.lab #invList > div > div:last-child > div:first-child {
+  font-family: var(--lab-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* ---------- form fields: a line to type on ---------- */
+/* Inline-styled selects and the inline sub editor. The page writes their
+ * border, radius and background as inline styles, hence !important. */
+body.lab #netWorthCurrency,
+body.lab #subCurrency,
+body.lab #subPeriod,
+body.lab #subFromCat,
+body.lab #subKind,
+body.lab .sub-row .se-name,
+body.lab .sub-row .se-amt,
+body.lab .sub-row .se-ccy,
+body.lab .sub-row .se-per,
+body.lab .sub-row .se-from {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--lab-rule) !important;
+  border-radius: 0 !important;
+  color: var(--lab-ink) !important;
+  font-family: var(--lab-type) !important;
+  min-height: 40px;
+}
+body.lab .sub-row .se-cancel {
+  background: var(--lab-sheet) !important;
+  border: 1px solid var(--lab-ink) !important;
+  border-radius: 2px !important;
+  color: var(--lab-ink) !important;
+  font-family: var(--lab-type) !important;
+  font-size: 11px !important;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+body.lab .sub-row .se-cancel:hover { background: var(--lab-ink) !important; color: var(--lab-sheet) !important; }
+
+/* The composers were dark boxes; on paper they are rows of ruled fields. */
+body.lab .quick-add,
+body.lab .ord-add-grid,
+body.lab .wish-add-row {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  gap: 8px 12px;
+}
+body.lab .quick-add input[type="text"],
+body.lab .quick-add input[type="number"],
+body.lab .quick-add input[type="date"],
+body.lab .quick-add select,
+body.lab .ord-input,
+body.lab .wish-input {
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 14px;
+  min-height: 40px;
+  padding: 8px 4px;
+}
+/* The phone stacking rules pad the fields with !important; a ruled field
+ * keeps its text on the line. */
+body.lab [data-section="subs"] .quick-add input,
+body.lab [data-section="subs"] .quick-add select,
+body.lab .ord-add-grid .ord-input,
+body.lab .wish-add-row .wish-input { padding: 10px 4px !important; }
+body.lab .ord-input-ccy,
+body.lab .ord-input-from,
+body.lab .wish-input-ccy {
+  appearance: auto;
+  -webkit-appearance: auto;
+  background: transparent;
+  border-radius: 0;
+  text-align: left;
+  font-weight: 400;
+}
+body.lab .nw-subcard .quick-add { border-top: 1px solid var(--lab-rule-faint) !important; padding-top: 10px; }
+body.lab .nw-subcard .quick-add-btn { font-size: 18px; min-width: 44px; padding: 0; }
+
+/* Date fields: the calendar emoji becomes a typed label. */
+body.lab .date-field {
+  gap: 8px;
+  padding: 8px 4px;
+  min-height: 40px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule);
+  border-radius: 0;
+  color: var(--lab-ink);
+}
+body.lab .date-field .date-emoji { display: none; }
+body.lab .date-field::before {
+  content: 'Date';
+  flex-shrink: 0;
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .date-field:has(#subRenewal)::before,
+body.lab .date-field:has(.se-ren)::before { content: 'Renews'; }
+body.lab .date-field:has(#ordArrival)::before { content: 'Arrives'; }
+body.lab .date-field input[type="date"] { color: var(--lab-ink); font-family: var(--lab-type); font-size: 14px !important; }
+
+/* ---------- buttons ---------- */
+/* The one primary action on each tab is inked in: the Add button. */
+body.lab .ord-add-btn,
+body.lab .wish-add-btn {
+  background: var(--lab-ink);
+  color: var(--lab-sheet);
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  box-shadow: none;
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  min-height: 40px;
+}
+body.lab .ord-add-btn:hover,
+body.lab .wish-add-btn:hover { background: var(--lab-ink-dim); box-shadow: none; transform: none; }
+/* Everything else is a typed label in a box. */
+body.lab .nw-del,
+body.lab .ord-card-x,
+body.lab .wish-row-x,
+body.lab .sub-row button[title="Edit"],
+body.lab .sub-row button[title="Delete"] {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 !important;
+  border: 1px solid var(--lab-rule) !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: var(--lab-ink-dim) !important;
+  font-family: var(--lab-type) !important;
+  font-size: 15px !important;
+  line-height: 1;
+}
+body.lab .nw-del:hover,
+body.lab .ord-card-x:hover,
+body.lab .wish-row-x:hover,
+body.lab .sub-row button[title="Delete"]:hover { color: var(--lab-red) !important; border-color: var(--lab-red) !important; }
+body.lab .sub-row button[title="Edit"]:hover { color: var(--lab-ink) !important; border-color: var(--lab-ink) !important; }
+body.lab .nw-del { border-color: transparent !important; }
+
+/* ---------- net worth ---------- */
+body.lab .nw-list { font-size: 14px; }
+body.lab .nw-row { padding: 2px 0; border-bottom: 1px solid var(--lab-rule-faint); }
+body.lab .nw-row:last-child { border-bottom: 0; }
+body.lab .nw-name { color: var(--lab-ink); }
+body.lab .nw-amt { color: var(--lab-ink); font-size: 13px; }
+body.lab .nw-name-edit:hover,
+body.lab .nw-amt-edit:hover { background: var(--lab-sheet-2); border-radius: 0; }
+body.lab .nw-name-edit input,
+body.lab .nw-amt-edit input {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--lab-ink) !important;
+  border-radius: 0 !important;
+  color: var(--lab-ink) !important;
+  font-family: var(--lab-type) !important;
+}
+
+/* The chart, the donut and the activity log are the sheets on this tab. */
+body.lab .nw-chart-wrap,
+body.lab .nw-donut-wrap,
+body.lab .nw-activity {
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+}
+body.lab .nw-chart-label { color: var(--lab-ink-dim); }
+body.lab .nw-chart-delta { color: var(--lab-ink); }
+body.lab .nw-chart-delta.up { color: var(--acc-done); }
+body.lab .nw-chart-delta.down { color: var(--lab-red); }
+
+/* Ink on paper. The line's colour comes from the page's JS (direction
+ * green, red or flat), which now reads the theme's inks. */
+body.lab .nw-chart-svg { color: var(--lab-ink); }
+body.lab .nw-chart-grid { stroke: var(--lab-rule); stroke-width: 1; stroke-dasharray: 3 3; }
+body.lab #nwChartArea { fill: currentColor; fill-opacity: 0.12; }
+body.lab #nwChartLine { stroke-width: 2; filter: none !important; }
+body.lab .nw-chart-stats { border-top: 1px solid var(--lab-rule-faint); }
+body.lab .nw-stat-val { font-size: 14px; color: var(--lab-ink); }
+body.lab .nw-chart-empty,
+body.lab .nw-donut-empty,
+body.lab .nw-activity-empty {
+  font-family: var(--lab-type);
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+
+/* Donut: category inks, a hairline of sheet between slices, no glow. */
+body.lab .nw-donut-stage::after { display: none; }
+body.lab .nw-donut-svg path { filter: none; stroke: var(--lab-sheet); stroke-width: 1; }
+body.lab .nw-donut-svg path[fill="#7DD3FC"] { fill: var(--acc-mover); }
+body.lab .nw-donut-svg path[fill="#6EE7B7"] { fill: var(--acc-done); }
+body.lab .nw-donut-svg path[fill="#FBBF24"] { fill: var(--acc-prep); }
+body.lab .nw-donut-svg path[fill="#B794F4"] { fill: var(--acc-inner); }
+body.lab .nw-donut-svg path[fill="#FF8A8A"] { fill: var(--lab-red); }
+body.lab .nw-donut-svg circle { fill: var(--lab-sheet-2); }
+body.lab .nw-donut-svg circle[fill="#0A0A0B"] { fill: var(--lab-sheet); }
+body.lab .nw-donut-num { font-size: 17px; color: var(--lab-ink); }
+/* The legend and activity rows carry their category colour as an inline
+ * style written by the page; map each to its ink. */
+body.lab .nw-leg[style*="#7DD3FC"], body.lab .nw-activity-row[style*="#7DD3FC"] { color: var(--acc-mover) !important; }
+body.lab .nw-leg[style*="#6EE7B7"], body.lab .nw-activity-row[style*="#6EE7B7"] { color: var(--acc-done) !important; }
+body.lab .nw-leg[style*="#FBBF24"], body.lab .nw-activity-row[style*="#FBBF24"] { color: var(--acc-prep) !important; }
+body.lab .nw-leg[style*="#B794F4"], body.lab .nw-activity-row[style*="#B794F4"] { color: var(--acc-inner) !important; }
+body.lab .nw-leg[style*="#FF8A8A"], body.lab .nw-activity-row[style*="#FF8A8A"] { color: var(--lab-red) !important; }
+body.lab .nw-leg { border-radius: 0; font-size: 12px; }
+body.lab .nw-leg-dot,
+body.lab .nw-activity-bar { background: currentColor !important; box-shadow: none; border-radius: 0; }
+body.lab .nw-leg-name { color: var(--lab-ink); }
+body.lab .nw-leg-pct { color: var(--lab-ink); font-size: 11px; }
+
+body.lab .nw-activity-row { background: transparent; border-radius: 0; border-bottom: 1px solid var(--lab-rule-faint); padding: 8px 4px; }
+body.lab .nw-activity-row:hover { background: var(--lab-sheet-2); }
+body.lab .nw-activity-name { color: var(--lab-ink); }
+body.lab .nw-activity-meta { color: var(--lab-ink-dim); font-size: 10.5px; }
+body.lab .nw-activity-amt.up { color: var(--acc-done); }
+body.lab .nw-activity-amt.down { color: var(--lab-red); }
+body.lab .nw-activity-date { color: var(--lab-ink-dim); font-size: 11px; }
+body.lab .nw-activity-list::-webkit-scrollbar-thumb { background: var(--lab-rule); border-radius: 0; }
+
+/* ---------- the renewal ticker ---------- */
+body.lab .finance-ticker {
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+  font-family: var(--lab-type);
+  font-size: 12px;
+}
+body.lab .finance-ticker.urgent {
+  background: var(--lab-red-soft);
+  border-color: var(--lab-red);
+  animation: none;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+}
+body.lab .ticker-tag {
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  color: var(--lab-ink-dim);
+  background: transparent;
+  border: 1px solid var(--lab-rule);
+  border-radius: 2px;
+  padding: 3px 7px 2px;
+}
+body.lab .finance-ticker.urgent .ticker-tag { color: var(--lab-red); border-color: var(--lab-red); background: transparent; }
+body.lab .ticker-item { color: var(--lab-ink-dim); }
+body.lab .ticker-item-name { color: var(--lab-ink); }
+body.lab .ticker-item-amt { color: var(--lab-ink); }
+body.lab .ticker-item-days { color: var(--lab-ink-dim); font-size: 11px; }
+body.lab .finance-ticker.urgent .ticker-item-amt,
+body.lab .finance-ticker.urgent .ticker-item-days { color: var(--lab-red); }
+body.lab .ticker-dot { width: 6px; height: 6px; border-radius: 0; background: var(--lab-rule-faint); }
+body.lab .ticker-dot.active { background: var(--lab-ink); }
+body.lab .finance-ticker.urgent .ticker-dot.active { background: var(--lab-red); }
+
+/* ---------- subscriptions ---------- */
+body.lab [data-section="subs"] > .card {
+  background: var(--lab-sheet) !important;
+  border: 1px solid var(--lab-rule) !important;
+}
+/* Rows are ruled lines; the page writes their box as an inline style. */
+body.lab .sub-row {
+  background: transparent !important;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule-faint);
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 12px 0 !important;
+}
+body.lab .sub-row.is-urgent {
+  background: var(--lab-red-soft) !important;
+  border: 1px solid var(--lab-red) !important;
+  margin: 0 0 8px !important;
+  padding: 12px 10px !important;
+  animation: none;
+  box-shadow: none;
+}
+body.lab .sub-renew-line { color: var(--acc-prep) !important; font-size: 11px !important; }
+body.lab .sub-row.is-urgent .sub-renew-line { color: var(--lab-red) !important; }
+body.lab .sub-row > div:nth-child(2) > div:first-child { color: var(--lab-ink); }
+body.lab .sub-row > div:nth-child(2) > div:nth-child(2) {
+  font-size: 10.5px !important;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+body.lab .sub-row > div:nth-child(2) > div:nth-child(3) { font-size: 11px !important; }
+
+/* Personal / Business: a typed label in a box that flips on tap. */
+body.lab [data-sub-kind] {
+  min-height: 40px;
+  padding: 0 10px !important;
+  border: 1px solid var(--lab-rule) !important;
+  border-radius: 2px !important;
+  color: var(--lab-ink) !important;
+  font-family: var(--lab-type) !important;
+  font-size: 10.5px !important;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+body.lab [data-sub-kind]:hover { border-color: var(--lab-ink) !important; }
+body.lab .sub-from-pill {
+  padding: 0 8px;
+  min-height: 40px;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  color: var(--acc-mover);
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The auto-deduct switch in the add form and the inline editor: a hidden
+ * checkbox drives two spans. The spans take the .lab-switch geometry. */
+body.lab .sub-auto-toggle {
+  min-height: 40px;
+  padding: 6px 0;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+}
+body.lab .sub-auto-toggle input[type="checkbox"] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+body.lab .sub-auto-track {
+  width: 46px;
+  height: 26px;
+  box-sizing: border-box;
+  border: 1px solid var(--lab-rule);
+  border-radius: 13px;
+  background: var(--lab-paper-deep);
+  transition: background 0.18s, border-color 0.18s;
+}
+body.lab .sub-auto-thumb {
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+body.lab .sub-auto-toggle input:checked ~ .sub-auto-track { background: var(--lab-switch-on); border-color: var(--lab-switch-on); }
+body.lab .sub-auto-toggle input:checked ~ .sub-auto-track .sub-auto-thumb { transform: translateX(20px); border-color: transparent; background: var(--lab-sheet); }
+body.lab .sub-auto-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+body.lab .sub-auto-toggle input:checked ~ .sub-auto-label { color: var(--lab-ink); font-weight: 700; }
+
+/* The per-row auto-deduct button toggles a class; its dot becomes the
+ * switch so the row reads the same as the form. */
+body.lab .sub-row-toggle {
+  min-height: 40px;
+  padding: 0;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+body.lab .sub-row-toggle.is-on { background: transparent; border-color: transparent; color: var(--lab-ink); }
+body.lab .sub-row-toggle .sub-row-toggle-dot {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  box-sizing: border-box;
+  border: 1px solid var(--lab-rule);
+  border-radius: 13px;
+  background: var(--lab-paper-deep);
+  box-shadow: none;
+  transition: background 0.18s, border-color 0.18s;
+}
+body.lab .sub-row-toggle .sub-row-toggle-dot::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+body.lab .sub-row-toggle.is-on .sub-row-toggle-dot { background: var(--lab-switch-on); border-color: var(--lab-switch-on); box-shadow: none; }
+body.lab .sub-row-toggle.is-on .sub-row-toggle-dot::after { transform: translateX(20px); border-color: transparent; }
+
+/* ---------- incoming orders ---------- */
+body.lab .ord-add-card {
+  background: var(--lab-sheet) !important;
+  border: 1px solid var(--lab-rule) !important;
+}
+body.lab .ord-add-preview {
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule-faint);
+  border-radius: 0;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 12px;
+}
+body.lab .ord-add-preview.warn { background: var(--lab-sheet-2); border-color: var(--acc-prep); color: var(--acc-prep); }
+body.lab .ord-add-preview.bad { background: var(--lab-red-soft); border-color: var(--lab-red); color: var(--lab-red); }
+body.lab .ord-section-count,
+body.lab .wish-section-count { color: var(--lab-ink-dim); font-family: var(--lab-type); }
+
+body.lab .ord-card {
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  border-left-width: 3px;
+  border-radius: 0;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+}
+body.lab .ord-card:hover { background: var(--lab-sheet); }
+body.lab .ord-card.cat-bank   { border-left-color: var(--acc-mover); }
+body.lab .ord-card.cat-stocks { border-left-color: var(--acc-done); }
+body.lab .ord-card.cat-crypto { border-left-color: var(--acc-prep); }
+body.lab .ord-card.cat-other  { border-left-color: var(--acc-inner); }
+body.lab .ord-card-name { color: var(--lab-ink); font-family: var(--lab-type); }
+body.lab .ord-card-amt { font-size: 18px; color: var(--lab-ink); }
+body.lab .ord-card-meta { color: var(--lab-ink-dim); font-family: var(--lab-type); font-size: 10.5px; }
+body.lab .ord-meta-pill {
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--lab-ink-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+body.lab .ord-meta-pill.from,
+body.lab .ord-meta-pill.date { color: var(--lab-ink-dim); background: transparent; }
+body.lab .ord-meta-pill.pct.good,
+body.lab .ord-meta-pill.date.today { color: var(--acc-done); background: transparent; }
+body.lab .ord-meta-pill.pct.warn,
+body.lab .ord-meta-pill.date.soon { color: var(--acc-prep); background: transparent; }
+body.lab .ord-meta-pill.pct.bad,
+body.lab .ord-meta-pill.date.past { color: var(--lab-red); background: transparent; }
+body.lab .ord-meta-pill.pct.frozen::after { opacity: 1; }
+body.lab .ord-card.is-deducted .ord-card-name { text-decoration-color: var(--lab-pencil); }
+body.lab .ord-card-foot { border-top: 1px solid var(--lab-rule-faint); }
+body.lab .ord-deduct-btn {
+  min-height: 40px;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  box-shadow: none;
+}
+body.lab .ord-deduct-btn:hover { background: var(--lab-ink); color: var(--lab-sheet); box-shadow: none; transform: none; }
+/* Deducted is a state, so it gets the stamp. */
+body.lab .ord-deducted-pill {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 8px 2px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--acc-done);
+  font-family: var(--lab-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+  transform: rotate(-2deg);
+  mix-blend-mode: multiply;
+}
+body.lab .ord-deducted-pill::before { content: none; }
+body.lab .ord-deduct-undo,
+body.lab .ord-deduct-cancel {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+body.lab .ord-deduct-undo:hover,
+body.lab .ord-deduct-cancel:hover { color: var(--lab-ink); border-color: var(--lab-ink); }
+body.lab .ord-deduct-chooser {
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+}
+body.lab .ord-deduct-opt {
+  min-height: 40px;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 12px;
+  text-align: left;
+}
+body.lab .ord-deduct-opt:hover { background: var(--lab-ink); color: var(--lab-sheet); border-color: var(--lab-ink); }
+body.lab .ord-deduct-opt small { color: var(--lab-ink-dim); font-family: var(--lab-type); font-size: 10.5px; }
+body.lab .ord-deduct-opt:hover small { color: var(--lab-sheet); }
+body.lab .ord-deduct-opt.insufficient:hover { background: var(--lab-sheet); color: var(--lab-ink); border-color: var(--lab-ink); }
+body.lab .ord-deduct-opt.insufficient:hover small { color: var(--lab-ink-dim); }
+
+body.lab .ord-empty-card,
+body.lab .wish-empty-card {
+  background: var(--lab-sheet-2);
+  border: 1px dashed var(--lab-rule);
+  border-radius: 0;
+}
+body.lab .ord-empty-icon,
+body.lab .wish-empty-icon { display: none; }
+body.lab .ord-empty-title,
+body.lab .wish-empty-title {
+  font-family: var(--lab-display);
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+body.lab .ord-empty-sub,
+body.lab .wish-empty-sub { color: var(--lab-ink-dim); font-size: 12.5px; }
+
+/* ---------- wishlist ---------- */
+body.lab .wish-hero {
+  background: var(--lab-sheet) !important;
+  border: 1px solid var(--lab-rule) !important;
+}
+body.lab .wish-hero::after { display: none; }
+body.lab .wish-hero-num { color: var(--lab-ink); }
+body.lab .wish-hero-pct-num { color: var(--acc-done); }
+body.lab .wish-hero-pct-num.warn { color: var(--acc-prep); }
+body.lab .wish-hero-pct-num.bad { color: var(--lab-red); }
+body.lab .wish-hero-bar {
+  height: 8px;
+  border-radius: 0;
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule-faint);
+}
+body.lab .wish-hero-bar-fill { border-radius: 0; background: var(--lab-ink); box-shadow: none; }
+body.lab .wish-hero-foot { color: var(--lab-ink-dim); font-size: 12px; }
+body.lab .wish-add-card {
+  background: var(--lab-sheet) !important;
+  border: 1px solid var(--lab-rule) !important;
+}
+body.lab .wish-row {
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+}
+body.lab .wish-row-name { color: var(--lab-ink); font-size: 15px; }
+body.lab .wish-row-meta { color: var(--lab-ink-dim); font-size: 11px; }
+body.lab .wish-row-amt { font-size: 18px; color: var(--lab-ink); }
+body.lab .wish-row-pct { font-size: 10.5px; }
+body.lab .wish-row-pct.good { color: var(--acc-done); }
+body.lab .wish-row-pct.warn { color: var(--acc-prep); }
+body.lab .wish-row-pct.bad  { color: var(--lab-red); }
+body.lab .wish-row-pct.flat { color: var(--lab-ink-dim); }
+body.lab .wish-row-bar {
+  height: 6px;
+  border-radius: 0;
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule-faint);
+}
+body.lab .wish-row-bar-fill { border-radius: 0; box-shadow: none; }
+body.lab .wish-row-bar-fill.good { background: var(--acc-done); box-shadow: none; }
+body.lab .wish-row-bar-fill.warn { background: var(--acc-prep); box-shadow: none; }
+body.lab .wish-row-bar-fill.bad  { background: var(--lab-red); box-shadow: none; }
+body.lab .wish-row-bar-fill.flat { background: var(--lab-pencil); }
+
+/* ---------- faktury (iDoklad) ---------- */
+body.lab #invRefresh {
+  min-height: 40px;
+  background: var(--lab-sheet) !important;
+  color: var(--lab-ink) !important;
+  border: 1px solid var(--lab-ink) !important;
+  border-radius: 2px !important;
+  font-family: var(--lab-type) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+body.lab #invRefresh:hover { background: var(--lab-ink) !important; color: var(--lab-sheet) !important; }
+body.lab #invStatus { color: var(--lab-ink-dim); }
+/* Invoice rows are built by the page's JS with inline styles and no class. */
+body.lab #invList > div {
+  background: transparent !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid var(--lab-rule-faint);
+  margin-bottom: 0 !important;
+  padding: 12px 2px !important;
+}
+body.lab #invList div[style*="#6ee7b7"] { color: var(--acc-done) !important; }
+body.lab #invList div[style*="#F2C063"] { color: var(--acc-prep) !important; }
+body.lab #invList div[style*="#7DD3FC"] { color: var(--acc-mover) !important; }
+body.lab #invList div[style*="#ff8a8a"] { color: var(--lab-red) !important; }
+body.lab #invList div[style*="font-size:10px"] { font-size: 10.5px !important; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* ---------- the page's own bottom tab bar: the same walnut as the shared one ---------- */
+body.lab .bottom-tabs {
+  z-index: 40;
+  justify-content: space-around;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 0 env(safe-area-inset-bottom);
+  background: var(--lab-wood);
+  border-top: 1px solid var(--lab-wood-edge);
+  box-shadow: 0 1px 0 rgba(233, 226, 208, 0.08) inset;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-family: var(--lab-type);
+}
+body.lab .bottom-tabs::before { display: none; }
+body.lab .bot-tab {
+  flex: 1;
+  max-width: none;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 50px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lab-chalk-dim);
+  box-shadow: inset 0 2px 0 transparent;
+  transition: color 0.15s;
+}
+body.lab .bot-tab:hover { background: transparent; color: var(--lab-chalk); }
+body.lab .bot-tab.active {
+  background: transparent;
+  border-color: transparent;
+  color: var(--lab-chalk);
+  box-shadow: inset 0 2px 0 var(--lab-chalk);
+}
+body.lab .bot-tab-icon { display: none; }
+body.lab .bot-tab-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.2;
+}
+/* Five labels across a phone. */
+@media (max-width: 480px) {
+  body.lab .bot-tab { padding: 8px 2px; }
+  body.lab .bot-tab-label { font-size: 10.5px; letter-spacing: 0.1em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.lab * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

@@ -1,27 +1,33 @@
 /* =============================================================
- * Lab theme: tokens and utilities.
+ * Lab theme: tokens and utilities. Loaded by every page.
  *
- * A 1940s laboratory document. Buff paper, typewriter ink, rubber stamps,
- * ruled forms, one Prussian-blue accent for the work that matters. No glass,
- * no glow, no blur, nothing that moves unless a number changed.
+ * A 1940s laboratory: paper on the desk, walnut and chalkboard around it.
+ * Typewriter ink for anything typed, one poster face for headings, fountain-
+ * pen inks for categories. No glass, no glow, no blur. Decoration only where
+ * it says something: a stamp marks a state, never a corner.
  *
- * The hooks the JavaScript uses (.hud-cmd, .hud-col, .hud-workring and so on)
- * keep their names: they are structural, and renaming them buys nothing.
- * This file only defines tokens and .lab-* utilities, so it cannot collide
- * with main.html's own styles.
+ * Reads first, decorates second. Nothing informative is smaller than 10.5px
+ * or lighter than --lab-ink-dim.
  * ============================================================= */
 
 :root {
   /* paper */
   --lab-paper:      #E6DBC2;   /* the desk: aged buff */
-  --lab-paper-deep: #D9CCAB;   /* bars and the vignette edge */
-  --lab-sheet:      #F2EAD8;   /* a fresher sheet on the desk */
-  --lab-sheet-2:    #EBE1CA;   /* insets, second sheet in the stack */
+  --lab-paper-deep: #D9CCAB;   /* edges, secondary surfaces */
+  --lab-sheet:      #F2EAD8;   /* a fresh sheet on the desk */
+  --lab-sheet-2:    #EBE1CA;   /* insets, the second sheet in a stack */
+
+  /* the room */
+  --lab-wood:       #2B2219;   /* walnut: the bars */
+  --lab-wood-edge:  #1A140E;
+  --lab-board:      #1E2822;   /* chalkboard: the drawer */
+  --lab-chalk:      #E9E2D0;   /* text on wood or board */
+  --lab-chalk-dim:  rgba(233, 226, 208, 0.62);
 
   /* ink */
   --lab-ink:      #211C16;
   --lab-ink-dim:  #4F473C;
-  --lab-pencil:   #877D6C;
+  --lab-pencil:   #7A7060;     /* decoration and disabled, never content */
   --lab-rule:       rgba(33, 28, 22, 0.55);
   --lab-rule-faint: rgba(33, 28, 22, 0.16);
 
@@ -37,6 +43,9 @@
   --acc-done:   #3F6C48;   /* the green of an approval stamp */
   --acc-arrow:  var(--lab-red);
   --acc-green:  var(--acc-done);   /* alias: grant-applied reads this name */
+
+  /* the switch, on. Livelier than the stamp green so "on" reads at a glance. */
+  --lab-switch-on: #3E8A55;
 
   --lab-type:    'American Typewriter', 'Courier Prime', 'Courier New', Courier, monospace;
   --lab-display: 'Futura', 'Futura PT', 'Century Gothic', 'Trebuchet MS', 'Helvetica Neue', Arial, sans-serif;
@@ -59,13 +68,13 @@
   font-family: var(--lab-type);
 }
 
-/* ---------- typography ---------- */
+/* ---------- type scale ---------- */
 
-/* Typed labels: small caps on a typewriter. */
+/* Typed labels: small caps on a typewriter. The floor for anything read. */
 .lab-label {
   font-family: var(--lab-type);
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--lab-ink-dim);
 }
@@ -74,26 +83,25 @@
   font-family: var(--lab-display);
   font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--lab-ink);
 }
 .lab-body {
   font-family: var(--lab-type);
-  font-size: 14px;
+  font-size: 14.5px;
   line-height: 1.5;
   color: var(--lab-ink);
 }
-/* Form codes at the foot of a sheet. */
-.lab-micro {
-  font-family: var(--lab-type);
-  font-size: 8.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--lab-pencil);
+/* Large figures: the poster face, no tracking. */
+.lab-figure {
+  font-family: var(--lab-display);
+  font-weight: 700;
+  color: var(--lab-ink);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ---------- the rubber stamp ---------- */
+/* ---------- the rubber stamp: only ever for a state ---------- */
 
 .lab-stamp {
   display: inline-block;
@@ -103,7 +111,7 @@
   font-family: var(--lab-display);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   line-height: 1.1;
   color: var(--lab-red);
@@ -125,12 +133,10 @@
   background: var(--lab-sheet);
   border: 1px solid var(--lab-rule);
   border-radius: 0;
-  /* Two sheets under it: the stack on a desk. */
   box-shadow:
     2px 2px 0 var(--lab-sheet-2),
     3px 3px 0 var(--lab-rule-faint);
 }
-
 /* Section header on a double rule, the way a typed form divides itself. */
 .lab-sheet-head {
   display: flex;
@@ -139,6 +145,126 @@
   padding-bottom: 7px;
   margin-bottom: 12px;
   border-bottom: 3px double var(--lab-rule);
+}
+
+/* ---------- controls ---------- */
+
+/* A button is a typed label in a box. Primary is inked in. */
+.lab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: none;
+  text-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.lab-btn:hover { background: var(--lab-ink); color: var(--lab-sheet); }
+.lab-btn-primary { background: var(--lab-ink); color: var(--lab-sheet); }
+.lab-btn-primary:hover { background: var(--lab-ink-dim); }
+.lab-btn-danger { border-color: var(--lab-red); color: var(--lab-red); background: transparent; }
+.lab-btn-danger:hover { background: var(--lab-red); color: var(--lab-sheet); }
+
+/* A form field: a line to type on, nothing else. */
+.lab-input {
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 14px;
+  padding: 9px 4px;
+  outline: none;
+  box-shadow: inset 0 -1px 0 transparent;
+}
+.lab-input:focus { box-shadow: inset 0 -1px 0 var(--lab-ink); }
+.lab-input::placeholder { color: var(--lab-pencil); }
+
+/* The switch. A pill, paper when off, green when on.
+ * Apply to <input type="checkbox">; the knob is drawn by ::after. */
+.lab-switch {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 26px;
+  margin: 0;
+  border: 1px solid var(--lab-rule);
+  border-radius: 13px;
+  background: var(--lab-paper-deep);
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background 0.18s, border-color 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.lab-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+.lab-switch:checked { background: var(--lab-switch-on); border-color: var(--lab-switch-on); }
+.lab-switch:checked::after { transform: translateX(20px); border-color: transparent; }
+.lab-switch:disabled { opacity: 0.45; cursor: default; }
+/* Label left, switch right, tap target 44px tall. */
+.lab-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--lab-rule-faint);
+}
+.lab-switch-row:last-child { border-bottom: 0; }
+
+/* A square checkbox, inked when ticked. For lists, where a switch is too big. */
+.lab-check {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  cursor: pointer;
+}
+.lab-check:checked { background: var(--lab-ink); }
+.lab-check:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--lab-sheet);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 /* ---------- category inks ---------- */

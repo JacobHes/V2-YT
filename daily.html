@@ -5,11 +5,14 @@
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0b">
+<meta name="theme-color" content="#E6DBC2">
 <title>Daily Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+<link rel="stylesheet" href="lab-theme.css">
+<link rel="stylesheet" href="lab-pages.css">
+<link rel="stylesheet" href="lab-daily.css">
 
 <style>
 :root {
@@ -311,7 +314,7 @@ html, body {
 .sm-cost-val { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--warn); font-variant-numeric: tabular-nums; }
 </style>
 </head>
-<body>
+<body class="lab">
 <div class="shell">
 
   <div class="day-pill">

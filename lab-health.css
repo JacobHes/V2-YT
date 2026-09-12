@@ -1,0 +1,596 @@
+/* =============================================================
+ * Lab theme applied to health.html, the supplements page.
+ *
+ * Everything is scoped under body.lab, so removing that one class returns
+ * the page to its previous look. Nothing here renames or removes a selector
+ * the page's JS renders; it only restyles elements that already exist.
+ *
+ * lab-pages.css carries the variables, the inputs, the section titles and
+ * the empty states. This file covers the shapes that are this page's own:
+ * the stack rows and their switch, the ticker, the add form, the search
+ * dropdown, and the WHOOP card with its ring, stages, stats and zone marks.
+ *
+ * Requires lab-theme.css and lab-pages.css before it.
+ * ============================================================= */
+
+/* ---------- page ground ---------- */
+/* topbar.js reserves its own height on <body>; the page's 56px was for the
+ * chrome it no longer has. */
+body.lab main { padding-top: 22px; }
+body.lab ::selection { background: rgba(44, 77, 127, 0.22); color: var(--lab-ink); }
+
+/* The section title's glyph says nothing. */
+body.lab .section-title::before { display: none; }
+body.lab .section-title { margin: 0 2px 12px; }
+
+/* ---------- the sheets ---------- */
+body.lab .stack-card,
+body.lab .whoop-card {
+  background: var(--lab-sheet);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+}
+
+/* ---------- ticker: a typed status line at the head of the sheet ---------- */
+body.lab .stack-ticker {
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule-faint);
+  border-radius: 0;
+  font-family: var(--lab-type);
+}
+body.lab .stack-ticker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--acc-done);
+  box-shadow: none;
+  animation: none;
+}
+body.lab .stack-ticker.status-low .stack-ticker-dot { background: var(--acc-prep); }
+body.lab .stack-ticker.status-missed .stack-ticker-dot { background: var(--lab-red); box-shadow: none; animation: none; }
+body.lab .stack-ticker-label { font-size: 10.5px; color: var(--lab-ink-dim); }
+body.lab .stack-ticker-sep { color: var(--lab-pencil); }
+body.lab .stack-ticker-msg { font-size: 12.5px; font-weight: 400; color: var(--lab-ink); }
+body.lab .stack-ticker-count { font-size: 11px; color: var(--lab-ink-dim); }
+
+/* ---------- head: title and progress ---------- */
+/* The section title above the sheet already says Daily Stack. */
+body.lab .stack-head .sf-eyebrow { display: none; }
+body.lab .sf-title {
+  font-family: var(--lab-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+  line-height: 1.25;
+}
+body.lab .stack-progress-text {
+  font-family: var(--lab-type);
+  font-size: 12px;
+  color: var(--lab-ink-dim);
+}
+body.lab .stack-progress-track {
+  height: 7px;
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+body.lab .stack-progress-fill {
+  background: var(--lab-ink);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ---------- windows: Morning, Lunch, Evening, Anytime ---------- */
+body.lab .stack-window { margin-bottom: 18px; }
+body.lab .stack-window-header {
+  gap: 10px;
+  padding-bottom: 6px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--lab-rule);
+}
+/* Sunrise, plate, moon, stopwatch: the typed label says it. */
+body.lab .stack-window-icon { display: none; }
+body.lab .stack-window-title {
+  font-family: var(--lab-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+body.lab .stack-window-time {
+  margin-left: auto;
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .stack-window-empty {
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+  padding: 10px 2px;
+}
+
+/* ---------- rows: a switch row, label left, switch right ---------- */
+body.lab .stack-item {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "body low del switch";
+  gap: 0 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0 0 2px;
+  margin-bottom: 0;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule-faint);
+  border-radius: 0;
+  background: transparent;
+  transition: none;
+}
+body.lab .stack-item:last-child { border-bottom: 0; }
+body.lab .stack-item:hover,
+body.lab .stack-item.taken { background: transparent; }
+/* The red pulse is gone; a missed dose is stamped on the line instead. */
+body.lab .stack-item.missed,
+body.lab .stack-item.taken.missed {
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule-faint);
+  animation: none;
+  box-shadow: none;
+}
+body.lab .stack-item.missed:last-child { border-bottom: 0; }
+body.lab .stack-item-body { grid-area: body; padding: 8px 0; }
+body.lab .stack-low-btn { grid-area: low; }
+body.lab .stack-item-del { grid-area: del; }
+body.lab .stack-check { grid-area: switch; }
+
+body.lab .stack-item-name {
+  font-family: var(--lab-type);
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--lab-ink);
+}
+body.lab .stack-item.taken .stack-item-name { color: var(--lab-pencil); text-decoration: line-through; }
+body.lab .stack-item-meta {
+  font-family: var(--lab-type);
+  font-size: 12px;
+  color: var(--lab-ink-dim);
+  margin-top: 2px;
+}
+body.lab .stack-item-meta:empty::before { color: var(--lab-pencil); }
+/* Editing in place: a pencil rule around the text. The name span gets its
+ * outline inline from the JS, so that one needs the weight. */
+body.lab .stack-item-name-text[contenteditable="true"] {
+  outline: 1px dashed var(--lab-rule) !important;
+  outline-offset: 3px !important;
+  border-radius: 0 !important;
+}
+body.lab .stack-item-meta[contenteditable="true"] {
+  outline: 1px dashed var(--lab-rule);
+  outline-offset: 3px;
+  border-radius: 0;
+  color: var(--lab-ink);
+}
+body.lab .stack-item.missed:not(.taken) .stack-item-name::after {
+  content: 'Missed';
+  display: inline-block;
+  padding: 2px 6px 1px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--lab-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: var(--lab-red);
+  opacity: 0.9;
+  transform: rotate(-4deg);
+  mix-blend-mode: multiply;
+  -webkit-mask-image: var(--lab-stamp-mask);
+  mask-image: var(--lab-stamp-mask);
+  -webkit-mask-size: 160px 160px;
+  mask-size: 160px 160px;
+}
+
+/* Tags: a typed category in its ink. */
+body.lab .stack-item-tag {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  background: transparent;
+}
+body.lab .stack-item-tag.tag-stack { color: var(--acc-prep); background: transparent; }
+body.lab .stack-item-tag.tag-not-ordered { color: var(--lab-pencil); border-style: dashed; background: transparent; }
+
+/* The taken tick: the theme's pill switch, drawn on the page's own button.
+ * The button is the tap target, 44px tall; the pill and the knob are its
+ * pseudo-elements, sized and coloured exactly as .lab-switch. */
+body.lab .stack-check {
+  position: relative;
+  width: 52px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+  transition: none;
+  -webkit-tap-highlight-color: transparent;
+}
+body.lab .stack-check::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 46px;
+  height: 26px;
+  margin: -13px 0 0 -23px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 13px;
+  background: var(--lab-paper-deep);
+  box-sizing: border-box;
+  transition: background 0.18s, border-color 0.18s;
+}
+body.lab .stack-check::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -20px;
+  border-radius: 50%;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+body.lab .stack-check:hover::before { border-color: var(--lab-ink); }
+body.lab .stack-check:focus-visible { outline: none; }
+body.lab .stack-check:focus-visible::before { outline: 1px solid var(--lab-ink); outline-offset: 2px; }
+body.lab .stack-check.checked { background: transparent; border: 0; box-shadow: none; color: transparent; }
+body.lab .stack-check.checked::before { background: var(--lab-switch-on); border-color: var(--lab-switch-on); }
+body.lab .stack-check.checked::after { transform: translateX(20px); border-color: transparent; }
+
+/* Running low: a boxed typed label, ochre when it is on. */
+body.lab .stack-low-btn {
+  min-height: 40px;
+  margin-top: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--lab-rule);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--lab-ink-dim);
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: none;
+}
+body.lab .stack-low-btn:hover { border-color: var(--lab-ink); color: var(--lab-ink); background: var(--lab-sheet-2); }
+body.lab .stack-low-btn.is-low { border-color: var(--acc-prep); color: var(--acc-prep); background: transparent; }
+
+/* Delete: a quiet pencil cross with a full tap target. */
+body.lab .stack-item-del {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--lab-pencil);
+  font-family: var(--lab-type);
+  font-size: 18px;
+  opacity: 1;
+  transition: none;
+}
+body.lab .stack-item-del:hover,
+body.lab .stack-item-del:active { color: var(--lab-red); background: var(--lab-red-soft); border: 0; opacity: 1; }
+
+/* On a phone the name takes the first line with the switch; the two small
+ * controls wrap under it, left-aligned, away from the switch. */
+@media (max-width: 600px) {
+  body.lab .stack-item {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "body body switch"
+      "low  del  .";
+    gap: 0 8px;
+    padding-bottom: 4px;
+  }
+  body.lab .stack-item .stack-low-btn { grid-area: low; justify-self: start; margin-top: 0; }
+  body.lab .stack-item .stack-item-del { justify-self: start; }
+}
+
+/* ---------- add form: lines to type on, one inked button ---------- */
+body.lab .stack-add-wrap {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--lab-rule);
+}
+body.lab .stack-input {
+  font-size: 14px;
+  padding: 9px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--lab-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  transition: none;
+}
+body.lab .stack-input:focus {
+  border-color: var(--lab-rule);
+  background: transparent;
+  box-shadow: inset 0 -1px 0 var(--lab-ink);
+}
+body.lab .stack-add-btn {
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-ink);
+  color: var(--lab-sheet);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: none;
+  transition: background 0.15s;
+}
+body.lab .stack-add-btn:hover { background: var(--lab-ink-dim); transform: none; }
+body.lab .stack-add-btn:active { transform: none; }
+
+/* ---------- search dropdown: a sheet lifted off the desk ---------- */
+body.lab .stack-search-results {
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-ink);
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 4px 4px 0 var(--lab-rule-faint);
+  padding: 4px;
+}
+body.lab .stack-result {
+  min-height: 44px;
+  border-radius: 0;
+  color: var(--lab-ink-dim);
+  transition: none;
+}
+body.lab .stack-result:hover,
+body.lab .stack-result.is-focused { background: var(--lab-sheet-2); }
+body.lab .stack-result + .stack-result { border-top: 1px solid var(--lab-rule-faint); }
+/* Pill and leaf glyphs: the name says it. */
+body.lab .stack-result-icon { display: none; }
+body.lab .stack-result-name { font-family: var(--lab-type); font-size: 13.5px; font-weight: 700; color: var(--lab-ink); }
+body.lab .stack-result-meta { font-family: var(--lab-type); font-size: 11px; color: var(--lab-ink-dim); }
+
+body.lab .attribution {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--lab-ink-dim);
+}
+
+/* ---------- WHOOP: an instrument card ---------- */
+body.lab .whoop-card { padding: 20px 20px 16px; }
+body.lab .wh-brand-mark {
+  border-radius: 2px;
+  background: var(--lab-ink);
+  color: var(--lab-sheet);
+  font-family: var(--lab-display);
+  font-weight: 700;
+  box-shadow: none;
+}
+body.lab .wh-brand-text {
+  font-family: var(--lab-display);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--lab-ink);
+}
+body.lab .wh-disc-title {
+  font-family: var(--lab-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+body.lab .wh-disc-sub {
+  font-family: var(--lab-type);
+  font-size: 14px;
+  color: var(--lab-ink-dim);
+  max-width: 300px;
+}
+/* A boxed typed label. The page's one inked button is Add. */
+body.lab .wh-connect {
+  min-height: 40px;
+  padding: 9px 18px;
+  border: 1px solid var(--lab-ink);
+  border-radius: 2px;
+  background: var(--lab-sheet);
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: none;
+  transition: none;
+}
+body.lab .wh-connect:hover { background: var(--lab-ink); color: var(--lab-sheet); transform: none; }
+
+/* header */
+body.lab .wh-live {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  color: var(--acc-done);
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  background: transparent;
+}
+body.lab .wh-live-dot { border-radius: 1px; background: currentColor; box-shadow: none; animation: none; }
+body.lab .wh-updated {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .wh-refresh {
+  width: 40px;
+  height: 40px;
+  border-radius: 2px;
+  border: 1px solid var(--lab-rule);
+  background: transparent;
+  color: var(--lab-ink-dim);
+  transition: transform 0.4s;
+}
+body.lab .wh-refresh:hover { background: var(--lab-sheet-2); color: var(--lab-ink); border-color: var(--lab-ink); }
+
+/* ring: ink on paper. The fill colour follows the recovery zone; the page
+ * sets it inline from the theme's inks. */
+body.lab .wh-ring { filter: none; }
+body.lab .wh-ring-track { stroke: var(--lab-rule-faint); }
+body.lab .wh-ring-fill { stroke: var(--lab-ink); stroke-linecap: butt; }
+body.lab .wh-ring-num {
+  font-family: var(--lab-display);
+  font-size: 56px;
+  letter-spacing: -0.02em;
+  color: var(--lab-ink);
+}
+body.lab .wh-ring-unit { font-family: var(--lab-type); font-size: 10.5px; color: var(--lab-ink-dim); }
+body.lab .wh-ring-label { font-family: var(--lab-type); font-size: 13px; font-weight: 700; color: var(--lab-ink); }
+
+/* sleep stages: four inks in a ruled bar */
+body.lab .wh-stages { border-top: 1px solid var(--lab-rule-faint); }
+body.lab .wh-stages-eye { font-family: var(--lab-type); font-size: 10.5px; color: var(--lab-ink-dim); }
+body.lab .wh-stages-meta { font-family: var(--lab-type); font-size: 11px; color: var(--lab-ink-dim); }
+body.lab .wh-stages-bar {
+  height: 10px;
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+body.lab .wh-stage-rem   { background: var(--acc-inner); }
+body.lab .wh-stage-deep  { background: var(--acc-mover); }
+body.lab .wh-stage-light { background: var(--acc-prep); }
+body.lab .wh-stage-awake { background: var(--lab-paper-deep); }
+body.lab .wh-leg { font-family: var(--lab-type); font-size: 11px; font-weight: 400; color: var(--lab-ink-dim); }
+body.lab .wh-leg-dot { border-radius: 1px; }
+body.lab .wh-leg-dot.d-rem   { background: var(--acc-inner); }
+body.lab .wh-leg-dot.d-deep  { background: var(--acc-mover); }
+body.lab .wh-leg-dot.d-light { background: var(--acc-prep); }
+body.lab .wh-leg-dot.d-awake { background: var(--lab-paper-deep); border: 1px solid var(--lab-rule); }
+body.lab .wh-leg-num { font-family: var(--lab-type); font-size: 11px; color: var(--lab-ink); }
+
+/* stats and biomarkers: ruled boxes, figures in the poster face */
+body.lab .wh-stats { border-top: 1px solid var(--lab-rule-faint); }
+body.lab .wh-stat,
+body.lab .wh-bio-item {
+  background: transparent;
+  border: 1px solid var(--lab-rule-faint);
+  border-radius: 0;
+}
+body.lab .wh-stat-label,
+body.lab .wh-bio-label { font-family: var(--lab-type); font-size: 10.5px; color: var(--lab-ink-dim); }
+body.lab .wh-stat-val { font-family: var(--lab-display); font-size: 22px; letter-spacing: 0; color: var(--lab-ink); }
+body.lab .wh-bio-val { font-family: var(--lab-display); font-size: 15px; color: var(--lab-ink); }
+body.lab .wh-stat-sub { font-family: var(--lab-type); font-size: 10.5px; color: var(--lab-ink-dim); }
+
+/* zone marks: a square of ink, no glow */
+body.lab .wh-zone { border-radius: 1px; background: var(--lab-rule-faint); box-shadow: none; }
+body.lab .wh-zone.z-good { background: var(--acc-done); box-shadow: none; }
+body.lab .wh-zone.z-norm { background: var(--lab-pencil); }
+body.lab .wh-zone.z-warn { background: var(--acc-prep); box-shadow: none; }
+body.lab .wh-zone.z-bad  { background: var(--lab-red); box-shadow: none; }
+body.lab .wh-legend { border-radius: 0; border: 1px solid var(--lab-rule-faint); background: transparent; }
+body.lab .wh-leg-item {
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+
+/* today's call: the verdict is stamped */
+body.lab .wh-verdict {
+  background: var(--lab-sheet-2);
+  border: 1px solid var(--lab-rule-faint);
+  border-left: 3px solid var(--lab-ink);
+  border-radius: 0;
+}
+body.lab .wh-verdict:has(.wh-verdict-badge.green)  { border-left-color: var(--acc-done); }
+body.lab .wh-verdict:has(.wh-verdict-badge.yellow) { border-left-color: var(--acc-prep); }
+body.lab .wh-verdict:has(.wh-verdict-badge.red)    { border-left-color: var(--lab-red); }
+body.lab .wh-verdict-eye { font-family: var(--lab-type); font-size: 10.5px; color: var(--lab-ink-dim); }
+body.lab .wh-verdict-badge {
+  padding: 3px 9px 2px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  background: transparent;
+  font-family: var(--lab-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1.1;
+  transform: rotate(-3deg);
+  mix-blend-mode: multiply;
+  -webkit-mask-image: var(--lab-stamp-mask);
+  mask-image: var(--lab-stamp-mask);
+  -webkit-mask-size: 160px 160px;
+  mask-size: 160px 160px;
+}
+body.lab .wh-verdict-badge.green  { color: var(--acc-done); border-color: currentColor; background: transparent; }
+body.lab .wh-verdict-badge.yellow { color: var(--acc-prep); border-color: currentColor; background: transparent; }
+body.lab .wh-verdict-badge.red    { color: var(--lab-red); border-color: currentColor; background: transparent; }
+body.lab .wh-verdict-headline { font-family: var(--lab-type); font-size: 14.5px; font-weight: 400; color: var(--lab-ink); }
+body.lab .wh-verdict-reasons { font-family: var(--lab-type); font-size: 13.5px; color: var(--lab-ink-dim); }
+
+body.lab .wh-err {
+  background: var(--lab-red-soft);
+  border: 1px solid var(--lab-red);
+  border-radius: 0;
+  color: var(--lab-red);
+  font-family: var(--lab-type);
+  font-size: 12px;
+}
+body.lab .wh-disconnect-link {
+  min-height: 40px;
+  font-family: var(--lab-type);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+body.lab .wh-disconnect-link:hover { color: var(--lab-ink); }

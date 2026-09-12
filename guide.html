@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6DBC2">
+<title>How this works · Dashboard</title>
+<script src="topbar.js" defer></script>
+<link rel="stylesheet" href="lab-theme.css">
+<link rel="stylesheet" href="lab-pages.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { min-height: 100vh; padding: 28px 20px 60px; }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  .guide-title {
+    display: flex; align-items: center; gap: 14px;
+    margin: 0 0 6px;
+    font-family: var(--lab-display); font-size: clamp(20px, 5vw, 26px); font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--lab-ink);
+    white-space: nowrap;
+  }
+  .guide-title::before, .guide-title::after { content: ''; flex: 1; height: 1px; background: var(--lab-rule); }
+  .guide-lede {
+    margin: 0 0 26px; text-align: center;
+    font-size: 13px; line-height: 1.6; color: var(--lab-ink-dim);
+  }
+
+  /* contents */
+  .toc { margin: 0 0 26px; padding: 14px 18px; }
+  .toc-label { margin-bottom: 8px; }
+  .toc ol { margin: 0; padding: 0 0 0 22px; columns: 2; column-gap: 24px; }
+  .toc li { margin: 0 0 6px; font-size: 13.5px; break-inside: avoid; }
+  .toc a { color: var(--lab-ink); text-decoration: none; border-bottom: 1px solid var(--lab-rule-faint); }
+  .toc a:hover { border-bottom-color: var(--lab-ink); }
+  @media (max-width: 480px) { .toc ol { columns: 1; } }
+
+  /* a section is a sheet */
+  .sheet { margin: 0 0 18px; padding: 18px 20px 16px; }
+  .sheet-head { display: flex; align-items: baseline; gap: 12px; }
+  .sheet-head h2 {
+    margin: 0;
+    font-family: var(--lab-display); font-size: 15px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--lab-ink);
+  }
+  .sheet-head .open {
+    margin-left: auto;
+    font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--lab-ink); text-decoration: none;
+    border: 1px solid var(--lab-ink); border-radius: 2px; padding: 5px 9px;
+    white-space: nowrap;
+  }
+  .sheet-head .open:hover { background: var(--lab-ink); color: var(--lab-sheet); }
+  .purpose { margin: 10px 0 12px; font-size: 14.5px; line-height: 1.55; color: var(--lab-ink); }
+  .sheet h3 {
+    margin: 16px 0 6px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--lab-ink-dim);
+  }
+  .sheet p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.6; color: var(--lab-ink); }
+  .sheet ul { margin: 0; padding: 0 0 0 18px; }
+  .sheet li { margin: 0 0 6px; font-size: 13.5px; line-height: 1.55; color: var(--lab-ink); }
+  .sheet li b, .sheet p b { font-weight: 700; }
+  .term { font-family: var(--lab-display); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .ink-mover { color: var(--acc-mover); } .ink-prep { color: var(--acc-prep); } .ink-admin { color: var(--acc-admin); } .ink-red { color: var(--lab-red); } .ink-done { color: var(--acc-done); }
+
+  /* a small typed table */
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 4px; font-size: 13px; }
+  th { text-align: left; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lab-ink-dim); font-weight: 700; padding: 4px 8px 6px 0; border-bottom: 3px double var(--lab-rule); }
+  td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--lab-rule-faint); vertical-align: top; line-height: 1.45; }
+  tr:last-child td { border-bottom: 0; }
+  .wrap { overflow-x: auto; }
+
+  .note { margin: 12px 0 0; padding: 10px 12px; border: 1px dashed var(--lab-rule); font-size: 13px; line-height: 1.55; color: var(--lab-ink); }
+  .note.red { border-color: var(--lab-red); color: var(--lab-red); background: var(--lab-red-soft); }
+  .foot { margin-top: 26px; text-align: center; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lab-ink-dim); }
+</style>
+</head>
+<body class="lab">
+<div class="page">
+
+  <h1 class="guide-title">How this works</h1>
+  <p class="guide-lede">What each page is for, how the pieces connect, and what to do when something looks wrong.<br>Read this when you have been away for a while.</p>
+
+  <nav class="toc lab-sheet" aria-label="Contents">
+    <div class="toc-label lab-label">Contents</div>
+    <ol>
+      <li><a href="#day">The shape of a day</a></li>
+      <li><a href="#main">Main</a></li>
+      <li><a href="#daily">Daily tracker</a></li>
+      <li><a href="#track">Track</a></li>
+      <li><a href="#finance">Finance</a></li>
+      <li><a href="#fitness">Fitness</a></li>
+      <li><a href="#supplements">Supplements</a></li>
+      <li><a href="#caffeine">Caffeine</a></li>
+      <li><a href="#hub">Hub and settings</a></li>
+      <li><a href="#grant">Grant</a></li>
+      <li><a href="#data">Where the data lives</a></li>
+      <li><a href="#broken">When something looks wrong</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===== the day ===== -->
+  <section class="sheet lab-sheet" id="day">
+    <div class="sheet-head"><h2>The shape of a day</h2></div>
+    <p class="purpose">The whole system is built around one idea: each day has one <span class="term ink-red">arrow</span>, the single task that makes the day a win if it is the only thing that ships. Everything else is arranged so that the arrow gets fired.</p>
+    <h3>The loop</h3>
+    <ul>
+      <li><b>Night before.</b> Run the planning wizard on Main: dump tomorrow's tasks, sort each one by energy, aim the arrow, pass the three-question gate. The plan locks and the page says "Day is won. Sleep."</li>
+      <li><b>Morning.</b> Log your energy (Full, Medium or Cooked). If no plan was locked, a banner asks you to aim before touching anything.</li>
+      <li><b>Work.</b> Press "I'm doing this" on the arrow, clear the four-item pre-work gate, and go. The work dial at the top shows the time left in your work window.</li>
+      <li><b>End of day.</b> The debrief asks whether the arrow landed, where the energy actually went, and one fix for tomorrow. Saving it opens tomorrow's wizard with that fix carried in.</li>
+    </ul>
+    <h3>The day boundary</h3>
+    <p>Main, Supplements and the top bar treat the day as flipping at <b>06:00</b>, so a task added at 01:00 still belongs to the day you are finishing. The Daily tracker and Track use the calendar date in Europe/Prague. Between midnight and six the two disagree, which is by design: the late-night debrief belongs to the day it closes.</p>
+    <h3>Energy categories</h3>
+    <div class="wrap"><table>
+      <tr><th>Tag</th><th>Means</th><th>Where it goes</th></tr>
+      <tr><td><span class="term ink-mover">Mover</span></td><td>Moves a client or the business forward. Needs real energy.</td><td>Left panel on Main. One of these is the arrow.</td></tr>
+      <tr><td><span class="term ink-prep">Prep</span></td><td>Sets up a mover: staging, gathering, tidying the runway.</td><td>Right panel.</td></tr>
+      <tr><td><span class="term ink-admin">Admin</span></td><td>Has to happen, moves nothing.</td><td>Right panel, last.</td></tr>
+    </table></div>
+    <p>A <b>cooked</b> day greys the movers and turns the arrow into a five-minute test: start it, and if it runs to the end the arrow fires anyway. "Cooked day = prep day" is the rule the page shows.</p>
+  </section>
+
+  <!-- ===== main ===== -->
+  <section class="sheet lab-sheet" id="main">
+    <div class="sheet-head"><h2>Main</h2><a class="open" href="main.html">Open</a></div>
+    <p class="purpose">The command page. Today's arrow, the task list grouped by energy, the energy check-in and streak, the work dial, open loops, the plan for tomorrow and past days. Most days you only need this page.</p>
+    <h3>Top strip</h3>
+    <ul>
+      <li><b>Energy today</b>: Full, Medium, Cooked. Tap to set, tap again to clear. Stored per day.</li>
+      <li><b>Day streak</b>: consecutive past days whose arrow landed. A day you never opened does not break it; a day with tasks and no landed arrow does.</li>
+      <li><b>Bedtime</b>: time left until 22:00. <b>Work left</b>: the dial, time left in the 09:00 to 17:00 window. It goes red under an hour. Both windows are settings, see the Hub section.</li>
+    </ul>
+    <h3>The arrow card</h3>
+    <ul>
+      <li>Aim a task with the <b>◎</b> button on its row. The page asks the one question that matters: if this is the only thing that ships today, is the day a win?</li>
+      <li><b>I'm doing this</b> opens the pre-work gate: phone in another room, messaging closed, space clean, no interruption possible. All four, then it fires.</li>
+      <li><b>Breakdown</b> under the arrow holds its steps. Tick them off as you go.</li>
+      <li>An unlanded arrow carries to tomorrow with an "aimed" count so you can see how long it has been dodged.</li>
+    </ul>
+    <h3>Task rows</h3>
+    <ul>
+      <li>The <b>tag</b> button sets Mover, Prep or Admin. Rows group by tag automatically.</li>
+      <li><b>!</b> flags a task urgent. It gets a red edge and an Urgent mark until it is done.</li>
+      <li>The <b>age</b> badge appears at three days and turns red at five. Old tasks are a signal, not a shame.</li>
+      <li><b>Push remaining to tomorrow</b> moves every open task. Done tasks stay as the record.</li>
+      <li><b>Polish</b> rewrites a task title into something specific enough to start.</li>
+    </ul>
+    <h3>Open loops</h3>
+    <p>A capture inbox for anything that nags. Close a loop by naming what it is, your part, and the next physical action; that becomes a task or gets archived. Empty is the goal.</p>
+    <h3>Plan ahead and past days</h3>
+    <p>Plan ahead shows the next days and the planning wizard. Past days shows each day's arrow and outcome, which is where the streak comes from. Both fold away so the first screen is the arrow.</p>
+  </section>
+
+  <!-- ===== daily ===== -->
+  <section class="sheet lab-sheet" id="daily">
+    <div class="sheet-head"><h2>Daily tracker</h2><a class="open" href="daily.html">Open</a></div>
+    <p class="purpose">The page you fill in at the end of the day: cash, weight, execution percentage, minutes of meditation, study and gym, social minutes and their cost, sleep, and the day's constraints. Above it sits DISCIPLINED30, a 30-day challenge with five habits.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>DISCIPLINED30</b>: a day counter, a progress ring, five habit bars, today's five habits (Plan is a switch, the other four tick themselves once minutes reach the goal), and a 30-cell strip you can tap to open any day.</li>
+      <li><b>Daily log</b>: cash, weight, execution, and minutes for meditation, studying and gym.</li>
+      <li><b>Social media</b>: minutes on Instagram, YouTube and X, with the cost worked out at your day rate.</li>
+      <li><b>Sleep</b>: bed time and wake time, with the duration computed for you.</li>
+      <li><b>Constraints</b>: one line each for what's limiting you personally and in business.</li>
+      <li><b>Habits</b>: ten yes/no switches.</li>
+      <li><b>Energy curve</b>: log low, medium or high for morning, afternoon and evening. After three days it names your peak window.</li>
+      <li><b>Past days</b>: the last 30 days at a glance, tap to reopen and correct any of them.</li>
+    </ul>
+    <p>Everything saves as you type. This page's day flips at midnight in Prague time, not 06:00 like Main, so a very late entry lands on the calendar day it is typed, not the day before.</p>
+  </section>
+
+  <!-- ===== track ===== -->
+  <section class="sheet lab-sheet" id="track">
+    <div class="sheet-head"><h2>Track</h2><a class="open" href="track.html">Open</a></div>
+    <p class="purpose">A self-hosted time tracker. Tap a project to start a timer, tap it again or hit Stop to end it. Deep Work, Studying, Meditation and Gym auto-fill the matching minutes on the Daily tracker, so you never retype them.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>Timer card</b>: the running project, elapsed time, Stop, and a chip grid to switch projects.</li>
+      <li><b>Today</b>: total time, a bar per project, and today's sessions, which you can edit or delete.</li>
+      <li><b>Last 7 days</b>: the same, rolled up over a week.</li>
+      <li><b>Calendar</b>: a month view shaded by how much you tracked that day; click a day to see its detail.</li>
+      <li><b>Manage projects</b>: add, rename, recolour or delete a project, and where each one's minutes should mirror on the Daily tracker.</li>
+    </ul>
+  </section>
+
+  <!-- ===== finance ===== -->
+  <section class="sheet lab-sheet" id="finance">
+    <div class="sheet-head"><h2>Finance</h2><a class="open" href="finance.html">Open</a></div>
+    <p class="purpose">Net worth, subscriptions, incoming money and outgoing invoices in one place. Log account balances here and watch the trend; the other tabs keep the recurring pieces from slipping through.</p>
+    <h3>What each tab shows</h3>
+    <ul>
+      <li><b>Net worth</b>: total across bank, stocks, crypto and other accounts, a history chart, a category breakdown, and the recent activity log.</li>
+      <li><b>Subs</b>: active subscriptions and monthly burn, split personal and business, with an auto-deduct switch per subscription.</li>
+      <li><b>Orders</b>: money expected to land, with a button to deduct it into an account once it arrives.</li>
+      <li><b>Wishlist</b>: items priced as a percentage of your current net worth.</li>
+      <li><b>Faktury</b>: outgoing invoices pulled from iDoklad.</li>
+    </ul>
+  </section>
+
+  <!-- ===== fitness ===== -->
+  <section class="sheet lab-sheet" id="fitness">
+    <div class="sheet-head"><h2>Fitness</h2><a class="open" href="gym.html">Open</a></div>
+    <p class="purpose">A progressive-overload gym log. Pick push, pull or legs and home or commercial gym, log today's top set for each exercise, and it tells you what to do next time: hold the weight or add to it, based on how the reps went.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>Weight tracker</b>: current bodyweight, a seven-day trend, an estimated composition.</li>
+      <li><b>Progress photos</b>: a grid you can compare side by side or delete from.</li>
+      <li><b>Gym log</b>: pick your split and gym, log weight and reps per exercise as pills, and get a next-session recommendation with your estimated one-rep max, best set and session count.</li>
+      <li><b>Edit exercise</b>: rename, mark it bodyweight, set the starting weight, rep range and increment, or delete it.</li>
+    </ul>
+    <p>Everything lives only on this page; nothing here is read by another page in the dashboard.</p>
+  </section>
+
+  <!-- ===== supplements ===== -->
+  <section class="sheet lab-sheet" id="supplements">
+    <div class="sheet-head"><h2>Supplements</h2><a class="open" href="health.html">Open</a></div>
+    <p class="purpose">Your daily supplement stack. Build the list once with dose, time window and a note, then tick each one off as you take it. A running count shows how many are done, and a missed dose is flagged once its window's cutoff passes untaken. WHOOP recovery, sleep and strain sit here too, once connected.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>WHOOP</b>: a Connect button until it is linked, then a recovery ring, sleep stages and strain, HRV and resting heart rate.</li>
+      <li><b>Daily stack</b>: your items grouped by Morning, Lunch and Evening, each with a switch for taken, a note, and a running-low flag.</li>
+      <li><b>Add to stack</b>: search a built-in catalogue or type your own, with dose and window.</li>
+    </ul>
+    <p>This is also where you connect WHOOP; other pages only read what it reports once connected here.</p>
+  </section>
+
+  <!-- ===== caffeine ===== -->
+  <section class="sheet lab-sheet" id="caffeine">
+    <div class="sheet-head"><h2>Caffeine</h2><a class="open" href="caffeine.html">Open</a></div>
+    <p class="purpose">Caffeine logs what you drink and when, and predicts the energy it gives you across the day from a half-life model plus your sleep and time awake. Search a drink or type your own; it lands in today's log and the ring, curve and plan update.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>Your day</b>: the energy ring, and a chart of predicted energy from midnight to midnight in three views, Line, Bars, Stack. Hover or drag it to check a specific time. Below it, the plan: peak focus window, predicted crash, and the last coffee that still lets you sleep on time.</li>
+      <li><b>Smart timing</b>: the same three facts as tiles, plus numbered tips.</li>
+      <li><b>Today</b>: milligrams logged against your ceiling, how much is still active in your system, and a bar that turns amber then red as you approach the limit.</li>
+      <li><b>Log a drink</b> and <b>Logged today</b>: search the built-in drink list or add your own name and mg; the log lists today's drinks with when they peak, half-clear and clear.</li>
+    </ul>
+    <p>The ceiling adjusts to your body weight and, when connected, last night's sleep from WHOOP.</p>
+  </section>
+
+  <!-- ===== hub ===== -->
+  <section class="sheet lab-sheet" id="hub">
+    <div class="sheet-head"><h2>Hub and settings</h2><a class="open" href="index.html">Open</a></div>
+    <p class="purpose">The front door. Every page as a numbered tile, and behind the Settings button the body profile the other pages read when they need your weight: height, weight, age, sex, active hours a week. The WHOOP box at the foot of that form shows whether the band is connected and, when it is, the latest recovery, sleep and resting heart rate.</p>
+    <h3>Settings</h3>
+    <ul>
+      <li><b>Your data</b>: height in cm or feet, weight in kg or lb, age, sex, active hours per week. Save writes the profile once; every page reads it.</li>
+      <li><b>WHOOP</b>: connection status and last sync. Connecting happens on the Supplements page; this box only reports and re-syncs.</li>
+    </ul>
+    <h3>Main's time windows</h3>
+    <p>The work dial and the bedtime countdown read three settings that have no form yet. Set them once, on each device, from the browser console on any page:</p>
+    <div class="wrap"><table>
+      <tr><th>Setting</th><th>Default</th><th>Console line</th></tr>
+      <tr><td>Work starts</td><td>09:00</td><td><code>localStorage.setItem('hud:workStart', '9')</code></td></tr>
+      <tr><td>Work ends</td><td>17:00</td><td><code>localStorage.setItem('hud:workEnd', '17')</code></td></tr>
+      <tr><td>Bedtime</td><td>22:00</td><td><code>localStorage.setItem('hud:bedtime', '22')</code></td></tr>
+    </table></div>
+  </section>
+
+  <!-- ===== grant ===== -->
+  <section class="sheet lab-sheet" id="grant">
+    <div class="sheet-head"><h2>Grant</h2><a class="open" href="main.html">On Main</a></div>
+    <p class="purpose">The assistant at the foot of Main. It reads today's tasks, the arrow, your energy and the tracker, and answers in the voice of a blunt coach. It can also act on the tracker: add a task, set the arrow, tag a row.</p>
+    <h3>The flows</h3>
+    <ul>
+      <li><b>Plan tomorrow</b>: walks the dump, sort, aim, gate sequence in conversation.</li>
+      <li><b>Morning</b>: reads the plan and the energy and tells you what to touch first.</li>
+      <li><b>Energy check</b>: for a cooked day, decides what still ships.</li>
+      <li><b>I'm stuck</b>: breaks the arrow into a first five minutes.</li>
+      <li><b>Debrief</b>: the end-of-day questions, with the pattern across recent days.</li>
+    </ul>
+    <p>Type anything else in the box for a plain conversation. <b>History</b> lists past sessions; <b>New session</b> starts clean. Grant runs on the server with its own key, so nothing has to be pasted into the browser.</p>
+  </section>
+
+  <!-- ===== data ===== -->
+  <section class="sheet lab-sheet" id="data">
+    <div class="sheet-head"><h2>Where the data lives</h2></div>
+    <p class="purpose">Every page keeps its state in the browser's local storage on the device you are using. Each page then mirrors its keys to one row in a small cloud database, so a change on the phone shows on the laptop within about a second when both are online.</p>
+    <ul>
+      <li><b>Local first.</b> The page always reads and writes locally. If the cloud is unreachable the page still works; it just stops syncing until it is back.</li>
+      <li><b>Merge, not overwrite.</b> On load a page pulls the cloud row, merges it with local, then uploads. Deletions are remembered so a delete on one device is not undone by another.</li>
+      <li><b>One row per page.</b> Main, Daily, Track, Finance, Supplements each own a row. Track also writes into Daily's row, which is how tracked minutes appear in the daily log without retyping.</li>
+      <li><b>The site itself</b> is static files on Vercel, deployed from the GitHub repository on every push to main. Grant's endpoint runs there too.</li>
+    </ul>
+  </section>
+
+  <!-- ===== broken ===== -->
+  <section class="sheet lab-sheet" id="broken">
+    <div class="sheet-head"><h2>When something looks wrong</h2></div>
+    <h3>Changes on one device do not appear on the other</h3>
+    <p>The cloud database is on a free tier that <b>pauses itself after about a week without use</b>. Everything keeps working locally, so the only symptom is that devices drift apart. Restore the project in the Supabase dashboard (the project is called <b>dashboard</b>); it takes a couple of minutes, needs no redeploy, and the next page load merges everything back. Open the device with the freshest entries first.</p>
+    <h3>The page is blank or stale</h3>
+    <p>Reload once. The site caches aggressively on a phone; a second load after a deploy picks up the new files.</p>
+    <h3>Grant does not answer</h3>
+    <p>Its key lives in the Vercel project settings, not in the page. If it replies with a server error, that setting is what to check.</p>
+    <h3>A task landed on the wrong day</h3>
+    <p>Check the clock. Before 06:00, Main files everything under the previous day on purpose.</p>
+    <div class="note">The code, including this page, is in the <b>V2-YT</b> repository. Every page is one HTML file; the theme is the three <b>lab-*.css</b> files; the bars come from <b>topbar.js</b>.</div>
+  </section>
+
+  <div class="foot">Dashboard · How this works</div>
+</div>
+</body>
+</html>
