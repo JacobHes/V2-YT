@@ -1,0 +1,151 @@
+/* =============================================================
+ * Lab theme: tokens and utilities.
+ *
+ * A 1940s laboratory document. Buff paper, typewriter ink, rubber stamps,
+ * ruled forms, one Prussian-blue accent for the work that matters. No glass,
+ * no glow, no blur, nothing that moves unless a number changed.
+ *
+ * The hooks the JavaScript uses (.hud-cmd, .hud-col, .hud-workring and so on)
+ * keep their names: they are structural, and renaming them buys nothing.
+ * This file only defines tokens and .lab-* utilities, so it cannot collide
+ * with main.html's own styles.
+ * ============================================================= */
+
+:root {
+  /* paper */
+  --lab-paper:      #E6DBC2;   /* the desk: aged buff */
+  --lab-paper-deep: #D9CCAB;   /* bars and the vignette edge */
+  --lab-sheet:      #F2EAD8;   /* a fresher sheet on the desk */
+  --lab-sheet-2:    #EBE1CA;   /* insets, second sheet in the stack */
+
+  /* ink */
+  --lab-ink:      #211C16;
+  --lab-ink-dim:  #4F473C;
+  --lab-pencil:   #877D6C;
+  --lab-rule:       rgba(33, 28, 22, 0.55);
+  --lab-rule-faint: rgba(33, 28, 22, 0.16);
+
+  /* the stamp */
+  --lab-red:      #A9322A;
+  --lab-red-soft: rgba(169, 50, 42, 0.10);
+
+  /* category inks. Fountain pen, not neon. */
+  --acc-mover:  #2C4D7F;   /* Prussian blue */
+  --acc-prep:   #8D6A1F;   /* ochre */
+  --acc-admin:  #5C564C;   /* graphite */
+  --acc-inner:  #6F3C5D;   /* plum */
+  --acc-done:   #3F6C48;   /* the green of an approval stamp */
+  --acc-arrow:  var(--lab-red);
+  --acc-green:  var(--acc-done);   /* alias: grant-applied reads this name */
+
+  --lab-type:    'American Typewriter', 'Courier Prime', 'Courier New', Courier, monospace;
+  --lab-display: 'Futura', 'Futura PT', 'Century Gothic', 'Trebuchet MS', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Paper fibre: brown speckle at low alpha, generated, no file. */
+  --lab-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.20  0 0 0 0 0.15  0 0 0 0 0.08  0 0 0 0.16 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
+  /* Worn ink for stamps: mostly opaque, thin in patches. */
+  --lab-stamp-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 0.45'/></filter><rect width='160' height='160' filter='url(%23m)'/></svg>");
+}
+
+/* ---------- page ground: paper, fibre, a vignette ---------- */
+
+.lab-root {
+  min-height: 100%;
+  background-color: var(--lab-paper);
+  background-image:
+    var(--lab-noise),
+    radial-gradient(ellipse at center, transparent 58%, rgba(70, 52, 24, 0.18) 100%);
+  color: var(--lab-ink);
+  font-family: var(--lab-type);
+}
+
+/* ---------- typography ---------- */
+
+/* Typed labels: small caps on a typewriter. */
+.lab-label {
+  font-family: var(--lab-type);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-ink-dim);
+}
+/* Headings: the poster face, tracked wide. */
+.lab-heading {
+  font-family: var(--lab-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lab-ink);
+}
+.lab-body {
+  font-family: var(--lab-type);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--lab-ink);
+}
+/* Form codes at the foot of a sheet. */
+.lab-micro {
+  font-family: var(--lab-type);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lab-pencil);
+}
+
+/* ---------- the rubber stamp ---------- */
+
+.lab-stamp {
+  display: inline-block;
+  padding: 3px 9px 2px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--lab-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: var(--lab-red);
+  opacity: 0.9;
+  transform: rotate(-4deg);
+  mix-blend-mode: multiply;
+  -webkit-mask-image: var(--lab-stamp-mask);
+  mask-image: var(--lab-stamp-mask);
+  -webkit-mask-size: 160px 160px;
+  mask-size: 160px 160px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---------- a sheet of paper ---------- */
+
+.lab-sheet {
+  position: relative;
+  background: var(--lab-sheet);
+  border: 1px solid var(--lab-rule);
+  border-radius: 0;
+  /* Two sheets under it: the stack on a desk. */
+  box-shadow:
+    2px 2px 0 var(--lab-sheet-2),
+    3px 3px 0 var(--lab-rule-faint);
+}
+
+/* Section header on a double rule, the way a typed form divides itself. */
+.lab-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 7px;
+  margin-bottom: 12px;
+  border-bottom: 3px double var(--lab-rule);
+}
+
+/* ---------- category inks ---------- */
+
+.t-mover { color: var(--acc-mover); }
+.t-prep  { color: var(--acc-prep); }
+.t-admin { color: var(--acc-admin); }
+.t-inner { color: var(--acc-inner); }
+.t-done  { color: var(--acc-done); }
+.t-arrow { color: var(--acc-arrow); }
