@@ -554,10 +554,12 @@ html, body {
   }
 
   function getDay(key) { return loadJSON(PREFIX + key, {}); }
+  function isFilled(obj) {
+    return Object.keys(obj).some(k => obj[k] !== '' && obj[k] !== false && obj[k] != null);
+  }
   function setDay(key, obj) {
     // Don't leave an empty row behind for a day that was opened but never filled.
-    const filled = Object.keys(obj).some(k => obj[k] !== '' && obj[k] !== false && obj[k] != null);
-    if (filled) saveJSON(PREFIX + key, obj);
+    if (isFilled(obj)) saveJSON(PREFIX + key, obj);
     else localStorage.removeItem(PREFIX + key);
   }
   function allDayKeys() {
@@ -607,20 +609,40 @@ html, body {
     flagTimer = setTimeout(() => flag.classList.remove('show'), 1200);
   }
 
+  // An input is "dirty" from the moment the user types into it until it is next
+  // painted from storage. Only dirty inputs are written back, so a field that a
+  // remote apply just re-rendered (or is about to) never goes back to the cloud
+  // with the value the DOM happened to hold.
+  const dirtyInputs = new WeakSet();
+  let saveTimer = null;
+  const SAVE_DEBOUNCE_MS = 400;
+
   function collectFromInputs() {
-    const day = getDay(activeKey);
+    const day = getDay(activeKey);   // current storage, read at save time
     document.querySelectorAll('[data-field]').forEach(el => {
-      day[el.dataset.field] = el.value.trim();
+      if (dirtyInputs.has(el)) day[el.dataset.field] = el.value.trim();
     });
     return day;
   }
 
   function saveInputs() {
+    clearTimeout(saveTimer); saveTimer = null;
     setDay(activeKey, collectFromInputs());
     renderSleep();
     renderSocial();
     renderHistory();
     flashSaved();
+  }
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveInputs, SAVE_DEBOUNCE_MS);
+  }
+  // Save anything typed but not yet saved (before switching day, leaving the page).
+  function flushSave() { if (saveTimer) saveInputs(); }
+  function paintInput(el) {
+    const day = getDay(activeKey);
+    el.value = day[el.dataset.field] != null ? day[el.dataset.field] : '';
+    dirtyInputs.delete(el);
   }
 
   // ---- Sleep ---------------------------------------------------
@@ -773,7 +795,8 @@ html, body {
   // ---- History -------------------------------------------------
   function renderHistory() {
     const wrap = document.getElementById('histList');
-    const keys = allDayKeys().filter(k => k !== activeKey).slice(0, 30);
+    // Skip empty records (Track leaves {} behind when it removes its own fields).
+    const keys = allDayKeys().filter(k => k !== activeKey && isFilled(getDay(k))).slice(0, 30);
     wrap.innerHTML = '';
 
     if (!keys.length) {
@@ -820,16 +843,19 @@ html, body {
       row.appendChild(date);
       row.appendChild(stats);
       row.appendChild(exec);
-      row.addEventListener('click', () => { activeKey = k; renderAll(); window.scrollTo(0, 0); });
+      row.addEventListener('click', () => { switchDay(k); window.scrollTo(0, 0); });
       wrap.appendChild(row);
     });
   }
 
   // ---- Render / wire -------------------------------------------
-  function renderInputs() {
-    const day = getDay(activeKey);
+  // force: repaint the focused field too (only after a day switch, when any
+  // pending typing has already been flushed to the day it belongs to).
+  function renderInputs(force) {
+    const focused = document.activeElement;
     document.querySelectorAll('[data-field]').forEach(el => {
-      el.value = day[el.dataset.field] != null ? day[el.dataset.field] : '';
+      if (!force && el === focused) return;   // never overwrite what the user is typing
+      paintInput(el);
     });
   }
   // ---- DISCIPLINED30 -------------------------------------------
@@ -845,10 +871,24 @@ html, body {
     { key: 'deep',     name: 'Deep Work',        timed: true  },
     { key: 'study',    name: 'Study',            timed: true  }
   ];
+  // Pure read. Until a start date exists, today is shown as Day 1; the default
+  // is only written in onReady, once the cloud has been merged and still lacks it.
+  // The start date is normally stored JSON-encoded ('"2026-08-10"'); accept a
+  // bare date too, so an unreadable copy can never be mistaken for a missing
+  // one and reset the challenge.
+  function readD30Start() {
+    const raw = localStorage.getItem('d30:start');
+    if (!raw) return null;
+    try { const v = JSON.parse(raw); if (typeof v === 'string' && v) return v; } catch (e) {}
+    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
+  }
   function d30Start() {
-    let s = loadJSON('d30:start', null);
-    if (!s) { s = todayKey(); saveJSON('d30:start', s); }
-    return s;
+    return readD30Start() || todayKey();
+  }
+  function ensureD30Start() {
+    if (readD30Start()) return false;
+    saveJSON('d30:start', todayKey());
+    return true;
   }
   function d30DateOfDay(n) { return shiftKey(d30Start(), n - 1); }
   function d30DayNum(dateStr) { return daysBetween(d30Start(), dateStr) + 1; }
@@ -915,8 +955,13 @@ html, body {
     renderD30Strip(active);
   }
 
+  // Rebuilding the rows would destroy a minutes field the user is typing in.
+  // While focus is inside, skip the rebuild and repaint once focus leaves.
+  let d30TodayStale = false;
   function renderD30Today(dateStr, dayNum) {
     const wrap = document.getElementById('d30Today');
+    if (wrap.contains(document.activeElement)) { d30TodayStale = true; return; }
+    d30TodayStale = false;
     wrap.innerHTML = '';
     if (dayNum < 1 || dayNum > 30) {
       const p = document.createElement('div'); p.className = 'peak-hint';
@@ -961,11 +1006,23 @@ html, body {
         const input = document.createElement('input');
         input.type = 'number'; input.className = 'd30-min'; input.inputMode = 'numeric';
         input.placeholder = '0'; input.value = data[h.key] != null ? data[h.key] : '';
-        input.addEventListener('change', () => {
+        let minTimer = null;
+        const saveMin = () => {
+          clearTimeout(minTimer); minTimer = null;
           const v = Math.max(0, Math.floor(Number(input.value) || 0));
           d30SetHabit(dateStr, h.key, v);
+        };
+        // Save while typing too (debounced), so minutes typed without leaving
+        // the field are not lost. The row is not rebuilt while it has focus.
+        input.addEventListener('input', () => {
+          clearTimeout(minTimer);
+          minTimer = setTimeout(() => { saveMin(); flashSaved(); }, SAVE_DEBOUNCE_MS);
+        });
+        input.addEventListener('change', () => {
+          saveMin();
           renderD30(); flashSaved();
         });
+        input.addEventListener('blur', () => { if (minTimer) saveMin(); });
         const unit = document.createElement('span'); unit.className = 'd30-min-unit'; unit.textContent = 'min';
         mw.appendChild(input); mw.appendChild(unit);
         row.appendChild(mw);
@@ -994,7 +1051,7 @@ html, body {
       cell.className = cls;
       cell.textContent = n;
       if (!isFuture) {
-        cell.addEventListener('click', () => { activeKey = ds; renderAll(); });
+        cell.addEventListener('click', () => { switchDay(ds); });
       }
       strip.appendChild(cell);
     }
@@ -1014,9 +1071,9 @@ html, body {
     document.getElementById('smCost').textContent = '≈ ' + cost.toLocaleString('en-US') + ' Kč';
   }
 
-  function renderAll() {
+  function renderAll(force) {
     renderDayLabel();
-    renderInputs();
+    renderInputs(force);
     renderSleep();
     renderHabits();
     renderEnergyLog();
@@ -1025,30 +1082,56 @@ html, body {
     renderHistory();
   }
 
+  // Typed values save while typing (debounced) as well as on commit, so a value
+  // typed without leaving the field is not lost on reload.
   document.querySelectorAll('[data-field]').forEach(el => {
-    el.addEventListener('change', saveInputs);
+    el.addEventListener('input', () => { dirtyInputs.add(el); scheduleSave(); });
+    el.addEventListener('change', () => { dirtyInputs.add(el); saveInputs(); });
+    // Leaving the field: save what is pending, then show the stored value (a
+    // remote apply may have skipped this field while it had focus).
+    el.addEventListener('blur', () => { flushSave(); paintInput(el); });
   });
+  document.getElementById('d30Today').addEventListener('focusout', (e) => {
+    if (!d30TodayStale) return;
+    if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget)) return;
+    setTimeout(renderD30, 0);
+  });
+  // Switching day: flush typing into the day it was typed for, then repaint
+  // every field (focused or not) from the new day.
+  function switchDay(key) {
+    flushSave();
+    activeKey = key;
+    renderAll(true);
+  }
   document.getElementById('dayPrev').addEventListener('click', () => {
-    activeKey = shiftKey(activeKey, -1); renderAll();
+    switchDay(shiftKey(activeKey, -1));
   });
   document.getElementById('dayNext').addEventListener('click', () => {
     if (activeKey === todayKey()) return;
-    activeKey = shiftKey(activeKey, 1); renderAll();
+    switchDay(shiftKey(activeKey, 1));
   });
+  // Leaving or backgrounding the page: save typing that is still debounced.
+  window.addEventListener('pagehide', flushSave);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
 
   renderAll();
 
   // ---- Cloud sync ----------------------------------------------
   // Mirrors daily:<date> entries to Supabase (project wired into sync.js).
   // Wait for DOMContentLoaded: sync.js is deferred, so it isn't defined yet
-  // while this inline script runs during parsing. (This was the bug that left
-  // the Daily Tracker unsynced — everything else waits like this.)
+  // while this inline script runs during parsing.
+  // onReady({fallback:false}) runs after the first successful fetch+merge; only
+  // then is a missing d30:start really missing, and only then is it defaulted.
   document.addEventListener('DOMContentLoaded', function () {
     if (typeof initCloudSync !== 'function') return;
     initCloudSync({
       appKey: 'daily',
       syncedPrefixes: [PREFIX, 'd30:'],
-      onApplied: function () { renderAll(); }
+      onApplied: function () { renderAll(); },
+      onReady: function (info) {
+        if (info && info.fallback) return;
+        if (ensureD30Start()) renderD30();
+      }
     });
   });
 })();

@@ -9,6 +9,12 @@
 // Stored on the arrow task as `steps: [{id, text, done}]` in goals:<date>.
 // Writes dispatch the `storage` event main.html already re-renders from, so
 // none of its functions are called or changed.
+//
+// Every write goes to the task the panel is SHOWING (its id and list key,
+// captured at render), found by id in a fresh read. If a sync merge moved the
+// arrow to another task in between, the step still lands on the task the user
+// was looking at, and a step typed for a task that has since gone is kept in
+// the input rather than lost.
 // =============================================================
 (function () {
   'use strict';
@@ -22,29 +28,35 @@
     return 'goals:' + d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   }
 
-  function read() {
-    try { var v = JSON.parse(localStorage.getItem(todayKey())); return Array.isArray(v) ? v : []; }
+  function read(key) {
+    try { var v = JSON.parse(localStorage.getItem(key)); return Array.isArray(v) ? v : []; }
     catch (e) { return []; }
   }
-  function commit(list) {
-    try { localStorage.setItem(todayKey(), JSON.stringify(list)); } catch (e) { return; }
+  function commit(key, list) {
+    try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) { return false; }
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('goals-changed'));
+    return true;
   }
   function genId() {
     return 's' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
   }
   function arrowTask(list) {
-    return list.find(function (g) { return g.arrow; }) || null;
+    return list.find(function (g) { return g && g.arrow; }) || null;
   }
 
-  function mutateArrow(fn) {
-    var list = read();
-    var task = arrowTask(list);
-    if (!task) return;
+  // The task the panel currently shows: { key, id }.
+  var shown = null;
+
+  /** Change the shown task, by id in a fresh read. False if it is gone. */
+  function mutateShown(fn) {
+    if (!shown || shown.id == null) return false;
+    var list = read(shown.key);
+    var task = list.find(function (g) { return g && g.id === shown.id; });
+    if (!task) return false;
     if (!Array.isArray(task.steps)) task.steps = [];
     fn(task);
-    commit(list);
+    return commit(shown.key, list);
   }
 
   function el(tag, className, text) {
@@ -83,17 +95,21 @@
     add.setAttribute('aria-label', 'Add step');
 
     function submit() {
-      var text = input.value.trim();
+      var raw = input.value;
+      var text = raw.trim();
       if (!text) return;
       input.value = '';
-      mutateArrow(function (task) {
+      var ok = mutateShown(function (task) {
         task.steps.push({ id: genId(), text: text, done: false });
       });
+      if (!ok) { input.value = raw; render(); }   // the task is gone: keep what was typed
     }
     add.addEventListener('click', submit);
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); submit(); }
     });
+    // Renders skipped while typing (see render) catch up here.
+    input.addEventListener('blur', function () { setTimeout(render, 0); });
 
     form.appendChild(input);
     form.appendChild(add);
@@ -101,24 +117,43 @@
     return panel;
   }
 
+  // The breakdown input has focus. Removing or moving the panel then would
+  // drop the focus mid-typing, so those wait for the blur.
+  function typingInPanel() {
+    var a = document.activeElement;
+    return !!(panel && a && a.id === 'arrowStepsInput' && panel.contains(a));
+  }
+
   function render() {
     if (rendering) return;
     var arrowEl = document.getElementById('gmArrow');
     if (!arrowEl || !arrowEl.parentNode) return;
 
-    var list = read();
+    var key = todayKey();
+    var list = read(key);
     var task = arrowTask(list);
+
+    // While a step is being typed, keep the panel on the task it is being
+    // typed for, even if a sync merge moved the arrow meanwhile. The blur
+    // re-renders onto the current arrow.
+    if (typingInPanel() && shown && shown.id != null) {
+      var pinned = read(shown.key).find(function (g) { return g && g.id === shown.id; });
+      if (pinned) { key = shown.key; task = pinned; }
+    }
 
     // No arrow aimed: nothing to break down.
     if (!task) {
+      if (typingInPanel()) return;   // keep the panel and its text until the blur
+      shown = null;
       if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
       return;
     }
 
     rendering = true;
+    shown = { key: key, id: task.id };
     if (!panel) build();
     // main.html re-renders around it, so re-seat the panel under the arrow.
-    if (panel.previousSibling !== arrowEl) {
+    if (panel.previousSibling !== arrowEl && !typingInPanel()) {
       arrowEl.parentNode.insertBefore(panel, arrowEl.nextSibling);
     }
 
@@ -138,10 +173,11 @@
       box.className = 'arrow-step-check';
       box.checked = !!step.done;
       box.addEventListener('change', function () {
-        mutateArrow(function (t) {
-          var s = t.steps.find(function (x) { return x.id === step.id; });
-          if (s) s.done = box.checked;
-        });
+        var checked = box.checked;
+        if (!mutateShown(function (t) {
+          var s = t.steps.find(function (x) { return x && x.id === step.id; });
+          if (s) s.done = checked;
+        })) render();
       });
       row.appendChild(box);
 
@@ -151,9 +187,9 @@
       del.type = 'button';
       del.setAttribute('aria-label', 'Remove step');
       del.addEventListener('click', function () {
-        mutateArrow(function (t) {
-          t.steps = t.steps.filter(function (x) { return x.id !== step.id; });
-        });
+        if (!mutateShown(function (t) {
+          t.steps = t.steps.filter(function (x) { return !(x && x.id === step.id); });
+        })) render();
       });
       row.appendChild(del);
 

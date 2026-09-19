@@ -1777,29 +1777,57 @@ body::after {
     return 'g' + Date.now().toString(36) + (_idCounter++).toString(36) +
            Math.floor(Math.random() * 1e6).toString(36);
   }
+  // Short stable hash (cyrb53, base36). The same input gives the same output on
+  // every device, which is what lets two devices derive the same id for the
+  // same task instead of each minting its own and the sync keeping both.
+  function stableHash(str) {
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  }
+  // A task's lineage is the id of the first task it was carried from. Every
+  // carried copy of the same task shares it, whichever device made the copy.
+  function lineageOf(g) { return (g && (g.rootId || g.id)) || null; }
+  function carryId(rootId, dateStr) { return 'c' + stableHash(rootId + '>' + dateStr); }
+  // Legacy tasks without an id get one derived from where they sit and what
+  // they say, so two devices backfilling the same list agree on it.
   function migrateIds() {
     storeListKeys('goals:').forEach(k => {
       const list = getGoals(k);
       let changed = false;
-      list.forEach(g => { if (!g.id) { g.id = genId(); changed = true; } });
+      list.forEach((g, i) => {
+        if (g && typeof g === 'object' && !g.id) {
+          g.id = 'm' + stableHash(k + '#' + i + '#' + (g.text || ''));
+          changed = true;
+        }
+      });
       if (changed) setGoals(k, list);
     });
+  }
+  // Change one task, found by id in a fresh read of its list. Row controls use
+  // this rather than a list position captured at render time, because a sync
+  // merge can reorder or replace the list between the render and the click.
+  // Returns false when the task is no longer in that list.
+  function updateGoalById(key, id, mutate) {
+    if (id == null) return false;
+    const list = getGoals(key);
+    const g = list.find(x => x && x.id === id);
+    if (!g) return false;
+    mutate(g);
+    setGoals(key, list);
+    return true;
   }
 
   // ---------- the arrow ----------
   // At most one task per day is the arrow. State: aimed -> fired -> landed.
   function arrowState(g) { return g.done ? 'landed' : (g.firedAt ? 'fired' : 'aimed'); }
   function getArrow(list) { return list.find(g => g.arrow) || null; }
-  // Guard against two arrows landing in one day (e.g. two carried forward).
-  function enforceSingleArrow(list) {
-    let seen = false;
-    list.forEach(g => {
-      if (!g.arrow) return;
-      if (seen) delete g.arrow;
-      else seen = true;
-    });
-    return list;
-  }
   function setArrowById(key, id) {
     const list = getGoals(key);
     list.forEach(g => {
@@ -1872,36 +1900,109 @@ body::after {
   // Past days are kept, not deleted. A goal that moves forward is marked
   // carried on the day it came from, so history still shows what that day
   // held and the goal is not pulled forward twice.
+  //
+  // Safe to run any number of times, on any device, in any order:
+  //   - the copy's id is derived from the task's lineage and today's date, so
+  //     every device makes the SAME copy, and a copy deleted on one device is
+  //     not re-created under a new id by another;
+  //   - a past task is copied only when NO later day, up to and including
+  //     today, already holds it (same id, same lineage or same text). If one
+  //     does, the task has moved on already (carried earlier, typed again, or
+  //     done since), so it is only marked carried. A task done on a later day
+  //     is therefore never brought back, even when its carried mark was lost.
+  //     An undone twin of a task ticked on the SAME day is left alone too;
+  //   - marking the source carried is a field edit on that task, and the copy
+  //     does not carry done/carried fields of its own, so it never outranks a
+  //     tick another device made on the same copy;
+  //   - nothing is written unless something actually changed.
+  // With cloud sync it runs from the sync's onReady, after the first merge, so
+  // it works on the merged lists rather than this device's stale copy.
   function rollover() {
     const todayDateStr = getActiveDateString();
     const todayK = 'goals:' + todayDateStr;
-    let today = getGoals(todayK);
-    const texts = new Set(today.map(g => g.text));
+    const today = getGoals(todayK);
 
-    storeListKeys('goals:').forEach(k => {
-      const dateStr = k.slice('goals:'.length);
-      if (dateStr >= todayDateStr) return;
+    // What the later days hold, each mapped to the nearest later day holding
+    // it. Filled from today first, then from each past day once that day has
+    // been processed, walking backwards in time.
+    const heldText = new Map();   // text -> date
+    const heldLine = new Map();   // id or rootId -> date
+    function hold(list, dateStr) {
+      list.forEach(x => {
+        if (!x || typeof x !== 'object') return;
+        if (x.text) heldText.set(x.text, dateStr);
+        if (x.id != null) heldLine.set(String(x.id), dateStr);
+        if (x.rootId != null) heldLine.set(String(x.rootId), dateStr);
+      });
+    }
+    function heldAt(g) {
+      return (g.id != null && heldLine.get(String(g.id))) ||
+             (g.rootId != null && heldLine.get(String(g.rootId))) ||
+             heldText.get(g.text) || null;
+    }
+    hold(today, todayDateStr);
+
+    // Newest past day first, so a task left undone on several days is copied
+    // from its latest state and its older entries count as already carried.
+    const pastDates = storeListKeys('goals:')
+      .map(keyDate)
+      .filter(d => d < todayDateStr)
+      .sort().reverse();
+    const copies = [];
+    pastDates.forEach(dateStr => {
+      const k = 'goals:' + dateStr;
       const old = getGoals(k);
+      // Tasks ticked on this same day. An undone entry with the same text or
+      // lineage is a twin an older sync duplicated, and the task itself is
+      // done: it is neither copied nor marked.
+      const doneText = new Set(), doneLine = new Set();
+      old.forEach(x => {
+        if (!x || typeof x !== 'object' || !x.done) return;
+        if (x.text) doneText.add(x.text);
+        if (x.id != null) doneLine.add(String(x.id));
+        if (x.rootId != null) doneLine.add(String(x.rootId));
+      });
       let touched = false;
       old.forEach((g, i) => {
-        if (!g.done && !g.carried && g.text && !texts.has(g.text)) {
+        if (!g || typeof g !== 'object' || g.done || g.carried || !g.text) return;
+        const root = lineageOf(g);
+        if (!root) return;   // migrateIds gives every task an id first
+        if (doneText.has(g.text) || doneLine.has(String(root))) return;
+        let to = heldAt(g);
+        if (!to) {
           const copy = Object.assign({}, g, {
-            id: genId(), done: false, carried: false, carriedFrom: dateStr
+            id: carryId(root, todayDateStr), rootId: root, carriedFrom: dateStr
           });
-          delete copy.firedAt; delete copy.doneAt; delete copy.carriedTo;
+          delete copy.done; delete copy.doneAt; delete copy.firedAt;
+          delete copy.carried; delete copy.carriedTo;
           // An arrow that never landed stays aimed, and its aim count grows so
           // the card can show how many days it has been carried without landing.
           if (g.arrow) copy.aimedCount = (g.aimedCount || 1) + 1;
-          today.push(copy);
-          texts.add(g.text);
-          old[i] = Object.assign({}, g, { carried: true, carriedTo: todayDateStr });
-          touched = true;
+          copies.push({ dateStr: dateStr, i: i, copy: copy });
+          hold([copy], todayDateStr);
+          to = todayDateStr;
         }
+        // This day's entry has moved on. A field edit on the task itself.
+        g.carried = true;
+        g.carriedTo = to;
+        touched = true;
       });
       if (touched) setGoals(k, old);
+      hold(old, dateStr);   // only now: a day never holds its own tasks
     });
-    enforceSingleArrow(today);
-    setGoals(todayK, today);
+
+    if (!copies.length) return;
+    // One arrow per day. An arrow already in today wins, then the arrow from
+    // the most recent past day (copies were collected newest day first). The
+    // existing tasks are never touched: only the new copies are adjusted.
+    let hasArrow = today.some(g => g && g.arrow);
+    copies.forEach(c => {
+      if (!c.copy.arrow) return;
+      if (hasArrow) delete c.copy.arrow;
+      else hasArrow = true;
+    });
+    copies.sort((a, b) => (a.dateStr < b.dateStr ? -1 : a.dateStr > b.dateStr ? 1 : a.i - b.i));
+    setGoals(todayK, today.concat(copies.map(c => c.copy)));
   }
 
   // ---------- streak ----------
@@ -1918,6 +2019,7 @@ body::after {
   // retroactive change in the Past-days card rebuilds it correctly.
   function processStreak() {
     const s = loadStreak();
+    const before = s.count + '|' + s.lastProcessedDate;
     const todayDateStr = getActiveDateString();
     const dates = storeListKeys('goals:')
       .map(k => k.slice('goals:'.length))
@@ -1931,7 +2033,8 @@ body::after {
     });
     s.count = count;
     s.lastProcessedDate = dates.length ? dates[dates.length - 1] : s.lastProcessedDate;
-    saveStreak(s);
+    // Recomputed after every sync merge, so only write when it moved.
+    if (s.count + '|' + s.lastProcessedDate !== before) saveStreak(s);
   }
 
   // ---------- Goal Ticker ----------
@@ -2101,7 +2204,7 @@ body::after {
   }
 
   // ---------- Row building ----------
-  function makeInlineEdit(textEl, goals, idx, key, reload) {
+  function makeInlineEdit(textEl, id, key, reload) {
     textEl.addEventListener('click', () => {
       if (textEl.getAttribute('contenteditable') === 'true') return;
       const original = textEl.textContent;
@@ -2117,16 +2220,18 @@ body::after {
         const next = textEl.textContent.trim();
         textEl.removeAttribute('contenteditable');
         if (next && next !== original) {
-          const list = getGoals(key);
-          if (list[idx]) { list[idx].text = next; setGoals(key, list); }
+          updateGoalById(key, id, g => { g.text = next; });
           reload();
         } else {
           textEl.textContent = original;
         }
       }
       function cancel() {
-        textEl.removeAttribute('contenteditable');
+        // Put the title back first, so the blur below commits nothing, and
+        // blur for real so a re-render held back during the edit runs now.
         textEl.textContent = original;
+        textEl.blur();
+        textEl.removeAttribute('contenteditable');
       }
       textEl.addEventListener('blur', commit, { once: true });
       textEl.addEventListener('keydown', function onKey(e) {
@@ -2136,11 +2241,14 @@ body::after {
     });
   }
 
-  function wireDragReorder(row, listEl, key, reload) {
+  // Drag carries the task's id and list, and the drop resolves both ids in a
+  // fresh read, so a list that changed since it was drawn still moves the
+  // right task to the right place.
+  function wireDragReorder(row, key, id, reload) {
     row.setAttribute('draggable', 'true');
     row.addEventListener('dragstart', (e) => {
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', row.dataset.idx);
+      e.dataTransfer.setData('text/plain', JSON.stringify({ key: key, id: id }));
     });
     row.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -2150,10 +2258,13 @@ body::after {
     row.addEventListener('drop', (e) => {
       e.preventDefault();
       row.classList.remove('is-drag-over');
-      const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
-      const to   = parseInt(row.dataset.idx, 10);
-      if (isNaN(from) || isNaN(to) || from === to) return;
+      let src = null;
+      try { src = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (err) { src = null; }
+      if (!src || src.key !== key || src.id == null || id == null || src.id === id) return;
       const list = getGoals(key);
+      const from = list.findIndex(x => x && x.id === src.id);
+      const to   = list.findIndex(x => x && x.id === id);
+      if (from === -1 || to === -1) return;
       const [moved] = list.splice(from, 1);
       list.splice(to, 0, moved);
       setGoals(key, list);
@@ -2165,6 +2276,10 @@ body::after {
     const li = document.createElement('li');
     li.className = 'gm-row';
     li.dataset.idx = String(idx);
+    // Every control on the row addresses the task by id in its list, read
+    // fresh when the control is used. hud-controls.js reads these too.
+    if (goal.id != null) li.dataset.id = String(goal.id);
+    li.dataset.key = key;
     if (goal.done) li.classList.add('gm-row-done');
     if (goal.queued) li.classList.add('gm-row-queued');
     if (goal.arrow) li.classList.add('gm-row-arrow');
@@ -2180,12 +2295,12 @@ body::after {
     cb.checked = !!goal.done;
     if (readOnly) { cb.disabled = true; cb.title = 'Activates at 6 AM tomorrow'; }
     cb.addEventListener('change', () => {
-      const list = getGoals(key);
-      if (!list[idx]) return;
-      list[idx].done = cb.checked;
-      if (cb.checked) list[idx].doneAt = Date.now();
-      else delete list[idx].doneAt;
-      setGoals(key, list);
+      const checked = cb.checked;
+      updateGoalById(key, goal.id, g => {
+        g.done = checked;
+        if (checked) g.doneAt = Date.now();
+        else delete g.doneAt;
+      });
       reload();
     });
     li.appendChild(cb);
@@ -2230,7 +2345,7 @@ body::after {
         li.appendChild(ab);
       }
     }
-    makeInlineEdit(text, null, idx, key, reload);
+    makeInlineEdit(text, goal.id, key, reload);
 
     // Aim is allowed on today AND on the tomorrow plan (the night-before aim).
     // The read-only lock only disables checking off early, not aiming.
@@ -2242,8 +2357,9 @@ body::after {
       aim.title = goal.arrow ? 'The arrow' : 'Aim as the arrow';
       aim.setAttribute('aria-label', goal.arrow ? 'The arrow' : 'Aim as the arrow');
       aim.addEventListener('click', () => {
-        if (goal.arrow) return;   // already the arrow
-        openAimConfirm(goal.text, () => { setArrowById(key, goal.id); reload(); });
+        const cur = getGoals(key).find(x => x && x.id === goal.id);
+        if (!cur || cur.arrow) { reload(); return; }   // gone, or already the arrow
+        openAimConfirm(cur.text, () => { setArrowById(key, goal.id); reload(); });
       });
       li.appendChild(aim);
     }
@@ -2256,10 +2372,9 @@ body::after {
     // Queuing is a planning action, so it works on future days too (like aim).
     // The read-only lock only stops checking a task done before its day.
     queueBtn.addEventListener('click', () => {
-      const list = getGoals(key);
-      if (!list[idx]) return;
-      list[idx].queued = !list[idx].queued;
-      setGoals(key, list);
+      // Flip what the row shows, on whichever task has this id now.
+      const want = !goal.queued;
+      if (!updateGoalById(key, goal.id, g => { g.queued = want; })) { reload(); return; }
       li.classList.add('is-queue-flashing');
       setTimeout(reload, 480);
     });
@@ -2272,13 +2387,13 @@ body::after {
     del.textContent = '×';
     del.addEventListener('click', () => {
       const list = getGoals(key);
-      list.splice(idx, 1);
-      setGoals(key, list);
+      const next = list.filter(x => !(x && x.id === goal.id));
+      if (goal.id != null && next.length !== list.length) setGoals(key, next);
       reload();
     });
     li.appendChild(del);
 
-    wireDragReorder(li, null, key, reload);
+    wireDragReorder(li, key, goal.id, reload);
     return li;
   }
 
@@ -2369,10 +2484,57 @@ body::after {
   // so adding or editing a task keeps the list open if the user opened it.
   const listExpanded = {};
 
+  // True while the user is typing somewhere inside el, for example an inline
+  // title edit in a task row. Checkboxes and buttons do not count.
+  function isEditingIn(el) {
+    const a = document.activeElement;
+    if (!el || !a || a === document.body || !el.contains(a)) return false;
+    if (a.isContentEditable) return true;
+    if (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT') return true;
+    if (a.tagName === 'INPUT') return !/^(checkbox|radio|button|submit|reset|image|range|color|file)$/i.test(a.type || '');
+    return false;
+  }
+  // Rebuild a list once the user has left the field they were typing in.
+  // One listener per list at a time. A full render in between clears the
+  // pending rebuild (it already showed fresh data), and the edit's own commit
+  // usually does exactly that from its blur handler.
+  function renderAfterEdit(listEl, reload) {
+    listEl._reloadAfterEdit = reload;
+    if (listEl._afterEditBound) return;
+    listEl._afterEditBound = true;
+    let timer = null;
+    function finish() {
+      if (isEditingIn(listEl)) return;   // still typing, or moved to another field here
+      listEl.removeEventListener('focusout', onOut);
+      clearInterval(timer);
+      listEl._afterEditBound = false;
+      const r = listEl._reloadAfterEdit;
+      listEl._reloadAfterEdit = null;
+      if (r) r();
+    }
+    // After the edit's own blur handler has committed and re-rendered.
+    function onOut() { setTimeout(finish, 0); }
+    listEl.addEventListener('focusout', onOut);
+    // Focus can also leave with no focusout at all (the edited node stops
+    // being editable), so look again every half second.
+    timer = setInterval(finish, 500);
+  }
+
   function renderListInto(goals, listEl, emptyEl, key, readOnly) {
+    // Re-render the list this row lives in, whatever the date is by then.
+    const reload = () => (listEl.id === 'goalList' ? loadToday() : loadTomorrow());
+    // A sync merge or another script can ask for a re-render while a task
+    // title is being edited in place. Rebuilding the list would destroy the
+    // edit, so keep the rows and rebuild once the edit ends.
+    if (isEditingIn(listEl)) {
+      renderAfterEdit(listEl, reload);
+      if (listEl.id === 'goalList') renderTodayHeader();
+      else                          renderTomorrowCount();
+      return;
+    }
+    listEl._reloadAfterEdit = null;   // this render is the fresh one
     listEl.innerHTML = '';
     emptyEl.style.display = goals.length === 0 ? 'block' : 'none';
-    const reload = () => (key === todayKey() ? loadToday() : loadTomorrow());
 
     const expanded = !!listExpanded[key];
     const visible = (goals.length > 5 && !expanded) ? goals.slice(0, 5) : goals;
@@ -2390,30 +2552,45 @@ body::after {
       listExpanded[key] = false;
     }
 
-    if (key === todayKey()) renderTodayHeader();
-    else                    renderTomorrowCount();
+    if (listEl.id === 'goalList') renderTodayHeader();
+    else                          renderTomorrowCount();
   }
 
   // ---------- Past days ----------
   const HISTORY_DAYS = 14;
+  const histOpen = {};   // dateStr -> open, for days the user toggled
 
-  // Move a past day's unfinished tasks into today (deduped by text). The pulled
-  // tasks are REMOVED from the source day; completed tasks stay in history.
-  // Returns how many were moved.
+  // What today already holds, by text and by lineage, so a past task that is
+  // already there (carried, typed again, or edited since) is not pulled twice.
+  function todayHolds() {
+    const today = getGoals(todayKey());
+    return {
+      texts: new Set(today.map(g => g && g.text)),
+      lineages: new Set(today.map(lineageOf).filter(Boolean))
+    };
+  }
+  function isPullable(g, held) {
+    return !!(g && !g.done && g.text && !held.texts.has(g.text) && !held.lineages.has(lineageOf(g)));
+  }
+
+  // Move a past day's unfinished tasks into today (deduped by text and lineage).
+  // The pulled tasks are REMOVED from the source day; completed tasks stay in
+  // history. Returns how many were moved.
   function pullDayToToday(dateStr) {
     const todayK = todayKey();
     const today = getGoals(todayK);
-    const texts = new Set(today.map(g => g.text));
+    const held = todayHolds();
     const src = getGoals('goals:' + dateStr);
     const remaining = [];
     let pulled = 0;
     src.forEach(g => {
-      if (!g.done && g.text && !texts.has(g.text)) {
-        const copy = Object.assign({}, g, { id: genId(), done: false, carriedFrom: dateStr });
+      if (isPullable(g, held)) {
+        const copy = Object.assign({}, g, { id: genId(), rootId: lineageOf(g), done: false, carriedFrom: dateStr });
         delete copy.arrow; delete copy.firedAt; delete copy.doneAt;
         delete copy.carried; delete copy.carriedTo; delete copy.aimedCount;
         today.push(copy);
-        texts.add(g.text);
+        held.texts.add(g.text);
+        held.lineages.add(lineageOf(g));
         pulled++;
         // not added to `remaining` -> removed from the source day
       } else {
@@ -2444,9 +2621,10 @@ body::after {
     emptyEl.style.display = dates.length === 0 ? 'block' : 'none';
     countEl.textContent = dates.length + (dates.length === 1 ? ' day' : ' days');
 
-    // Tasks already in today, by text, so the pull button only counts what is
-    // genuinely new (auto-rollover may already have carried some forward).
-    const todayTexts = new Set(getGoals(todayKey()).map(g => g.text));
+    // Tasks already in today, by text and lineage, so the pull button only
+    // counts what is genuinely new (auto-rollover may already have carried
+    // some forward).
+    const held = todayHolds();
 
     dates.forEach((dateStr, dayIdx) => {
       const goals = getGoals('goals:' + dateStr);
@@ -2455,7 +2633,10 @@ body::after {
       const day = document.createElement('div');
       day.className = 'gm-hist-day';
       // Most recent past day starts open, that is the one being looked for.
-      if (dayIdx === 0) day.classList.add('is-open');
+      // A day the user opened or closed stays that way across re-renders
+      // (every sync merge re-renders this list).
+      const open = Object.prototype.hasOwnProperty.call(histOpen, dateStr) ? histOpen[dateStr] : dayIdx === 0;
+      if (open) day.classList.add('is-open');
 
       const head = document.createElement('button');
       head.type = 'button';
@@ -2478,11 +2659,11 @@ body::after {
 
       head.appendChild(date);
       head.appendChild(meta);
-      head.addEventListener('click', () => day.classList.toggle('is-open'));
+      head.addEventListener('click', () => { histOpen[dateStr] = day.classList.toggle('is-open'); });
 
       const ul = document.createElement('ul');
       ul.className = 'gm-hist-tasks';
-      goals.forEach((g, taskIdx) => {
+      goals.forEach((g) => {
         const li = document.createElement('li');
         li.className = 'gm-hist-row' + (g.done ? ' is-done' : '');
 
@@ -2506,18 +2687,23 @@ body::after {
         // row, day count and carried tag in place (so the day stays expanded),
         // then recompute the streak since a completed past day can change it.
         glyph.addEventListener('click', () => {
-          const list = getGoals('goals:' + dateStr);
-          if (!list[taskIdx]) return;
-          const nowDone = !list[taskIdx].done;
-          list[taskIdx].done = nowDone;
-          if (nowDone) list[taskIdx].doneAt = Date.now();
-          else delete list[taskIdx].doneAt;
-          setGoals('goals:' + dateStr, list);
+          // By id in a fresh read; flip what the glyph shows.
+          const k = 'goals:' + dateStr;
+          const nowDone = glyph.getAttribute('aria-pressed') !== 'true';
+          let carried = false;
+          const found = updateGoalById(k, g.id, t => {
+            t.done = nowDone;
+            if (nowDone) t.doneAt = Date.now();
+            else delete t.doneAt;
+            carried = !!t.carried;
+          });
+          if (!found) { renderHistory(); return; }   // the list changed under us
+          const list = getGoals(k);
 
           li.classList.toggle('is-done', nowDone);
           glyph.textContent = nowDone ? '✓' : '○';
           glyph.setAttribute('aria-pressed', nowDone ? 'true' : 'false');
-          tag.style.display = (!nowDone && list[taskIdx].carried) ? '' : 'none';
+          tag.style.display = (!nowDone && carried) ? '' : 'none';
 
           const doneNow = list.filter(x => x.done).length;
           count.textContent = doneNow + '/' + list.length;
@@ -2538,7 +2724,7 @@ body::after {
 
       // One-click: send this day's unfinished tasks into today. Only counts
       // tasks not already in today, so the button reflects a real action.
-      const pullable = goals.filter(g => !g.done && g.text && !todayTexts.has(g.text)).length;
+      const pullable = goals.filter(g => isPullable(g, held)).length;
       if (pullable > 0) {
         const pull = document.createElement('button');
         pull.type = 'button';
@@ -2569,8 +2755,7 @@ body::after {
     // On a cooked day, grey out mover rows so they read as "not today".
     const goals = getGoals(todayKey());
     document.querySelectorAll('#goalList .gm-row').forEach(row => {
-      const idx = parseInt(row.dataset.idx, 10);
-      const g = goals[idx];
+      const g = goals.find(x => x && x.id != null && String(x.id) === row.dataset.id);
       row.classList.toggle('is-cooled', cooked && g && g.energy === 'mover');
     });
   }
@@ -2618,9 +2803,12 @@ body::after {
 
   // ---------- End-of-day debrief ----------
   let _eodOutcome = null;
+  let _eodDate = null, _eodBase = null;   // what the form showed when it opened
   function openEod() {
     const d = getActiveDateString();
     const existing = getDebrief(d) || {};
+    _eodDate = d;
+    _eodBase = { outcome: existing.outcome || null, energyWent: existing.energyWent || '', fix: existing.fix || '' };
     _eodOutcome = existing.outcome || null;
     document.querySelectorAll('#eodOutcome button').forEach(b =>
       b.classList.toggle('on', b.dataset.outcome === _eodOutcome));
@@ -2636,13 +2824,22 @@ body::after {
     });
   });
   document.getElementById('eodGo').addEventListener('click', () => {
-    const d = getActiveDateString();
-    saveDebrief(d, {
+    const d = _eodDate || getActiveDateString();
+    const base = _eodBase || {};
+    const typed = {
       outcome: _eodOutcome,
       energyWent: document.getElementById('eodEnergy').value.trim(),
-      fix: document.getElementById('eodFix').value.trim(),
-      at: Date.now()
+      fix: document.getElementById('eodFix').value.trim()
+    };
+    // Start from the stored debrief as it is now and write only the fields
+    // changed in the form, so a field synced from the other device while the
+    // form was open is not overwritten with what the form showed at opening.
+    const next = Object.assign({}, getDebrief(d) || {});
+    Object.keys(typed).forEach(f => {
+      if (typed[f] !== base[f] || !Object.prototype.hasOwnProperty.call(next, f)) next[f] = typed[f];
     });
+    next.at = Date.now();
+    saveDebrief(d, next);
     // "Landed" also lands the arrow if it is not already done.
     if (_eodOutcome === 'landed') {
       const a = getArrow(getGoals(todayKey()));
@@ -3098,21 +3295,27 @@ body::after {
   });
 
   // ---------- Push remaining ----------
+  // The moved tasks keep their ids: it is the same task in a different list.
+  // Sync deletes are scoped to the key they happen in, so removing an id from
+  // today does not touch the same id in tomorrow, whichever write lands first.
   document.getElementById('gmPushBtn').addEventListener('click', () => {
-    const today    = getGoals(todayKey());
+    const count = getGoals(todayKey()).filter(g => !g.done).length;
+    if (count === 0) return;
+    if (!confirm('Move ' + count + ' unchecked goal' + (count === 1 ? '' : 's') + ' to tomorrow?')) return;
+    const todayK = todayKey(), tomorrowK = tomorrowKey();
+    const today = getGoals(todayK);
     const remaining = today.filter(g => !g.done);
-    if (remaining.length === 0) return;
-    if (!confirm('Move ' + remaining.length + ' unchecked goal' + (remaining.length === 1 ? '' : 's') + ' to tomorrow?')) return;
-    const tomorrow = getGoals(tomorrowKey());
+    const tomorrow = getGoals(tomorrowK);
     const seen = new Set(tomorrow.map(g => g.text));
+    const seenIds = new Set(tomorrow.map(g => g.id));
     remaining.forEach(g => {
-      if (!seen.has(g.text)) {
+      if (!seen.has(g.text) && !seenIds.has(g.id)) {
         tomorrow.push(Object.assign({}, g, { done: false, carried: false, carriedFrom: getActiveDateString() }));
-        seen.add(g.text);
+        seen.add(g.text); seenIds.add(g.id);
       }
     });
-    setGoals(tomorrowKey(), tomorrow);
-    setGoals(todayKey(), today.filter(g => g.done));
+    setGoals(tomorrowK, tomorrow);
+    setGoals(todayK, today.filter(g => g.done));
     loadToday(); loadTomorrow();
   });
 
@@ -3195,7 +3398,7 @@ body::after {
     document.getElementById('goalInput'),
     document.getElementById('goalAddBtn'),
     document.getElementById('goalPolishBtn'),
-    todayKey(),
+    todayKey,   // resolved per add, so a page left open past 06:00 adds to the new day
     document.getElementById('polishStatus'),
     loadToday
   );
@@ -3209,35 +3412,101 @@ body::after {
   );
 
   // ---------- Boot ----------
-  migrateIds();
-  rollover();
+  // Rollover and the id backfill write lists based on what the lists hold, so
+  // they must see the MERGED lists, not this device's stale copy, and must not
+  // outrank real edits made elsewhere. With cloud sync they therefore run from
+  // the sync's onReady, after the first fetch and merge (sync.js is deferred,
+  // so initCloudSync only exists from DOMContentLoaded). Without supabase-js
+  // there is no sync to wait for, and they run now.
+  const syncExpected = !!(window.supabase && typeof window.supabase.createClient === 'function');
+  let syncHandle = null;
+  let derivedRan = false;    // rollover has run on this page
+  let derivedDate = null;    // the active day it last ran for
+  let dayFlipBusy = false;
+
+  function runDerivedWrites() {
+    migrateIds();
+    rollover();
+    derivedRan = true;
+    derivedDate = getActiveDateString();
+  }
+  // Re-render everything from localStorage as it is now.
+  function refreshFromStorage() {
+    processStreak();
+    loadToday();
+    loadTomorrow();
+    renderStreak();
+  }
+  function refreshAll() {
+    refreshFromStorage();
+    // The ticker, header, row decorations, fold counts and breakdown panel.
+    window.dispatchEvent(new CustomEvent('goals-changed'));
+  }
+  // Called once the first merge is done, and possibly once earlier with
+  // fallback:true when the network is slow or offline. Both runs are safe:
+  // rollover is idempotent and writes nothing when nothing needs to change.
+  function onSyncReady() {
+    runDerivedWrites();
+    refreshAll();
+  }
+  // The page can stay open past 06:00. When the active day changes, refetch
+  // first (a tab that slept may hold old lists), then roll over.
+  function checkDayFlip() {
+    if (!derivedRan || dayFlipBusy || derivedDate === getActiveDateString()) return;
+    dayFlipBusy = true;
+    if (planDate < getTomorrowDateString()) planDate = getTomorrowDateString();
+    const go = () => { try { runDerivedWrites(); refreshAll(); } finally { dayFlipBusy = false; } };
+    if (syncHandle && typeof syncHandle.pull === 'function') {
+      Promise.resolve()
+        .then(() => syncHandle.pull())
+        // Offline: show the new day now, roll it over on a later minute tick.
+        .then(go, () => { try { refreshAll(); } finally { dayFlipBusy = false; } });
+    } else {
+      go();
+    }
+  }
+
+  migrateIds();   // ids are derived, not random, so this matches every other device
+  if (!syncExpected) runDerivedWrites();
   processStreak();
   loadToday();
   loadTomorrow();
   renderStreak();
   updateDayRing();
-  setInterval(updateDayRing, 60 * 1000);
+  setInterval(() => { updateDayRing(); checkDayFlip(); }, 60 * 1000);
   startTicker();
 
-  // Re-render when storage changes from another tab (or our bridged parent).
-  window.addEventListener('storage', () => {
-    loadToday(); loadTomorrow(); renderStreak();
-  });
-})();
-</script>
+  // Re-render when storage changes from another tab, or when a helper script
+  // (hud-controls, arrow-steps, grant-actions) signals that it wrote.
+  window.addEventListener('storage', () => refreshFromStorage());
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  if (typeof initCloudSync !== 'function') return;
-  initCloudSync({
-    appKey: 'goals',
-    syncedPrefixes: ['goals:', 'plan:', 'energy:', 'debrief:', 'loops:'],
-    onApplied: function () {
-      window.dispatchEvent(new CustomEvent('goals-changed'));
-      window.dispatchEvent(new Event('storage'));
+  function startCloudSync() {
+    let handle = null;
+    if (typeof window.initCloudSync === 'function') {
+      try {
+        handle = window.initCloudSync({
+          appKey: 'goals',
+          syncedPrefixes: ['goals:', 'plan:', 'energy:', 'debrief:', 'loops:'],
+          onReady: onSyncReady,
+          // Only called when a merge changed something. Everything is rebuilt
+          // from localStorage; a list with a task title being edited in place
+          // waits until the edit ends (renderListInto).
+          onApplied: function () { refreshAll(); }
+        });
+      } catch (e) {
+        console.error('[goals] cloud sync did not start', e);
+      }
     }
-  });
-});
+    syncHandle = (handle && typeof handle === 'object') ? handle : null;
+    if (derivedRan) return;
+    // No sync on this page after all (sync.js missing or refused to start).
+    if (!syncHandle) { onSyncReady({ fallback: true }); return; }
+    // onReady is promised within 4 s even offline; this is only a backstop.
+    setTimeout(() => { if (!derivedRan) onSyncReady({ fallback: true }); }, 6000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startCloudSync);
+  else startCloudSync();
+})();
 </script>
 </body>
 </html>

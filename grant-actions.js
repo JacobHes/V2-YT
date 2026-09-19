@@ -185,10 +185,16 @@
       if (!f) return fail('no task with that id');
       var destKey = 'goals:' + dayKey(input.day);
       if (destKey === f.key) return fail('already on that day');
+      // The task keeps its id: it is the same task in another list. Sync
+      // deletes are scoped to the key they happen in, so the write order below
+      // is safe either way round.
       var moved = f.list.splice(f.idx, 1)[0];
       delete moved.arrow;   // the arrow belongs to a day, not to the task
       var dest = read(destKey);
-      dest.push(moved);
+      // Never two entries with one id in a list (a move already merged in
+      // from another device): replace rather than append.
+      var at = dest.findIndex(function (g) { return g && g.id === moved.id; });
+      if (at === -1) dest.push(moved); else dest[at] = moved;
       if (!write(f.key, f.list) || !write(destKey, dest)) return fail('could not save');
       return ok({ task_id: input.task_id, day: input.day });
     },

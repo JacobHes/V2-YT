@@ -1937,6 +1937,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   function storeSet(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
   }
+  // Most finance arrays carry no ids. An item is found again at event time by
+  // its render-time position if that slot still holds the same name, otherwise
+  // by name, so a click never acts on whatever moved into a stale index.
+  function locateByName(arr, idx, name) {
+    if (arr[idx] && String(arr[idx].name) === String(name)) return idx;
+    return arr.findIndex(x => x && String(x.name) === String(name));
+  }
+  // Declared up here, before the first render, to stay clear of the TDZ.
+  // syncReady: the first cloud merge has completed (onReady, fallback false).
+  // Auto-deduct only runs after that, so a stale device cannot deduct twice.
+  let syncReady = false;
+  let rerenderPending = false;
 
   // ============================================================
   // ORD_FROM_META — must be hoisted to the top of the IIFE.
@@ -2027,17 +2039,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       name.className = 'nw-name nw-name-edit';
       name.textContent = it.name;
       name.title = 'Tap to rename';
-      name.addEventListener('click', () => beginNwNameEdit(name, items, idx, cat.key));
+      name.addEventListener('click', () => beginNwNameEdit(name, idx, it.name, cat.key));
       const amt = document.createElement('span');
       amt.className = 'nw-amt nw-amt-edit';
       amt.textContent = fmtMoney(it.amount);
       amt.title = 'Tap to edit · type +500 to add, -200 to subtract, or a new total';
-      amt.addEventListener('click', () => beginNwAmountEdit(amt, items, idx, cat.key));
+      amt.addEventListener('click', () => beginNwAmountEdit(amt, idx, it.name, cat.key));
       const del = document.createElement('button'); del.className = 'nw-del'; del.textContent = '×';
       del.addEventListener('click', () => {
-        const removed = items[idx];
-        items.splice(idx, 1); storeSet('nw:' + cat.key, items);
-        if (removed) logActivity(cat.key, removed.name, -(Number(removed.amount) || 0), 'delete');
+        // Re-read at click time; the render-time array may be stale.
+        const cur = storeGet('nw:' + cat.key) || [];
+        const i = locateByName(cur, idx, it.name);
+        if (i >= 0) {
+          const removed = cur.splice(i, 1)[0];
+          storeSet('nw:' + cat.key, cur);
+          logActivity(cat.key, removed.name, -(Number(removed.amount) || 0), 'delete');
+        }
         renderAllNetWorth();
       });
       row.appendChild(name); row.appendChild(amt); row.appendChild(del);
@@ -2047,11 +2064,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     return total;
   }
 
-  function beginNwAmountEdit(amtEl, items, idx, catKey) {
+  function beginNwAmountEdit(amtEl, idx, itemName, catKey) {
     if (amtEl.querySelector('input')) return;
     const symbol = currencyEl ? currencyEl.value : 'CHF';
     const rate = exchangeRates[symbol] || 1;
-    const curCHF = Number(items[idx].amount) || 0;
+    const startItems = storeGet('nw:' + catKey) || [];
+    const startIdx = locateByName(startItems, idx, itemName);
+    if (startIdx < 0) { renderAllNetWorth(); return; }
+    const curCHF = Number(startItems[startIdx].amount) || 0;
     const curDisplay = curCHF * rate;
     const input = document.createElement('input');
     input.type = 'text';
@@ -2061,27 +2081,37 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     amtEl.textContent = '';
     amtEl.appendChild(input);
     setTimeout(() => { input.focus(); input.select(); }, 0);
+    const initialText = input.value;
     let saved = false;
     function save() {
       if (saved) return; saved = true;
       const v = input.value.trim();
-      if (v === '') { renderAllNetWorth(); return; }
+      // Empty, or left exactly as shown: not an edit. Writing the shown value
+      // back would undo any change that arrived while the field was open.
+      if (v === '' || v === initialText) { renderAllNetWorth(); return; }
+      // Re-read at save time and apply the edit to the account as it is now.
+      const items = storeGet('nw:' + catKey) || [];
+      const i = locateByName(items, startIdx, itemName);
+      if (i < 0) { renderAllNetWorth(); return; }
+      const nowCHF = Number(items[i].amount) || 0;
       // Input is in the DISPLAY currency. Convert back to CHF before storing.
-      let nextDisplay = curDisplay;
+      // "+500" / "-200" adjust the current amount; a plain number replaces it.
+      let nextCHF = nowCHF;
       if (/^[+\-]\s*\d/.test(v)) {
         const delta = parseFloat(v.replace(/\s+/g, ''));
-        if (!isNaN(delta)) nextDisplay = curDisplay + delta;
+        if (!isNaN(delta)) nextCHF = nowCHF + delta / rate;
       } else {
         const n = parseFloat(v);
-        if (!isNaN(n)) nextDisplay = n;
+        if (!isNaN(n)) nextCHF = n / rate;
       }
-      if (nextDisplay < 0) nextDisplay = 0;
-      const nextCHF = nextDisplay / rate;
-      const deltaCHF = nextCHF - curCHF;
-      items[idx].amount = nextCHF;
-      storeSet('nw:' + catKey, items);
-      if (Math.abs(deltaCHF) > 0.005) {
-        logActivity(catKey, items[idx].name, deltaCHF, 'edit');
+      if (nextCHF < 0) nextCHF = 0;
+      const deltaCHF = nextCHF - nowCHF;
+      if (nextCHF !== nowCHF) {
+        items[i].amount = nextCHF;
+        storeSet('nw:' + catKey, items);
+        if (Math.abs(deltaCHF) > 0.005) {
+          logActivity(catKey, items[i].name, deltaCHF, 'edit');
+        }
       }
       renderAllNetWorth();
     }
@@ -2091,9 +2121,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     });
     input.addEventListener('blur', save);
   }
-  function beginNwNameEdit(nameEl, items, idx, catKey) {
+  function beginNwNameEdit(nameEl, idx, itemName, catKey) {
     if (nameEl.querySelector('input')) return;
-    const cur = String(items[idx].name || '');
+    const cur = String(itemName || '');
     const input = document.createElement('input');
     input.type = 'text';
     input.value = cur;
@@ -2105,7 +2135,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     function save() {
       if (saved) return; saved = true;
       const v = input.value.trim();
-      if (v) { items[idx].name = v; storeSet('nw:' + catKey, items); }
+      if (v && v !== cur) {
+        // Re-read at save time; rename the account as it is now.
+        const items = storeGet('nw:' + catKey) || [];
+        const i = locateByName(items, idx, cur);
+        if (i >= 0) { items[i].name = v; storeSet('nw:' + catKey, items); }
+      }
       renderAllNetWorth();
     }
     input.addEventListener('keydown', (e) => {
@@ -2508,8 +2543,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   function renderSubs() {
     if (!subsList) return;
-    // Auto-deduct any matured renewals before painting
-    processAutoDeductSubs();
+    // Auto-deduct any matured renewals before painting, but only once the
+    // first cloud merge is in (never at parse time or from the exchange-rate
+    // callback before it): a stale local copy could deduct a bill twice.
+    if (syncReady) processAutoDeductSubs();
     // Keep the From-account dropdown synced with current NW accounts
     populateSubFromSelect();
     const items = storeGet('subs') || [];
@@ -2597,14 +2634,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       editBtn.title = 'Edit';
       editBtn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.10);color:var(--text-tertiary);cursor:pointer;font-size:12px;padding:3px 7px;border-radius:5px;font-family:inherit;line-height:1';
       editBtn.textContent = '✏';
-      editBtn.addEventListener('click', () => editSubInline(idx));
+      editBtn.addEventListener('click', () => editSubInline(idx, row, it.name));
       const del = document.createElement('button');
       del.title = 'Delete';
       del.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.10);color:var(--text-tertiary);cursor:pointer;font-size:12px;padding:3px 7px;border-radius:5px;font-family:inherit;line-height:1';
       del.textContent = '×';
       del.addEventListener('click', () => {
         if (!confirm('Delete "' + it.name + '"?')) return;
-        items.splice(idx, 1); storeSet('subs', items); renderSubs();
+        const cur = storeGet('subs') || [];
+        const i = locateByName(cur, idx, it.name);
+        if (i >= 0) { cur.splice(i, 1); storeSet('subs', cur); }
+        renderSubs();
       });
       actions.appendChild(editBtn);
       actions.appendChild(del);
@@ -2615,9 +2655,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     subsList.querySelectorAll('[data-sub-toggle]').forEach(b => {
       b.addEventListener('click', (e) => {
         e.stopPropagation();
-        const i = parseInt(b.dataset.subToggle, 10);
+        const ri = parseInt(b.dataset.subToggle, 10);
         const arr = storeGet('subs') || [];
-        if (!arr[i]) return;
+        const i = items[ri] ? locateByName(arr, ri, items[ri].name) : -1;
+        if (i < 0) { renderSubs(); return; }
         if (!arr[i].autoDeduct && (!arr[i].fromCat || !arr[i].fromAccount)) {
           alert('Pick a "From account" first (use the ✏ edit button) so the deduction knows where to take the money from.');
           return;
@@ -2631,9 +2672,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     subsList.querySelectorAll('[data-sub-kind]').forEach(b => {
       b.addEventListener('click', (e) => {
         e.stopPropagation();
-        const i = parseInt(b.dataset.subKind, 10);
+        const ri = parseInt(b.dataset.subKind, 10);
         const arr = storeGet('subs') || [];
-        if (!arr[i]) return;
+        const i = items[ri] ? locateByName(arr, ri, items[ri].name) : -1;
+        if (i < 0) { renderSubs(); return; }
         arr[i].kind = (arr[i].kind === 'business') ? 'personal' : 'business';
         storeSet('subs', arr);
         renderSubs();
@@ -2677,7 +2719,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   // Idempotent via `lastDeductedAt` so refreshing the page doesn't
   // double-charge.
   // ============================================================
+  // PAUSED until the owner confirms the renewal backlog. Switched on, the first
+  // load after the sync rollout would apply every overdue renewal at once and
+  // move the account balances. While false, processAutoDeductSubs changes
+  // nothing: no balance, activity entry, history point or subs field (renewal
+  // and lastDeductedAt stay as stored). The per-sub autoDeduct toggle is still
+  // shown and saved.
+  const AUTO_DEDUCT_ENABLED = false;
   function processAutoDeductSubs() {
+    if (!AUTO_DEDUCT_ENABLED) return false;
     const items = storeGet('subs') || [];
     if (!items.length) return false;
     const now = new Date();
@@ -2718,12 +2768,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     return changed;
   }
 
-  function editSubInline(idx) {
+  // rowEl is the row that was clicked (the list is sorted personal-first, so a
+  // storage index does not name a DOM row). The sub is looked up again by name.
+  function editSubInline(idx, rowEl, subName) {
     const items = storeGet('subs') || [];
-    const it = items[idx];
-    if (!it) return;
-    const rows = subsList.querySelectorAll('.sub-row');
-    const row = rows[idx];
+    const startIdx = locateByName(items, idx, subName);
+    const it = items[startIdx];
+    if (!it) { renderSubs(); return; }
+    const row = rowEl;
     if (!row) return;
     const enteredCcy = it.entered_currency || 'CHF';
     const enteredAmt = it.entered_amount != null ? it.entered_amount : it.amount;
@@ -2757,6 +2809,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       '<button class="se-save quick-add-btn">Save</button>' +
       '<button class="se-cancel" style="background:transparent;border:1px solid rgba(255,255,255,0.10);color:var(--text-tertiary);cursor:pointer;font-size:12px;padding:6px 10px;border-radius:var(--radius-md);font-family:inherit">Cancel</button>';
     row.appendChild(form);
+    // What the form showed when it opened. Only fields changed from these are
+    // written, so an untouched field never reverts a change made elsewhere.
+    const readForm = () => ({
+      name: row.querySelector('.se-name').value.trim(),
+      amt: parseFloat(row.querySelector('.se-amt').value),
+      ccy: row.querySelector('.se-ccy').value,
+      per: row.querySelector('.se-per').value,
+      ren: row.querySelector('.se-ren').value || null,
+      from: row.querySelector('.se-from').value,
+      auto: row.querySelector('.se-auto').checked
+    });
+    const init = readForm();
     const save = () => {
       const newName = row.querySelector('.se-name').value.trim();
       const newAmtRaw = parseFloat(row.querySelector('.se-amt').value);
@@ -2776,8 +2840,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       }
       if (!newName || isNaN(newAmtRaw)) return;
       const rate = exchangeRates[newCcy] || 1;
-      items[idx] = { ...it, name: newName, amount: newAmtRaw / rate, period: newPer, renewal: newRen, entered_amount: newAmtRaw, entered_currency: newCcy, fromCat: newFromCat, fromAccount: newFromAccount, autoDeduct: newAuto };
-      storeSet('subs', items); renderSubs();
+      // Re-read at save time and start from the sub as it is NOW (it may have
+      // been auto-deducted or edited elsewhere while the form was open).
+      const cur = storeGet('subs') || [];
+      const i = locateByName(cur, startIdx, it.name);
+      if (i < 0) { renderSubs(); return; }
+      const next = Object.assign({}, cur[i]);
+      if (newName !== init.name) next.name = newName;
+      if (newAmtRaw !== init.amt || newCcy !== init.ccy) {
+        next.amount = newAmtRaw / rate; next.entered_amount = newAmtRaw; next.entered_currency = newCcy;
+      }
+      if (newPer !== init.per) next.period = newPer;
+      if (newRen !== init.ren) next.renewal = newRen;
+      if (newFromVal !== init.from) { next.fromCat = newFromCat; next.fromAccount = newFromAccount; }
+      if (newAuto !== init.auto) next.autoDeduct = newAuto;
+      cur[i] = next;
+      storeSet('subs', cur); renderSubs();
     };
     const cancel = () => renderSubs();
     row.querySelector('.se-save').addEventListener('click', save);
@@ -2931,10 +3009,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     });
     wishList.querySelectorAll('.wish-row-x').forEach(b => {
       b.addEventListener('click', () => {
-        const i = parseInt(b.dataset.i, 10);
+        // Re-read at click time and find the item again (by its added-at ts and
+        // name), instead of splicing a render-time index out of a newer array.
+        const ri = parseInt(b.dataset.i, 10);
+        const snap = items[ri];
         const arr = storeGet('wishlist') || [];
-        arr.splice(i, 1);
-        storeSet('wishlist', arr);
+        const same = (x) => !!(x && snap && x.ts === snap.ts && String(x.name) === String(snap.name));
+        const i = same(arr[ri]) ? ri : arr.findIndex(same);
+        if (i >= 0) { arr.splice(i, 1); storeSet('wishlist', arr); }
         renderWishlist();
       });
     });
@@ -3542,21 +3624,53 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   // If the page opens straight onto the Faktury tab, load once.
   if (storeGet(TAB_KEY) === 'invoices') loadInvoices();
 
-})();
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  if (typeof initCloudSync !== 'function') return;
-  initCloudSync({
-    appKey: 'finance',
-    syncedKeys: ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history'],
-    syncedPrefixes: ['nw:'],
-    onApplied: function () {
-      window.dispatchEvent(new Event('storage'));
+  // ============================================================
+  // CLOUD SYNC — re-render every tab from storage after a remote merge.
+  // (Before, onApplied dispatched a 'storage' event nobody listened to, so the
+  // page kept showing, and later wrote back, pre-sync arrays.)
+  // ============================================================
+  // An open inline editor (account amount/name input, sub edit form, deduct
+  // chooser) would be destroyed by a re-render, so the re-render waits for it
+  // to close. deferApplyWhileEditing already holds the merge itself while an
+  // input has focus; this covers the moment focus moves to a Save button.
+  function inlineEditorOpen() {
+    return !!document.querySelector('.nw-amt-edit input, .nw-name-edit input, .sub-row .se-save, .ord-deduct-chooser');
+  }
+  function renderEverything() {
+    rerenderPending = false;
+    if (currencyEl && document.activeElement !== currencyEl) {
+      const c = storeGet(CURRENCY_KEY);
+      if (c && c !== currencyEl.value) currencyEl.value = c;
     }
+    // renderSubs runs auto-deduct (only once syncReady), paints Subs, then calls
+    // renderAllNetWorth: Net Worth, chart, donut, activity, Wishlist, Orders.
+    renderSubs();
+    safeRenderTicker();
+  }
+  function onRemoteApplied() {
+    if (inlineEditorOpen()) { rerenderPending = true; return; }
+    renderEverything();
+  }
+  setInterval(() => { if (rerenderPending && !inlineEditorOpen()) renderEverything(); }, 1000);
+
+  // sync.js is deferred, so wait for DOMContentLoaded.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
+      appKey: 'finance',
+      syncedKeys: ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history'],
+      syncedPrefixes: ['nw:'],
+      deferApplyWhileEditing: true,
+      onApplied: onRemoteApplied,
+      onReady: function (info) {
+        if (info && info.fallback) return;
+        syncReady = true;        // from now on renderSubs may auto-deduct
+        onRemoteApplied();
+      }
+    });
   });
-});
+
+})();
 </script>
 
 </body>

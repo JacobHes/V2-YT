@@ -13,6 +13,11 @@
 //     button is injected into each rendered row and re-injected after every
 //     re-render.
 //
+// Rows are addressed by the task id and list key main.html puts on each row
+// (data-id, data-key), and every write reads the list fresh. A position in
+// the list is never used: a sync merge can reorder or replace the list
+// between the render and the click, and the menu stays open across renders.
+//
 // Writes go straight to goals:<date> and then dispatch a `storage` event,
 // which main.html already listens for to re-render. Nothing here calls into
 // main.html's internals.
@@ -41,12 +46,23 @@
     catch (e) { return null; }
   }
 
-  /** Mutate one task by its row index and let main.html re-render itself. */
-  function updateTask(idx, mutate) {
-    var key = activeKey();
+  function findById(list, id) {
+    if (!list || id == null || id === '') return null;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].id != null && String(list[i].id) === String(id)) return list[i];
+    }
+    return null;
+  }
+
+  // The list a row belongs to, as main.html rendered it.
+  function rowKey(row) { return (row && row.dataset.key) || activeKey(); }
+
+  /** Mutate one task by id in a fresh read, and let main.html re-render itself. */
+  function updateTask(key, id, mutate) {
     var list = readList(key);
-    if (!list || !list[idx]) return false;
-    mutate(list[idx]);
+    var task = findById(list, id);
+    if (!task) return false;
+    mutate(task);
     try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) { return false; }
     // main.html re-renders on `storage`; sync.js carries it to Supabase.
     window.dispatchEvent(new Event('storage'));
@@ -63,7 +79,7 @@
     menu = null;
   }
 
-  function openMenu(button, idx, current) {
+  function openMenu(button, key, id, current) {
     closeMenu();
 
     menu = document.createElement('div');
@@ -77,7 +93,7 @@
       item.textContent = tag.label;
       item.addEventListener('click', function (e) {
         e.stopPropagation();
-        updateTask(idx, function (task) {
+        updateTask(key, id, function (task) {
           if (tag.value) task.energy = tag.value;
           else delete task.energy;
         });
@@ -113,10 +129,11 @@
       if (!row) return;
       e.preventDefault();
       e.stopPropagation();
-      var idx = parseInt(row.dataset.idx, 10);
-      var list = readList(activeKey());
-      var current = (list && list[idx] && list[idx].energy) || null;
-      openMenu(btn, idx, current);
+      var key = rowKey(row);
+      var id = row.dataset.id;
+      var task = findById(readList(key), id);
+      if (!task) return;
+      openMenu(btn, key, id, task.energy || null);
       return;
     }
     if (menu && !e.target.closest('.hud-tagmenu')) closeMenu();
@@ -132,13 +149,13 @@
   function decorate() {
     var list = document.getElementById('goalList');
     if (!list || decorating) return;
-    var data = readList(activeKey());
-    if (!data) return;
 
     decorating = true;
+    var lists = {};   // one fresh read per key per pass
     Array.prototype.forEach.call(list.querySelectorAll('.gm-row'), function (row) {
-      var idx = parseInt(row.dataset.idx, 10);
-      var task = data[idx];
+      var key = rowKey(row);
+      if (!(key in lists)) lists[key] = readList(key);
+      var task = findById(lists[key], row.dataset.id);
       if (!task) return;
 
       row.classList.toggle('is-urgent', !!task.urgent);
@@ -152,9 +169,10 @@
         btn.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
-          var i = parseInt(row.dataset.idx, 10);
-          updateTask(i, function (t) {
-            if (t.urgent) delete t.urgent; else t.urgent = true;
+          // Flip what the button shows, on whichever task has this id now.
+          var want = !btn.classList.contains('is-on');
+          updateTask(rowKey(row), row.dataset.id, function (t) {
+            if (want) t.urgent = true; else delete t.urgent;
           });
         });
         // Sits with the other row controls, before the delete button.

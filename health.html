@@ -1039,16 +1039,28 @@ main {
 
   let todayKey = `stack:taken:${getActiveDate()}`;
 
+  // Pure read: rendering never writes. The template is applied only by
+  // applyTemplateIfMissing(), from onReady, after the first cloud merge.
   function getItems() {
-    const storedVersion = storeGet('stack:version');
     const stored = storeGet('stack:items');
-    if (!stored || !Array.isArray(stored) || !stored.length || storedVersion !== TEMPLATE_VERSION) {
-      const fresh = JSON.parse(JSON.stringify(STACK_DEFAULTS));
-      storeSet('stack:items', fresh);
-      storeSet('stack:version', TEMPLATE_VERSION);
-      return fresh;
+    return Array.isArray(stored) ? stored : [];
+  }
+  // Seed the placeholder stack only when the merged data truly has no items and
+  // this template version was never applied. Real items are never replaced
+  // because of a version mismatch; only the version is bumped. Idempotent.
+  function applyTemplateIfMissing() {
+    const stored = storeGet('stack:items');
+    const hasItems = Array.isArray(stored) && stored.length > 0;
+    const version = storeGet('stack:version');
+    if (hasItems) {
+      if (version !== TEMPLATE_VERSION) storeSet('stack:version', TEMPLATE_VERSION);
+      return false;
     }
-    return stored;
+    // No items at the current version means the user emptied the stack. Leave it.
+    if (version === TEMPLATE_VERSION) return false;
+    storeSet('stack:items', JSON.parse(JSON.stringify(STACK_DEFAULTS)));
+    storeSet('stack:version', TEMPLATE_VERSION);
+    return true;
   }
   function setItems(items) { storeSet('stack:items', items); }
   function getTaken() { return storeGet(todayKey) || {}; }
@@ -1428,29 +1440,55 @@ main {
     });
   });
 
+  // A rebuild of #stackGroups destroys an inline name or dose edit in progress,
+  // so while one is focused the render waits until focus leaves the list.
+  function editingStack() {
+    const a = document.activeElement;
+    return !!(a && a.isContentEditable && document.getElementById('stackGroups').contains(a));
+  }
+  let renderPending = false;
+  function renderUnlessEditing() {
+    if (editingStack()) { renderPending = true; return; }
+    renderPending = false;
+    render();
+  }
+  document.getElementById('stackGroups').addEventListener('focusout', () => {
+    if (renderPending) setTimeout(renderUnlessEditing, 0);
+  });
+
+  // Periodic refresh (6 AM day rollover, missed-dose styling). Read-only:
+  // getItems() never seeds.
   setInterval(() => {
     const newKey = `stack:taken:${getActiveDate()}`;
     if (newKey !== todayKey) todayKey = newKey;
-    render();
+    renderUnlessEditing();
   }, 60 * 1000);
 
   render();
   startTicker();
-})();
-</script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  if (typeof initCloudSync !== 'function') return;
-  initCloudSync({
-    appKey: 'health',
-    syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'po_water_v1'],
-    syncedPrefixes: ['stack:taken:'],
-    onApplied: function () {
-      window.dispatchEvent(new Event('storage'));
-    }
+  // ====== CLOUD SYNC ======
+  // sync.js is deferred, so wait for DOMContentLoaded. onApplied re-renders at
+  // once (before, nothing listened and remote changes showed up to 60 s late).
+  // deferApplyWhileEditing: the stack names and doses are contenteditable.
+  // The template is applied in onReady, after the first merge, and only when
+  // the merged data has no stack.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
+      appKey: 'health',
+      syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'po_water_v1'],
+      syncedPrefixes: ['stack:taken:'],
+      deferApplyWhileEditing: true,
+      onApplied: function () { renderUnlessEditing(); },
+      onReady: function (info) {
+        if (info && info.fallback) return;
+        applyTemplateIfMissing();
+        renderUnlessEditing();
+      }
+    });
   });
-});
+})();
 </script>
 
 </body>

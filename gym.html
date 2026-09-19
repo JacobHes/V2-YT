@@ -7,6 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#E6DBC2">
 <title>Fitness · Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 
 <!-- =============================================================
@@ -1268,7 +1270,6 @@ img, video, canvas, svg { max-width: 100%; }
 
 .hidden { display: none !important; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="lab">
 
@@ -1752,6 +1753,20 @@ img, video, canvas, svg { max-width: 100%; }
   function saveState() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
   }
+  // Derived write: getCurrentEx storing its default pick of the current
+  // exercise. It waits for the first cloud merge (pcCloudReady, set in
+  // onReady, see CLOUD SYNC below) so a stale or empty device cannot beat
+  // the cloud, and it never creates po_coach_v1 on its own: a device with
+  // no gym data renders the defaults and stores them only when the user
+  // edits something. (Inside renderAll, renderSelect usually makes the pick
+  // in memory first, so the pick and today's split filter are stored with
+  // the user's next save.)
+  let pcCloudReady = false;
+  function saveDerived() {
+    if (!pcCloudReady) return;
+    try { if (localStorage.getItem(LS_KEY) == null) return; } catch (e) { return; }
+    saveState();
+  }
   let state = loadState();
   document.getElementById('appTitle').textContent = CONFIG.appTitle || 'Progressive Overload Coach';
 
@@ -1773,7 +1788,7 @@ img, video, canvas, svg { max-width: 100%; }
     const f = getFiltered();
     if (!f.length) return null;
     let ex = f.find(e => e.id === state.currentEx);
-    if (!ex) { ex = f[0]; state.currentEx = ex.id; saveState(); }
+    if (!ex) { ex = f[0]; state.currentEx = ex.id; saveDerived(); }
     return ex;
   }
   function getLogs() { return (state.logs[state.currentEx] || []).slice(); }
@@ -2245,13 +2260,15 @@ img, video, canvas, svg { max-width: 100%; }
 
   // First-load nicety: if today's split matches one of the day filters
   // by name (case-insensitive) and the user hasn't manually picked one,
-  // pre-select that day.
-  (function autoSelectTodaySplit() {
+  // pre-select that day. In memory only: it is stored with the user's next
+  // save. onReady runs it again on the merged state.
+  function autoSelectTodaySplit() {
     const s = todaySplit();
     if (!s.name || isRestName(s.name) || state._userPickedDay) return;
     const match = state.days.find(d => d.name.toLowerCase() === s.name.toLowerCase());
     if (match) state.filterDay = match.id;
-  })();
+  }
+  autoSelectTodaySplit();
 
   $('exSelect').addEventListener('change', e => {
     state.currentEx = e.target.value; saveState(); renderAll();
@@ -3030,6 +3047,7 @@ img, video, canvas, svg { max-width: 100%; }
   // Upload a compressed data URL to the Supabase Storage bucket
   // 'progress-photos' and return its public URL (or null on failure).
   async function uploadPhotoToStorage(dataUrl) {
+    const pcSupa = pcStorageClient();
     if (!pcSupa) return null;
     try {
       const res = await fetch(dataUrl);
@@ -3070,8 +3088,8 @@ img, video, canvas, svg { max-width: 100%; }
 
     // Background: upload to Supabase Storage. Once we have a public URL,
     // drop the base64 dataUrl locally and push to sibling devices via the
-    // normal sync path — only the URL ends up in the row, so the payload
-    // stays tiny.
+    // normal sync path — only the URL ends up in the row (pcSerialize), so
+    // the payload stays tiny.
     uploadPhotoToStorage(entry.dataUrl).then((url) => {
       if (!url) return;
       const e = photos.find(p => p.id === id);
@@ -3289,81 +3307,62 @@ img, video, canvas, svg { max-width: 100%; }
   $('wtCmpSideB').addEventListener('click', cycleCompareTarget);
 
   // ============================================================
-  // BOOT
+  // BOOT. Renders local data (or the defaults) and writes nothing:
+  // pcCloudReady is still false, so getCurrentEx does not save.
   // ============================================================
   renderAll();
   wtRender();
   photosRender();
 
   // ============================================================
-  // CLOUD SYNC via Supabase  (OPTIONAL — leave blank for local-only)
+  // CLOUD SYNC via sync.js (the same helper the other dashboard pages use)
   // ------------------------------------------------------------
-  // Stores your gym state as one JSONB row in the public.app_state
-  // table, keyed by APP_KEY. Supabase's realtime channel pushes
-  // changes to every device the instant they happen.
+  // The four po_coach_* keys live in the 'po-coach' row of
+  // public.app_state. sync.js owns the storage hook, the merge (per id
+  // and per field, never a whole-row replace), realtime and the flush on
+  // hide and unload. This page only says which keys it owns, what may go
+  // to the cloud (pcSerialize), how to redraw after a merge (pcRerender)
+  // and which derived writes to make once the first merge has landed
+  // (pcOnReady).
   //
-  // SETUP (5 minutes, all in a browser):
-  //   1. Make a free account at https://supabase.com
-  //   2. Create a new project
-  //   3. In your project: Settings → API → copy your Project URL +
-  //      "Publishable" key (the one starting with `sb_publishable_`)
-  //   4. Paste them below, replacing the two placeholder strings
-  //   5. Open the SQL Editor and run the SQL block from README.md
-  //
-  // If you leave the placeholders unchanged the app still works,
-  // just only on this device (data stays in your browser).
+  // Progress photos: only URL-pointer entries ride the row. The JPEG
+  // lives in Supabase Storage (bucket 'progress-photos'). A photo that has
+  // not been uploaded yet keeps its base64 dataUrl in this browser only.
   // ============================================================
   const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://bbillwahmyolgsiumxuf.supabase.co';
   const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_mgM66JU6rRQxXKBlbnfp1A_tngIl22h';
   const APP_KEY = 'po-coach';
-  // Note: po_coach_photos IS synced, but only URL-pointer entries ride
-  // the wire. The actual JPEG lives in Supabase Storage. pcCollectState
-  // strips any base64 dataUrl entries before push so the payload stays
-  // tiny and we never blow iOS Safari's ~5MB localStorage quota.
   const PC_SYNCED_KEYS = ['po_coach_v1', 'po_coach_workout_done', 'po_coach_weights', 'po_coach_photos'];
 
-  let pcSupa = null;
-  let pcPushTimer = null;
-  let pcSuppressSync = false;
-  let pcPendingRemote = null;
-  // JSON of the last state we sent or received — used to ignore
-  // realtime echoes of our own pushes so we don't infinite-loop.
-  let pcLastSyncedJson = null;
-
-  const _pcOrigSet = localStorage.setItem.bind(localStorage);
-  const _pcOrigRemove = localStorage.removeItem.bind(localStorage);
-  // Wrap setItem/removeItem so a sync-side error can NEVER prevent the
-  // underlying write from happening. The original call always runs;
-  // any error in the sync scheduling is swallowed.
-  localStorage.setItem = function(k, v) {
-    _pcOrigSet(k, v);
+  // Supabase client for photo uploads only. It has its own auth storage
+  // key and keeps no session, so it shares nothing with sync.js's client.
+  let pcStorageClientCache = null;
+  function pcStorageClient() {
+    if (pcStorageClientCache) return pcStorageClientCache;
+    if (!window.supabase || !SUPABASE_URL || !SUPABASE_KEY) return null;
+    if (SUPABASE_URL.indexOf('PASTE-') === 0 || SUPABASE_KEY.indexOf('PASTE-') === 0) return null;
     try {
-      if (!pcSuppressSync && PC_SYNCED_KEYS.indexOf(k) !== -1) pcSchedulePush();
-    } catch (e) {}
-  };
-  localStorage.removeItem = function(k) {
-    _pcOrigRemove(k);
-    try {
-      if (!pcSuppressSync && PC_SYNCED_KEYS.indexOf(k) !== -1) pcSchedulePush();
-    } catch (e) {}
-  };
+      pcStorageClientCache = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { storageKey: 'po-coach-photo-upload', persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      });
+    } catch (e) { pcStorageClientCache = null; }
+    return pcStorageClientCache;
+  }
 
-  function pcCollectState() {
-    const out = {};
-    for (const k of PC_SYNCED_KEYS) {
-      const v = localStorage.getItem(k);
-      if (v == null) continue;
-      try {
-        let val = JSON.parse(v);
-        if (k === 'po_coach_photos' && Array.isArray(val)) {
-          val = val
-            .filter((p) => p && p.url)
-            .map((p) => ({ id: p.id, url: p.url, dateKey: p.dateKey, weight: p.weight }));
-        }
-        out[k] = val;
-      } catch {}
+  // What goes into the cloud row for a key. Photos: only entries that
+  // already have a Storage URL, as {id, url, dateKey, weight}, so a local
+  // base64 dataUrl never leaves the device. Every other key goes as is.
+  function pcSerialize(key, value) {
+    if (key !== PHOTO_KEY) return value;
+    if (typeof value === 'string') {
+      let parsed;
+      try { parsed = JSON.parse(value); } catch (e) { return value; }
+      return JSON.stringify(pcSerialize(key, parsed));
     }
-    return out;
+    if (!Array.isArray(value)) return value;
+    return value
+      .filter((p) => p && p.url)
+      .map((p) => ({ id: p.id, url: p.url, dateKey: p.dateKey, weight: p.weight }));
   }
 
   function pcIsUserEditing() {
@@ -3375,155 +3374,87 @@ img, video, canvas, svg { max-width: 100%; }
     return false;
   }
 
-  function pcRerender() {
-    // Reload every closure variable that mirrors a synced localStorage
-    // key — otherwise renderAll/wtRender/photosRender would read stale
-    // in-memory copies from before the remote pull.
+  // The weight renderAll() pre-fills for the current exercise.
+  function pcPrefillWeight() {
+    const ex = state.exercises.find(e => e.id === state.currentEx);
+    if (!ex || ex.bw) return null;
+    const logs = state.logs[ex.id] || [];
+    return String(logs.length ? logs[logs.length - 1].weight : (ex.startWeight || 0));
+  }
+
+  // Reload every closure variable that mirrors a synced localStorage key
+  // (state, doneDays, wtEntries, photos), then redraw. Without the reload,
+  // renderAll/wtRender/photosRender and the next save would use the stale
+  // in-memory copies from before the merge.
+  function pcRerender(opts) {
+    const prevEx = state.currentEx;
+    const typedWeight = $('weightInput').value;
+    const weightWasTyped = typedWeight !== '' && typedWeight !== pcPrefillWeight();
+    // Photos taken here that have not reached Storage yet exist only on
+    // this device, so a merge must never drop them.
+    const localOnlyPhotos = (Array.isArray(photos) ? photos : []).filter((p) => p && !p.url && p.dataUrl);
     try { state = loadState(); } catch {}
+    try { doneDays = loadDoneDays(); } catch {}
     try { wtEntries = wtLoad(); } catch {}
     try {
       const raw = localStorage.getItem(PHOTO_KEY);
       photos = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(photos)) photos = [];
     } catch { photos = []; }
+    const dropped = localOnlyPhotos.filter((p) => !photos.some((q) => q && q.id === p.id));
+    if (dropped.length) { photos = dropped.concat(photos); photosSave(); }
+    if (opts && opts.autoSelect) autoSelectTodaySplit();
     try { renderAll(); } catch {}
+    // A merge never replaces a weight the user typed for the same exercise.
+    // (A merge held back while typing lands on focusout, which is the tap
+    // on Log.)
+    if (weightWasTyped && state.currentEx === prevEx) $('weightInput').value = typedWeight;
     try { wtRender(); } catch {}
     try { photosRender(); } catch {}
   }
 
-  function pcApplyRemoteState(remote) {
-    if (!remote || typeof remote !== 'object') return false;
-    pcSuppressSync = true;
-    let changed = false;
-    try {
-      for (const k of PC_SYNCED_KEYS) {
-        if (k === 'po_coach_photos') {
-          // Merge: keep local dataUrl-only photos (not yet uploaded) +
-          // overlay the remote URL-based set.
-          let localPhotos = [];
-          try { localPhotos = JSON.parse(localStorage.getItem(k) || '[]'); } catch {}
-          const remotePhotos = Array.isArray(remote[k]) ? remote[k] : [];
-          const remoteIds = new Set(remotePhotos.map((p) => p && p.id));
-          const localOnly = localPhotos.filter((p) => p && !p.url && !remoteIds.has(p.id));
-          const merged = [...remotePhotos, ...localOnly];
-          const incoming = JSON.stringify(merged);
-          if (localStorage.getItem(k) !== incoming) {
-            try { _pcOrigSet(k, incoming); changed = true; } catch {}
-          }
-          continue;
-        }
-        if (k in remote) {
-          const incoming = JSON.stringify(remote[k]);
-          const local = localStorage.getItem(k);
-          if (local !== incoming) { try { _pcOrigSet(k, incoming); changed = true; } catch {} }
-        } else if (localStorage.getItem(k) != null) {
-          try { _pcOrigRemove(k); changed = true; } catch {}
-        }
-      }
-    } finally {
-      pcSuppressSync = false;
+  // The first merge has landed: re-read the merged keys, pick today's split
+  // again on the merged state (in memory, stored with the user's next
+  // save), and from now on let getCurrentEx store a default pick
+  // (saveDerived). The early fallback call (offline, or no merge after
+  // 4 s) does nothing: local data stays on screen and the derived writes
+  // wait for the real merge. Held while an input has focus, so the redraw
+  // cannot disturb typing.
+  let pcReadyWaiting = false;
+  function pcOnReady(info) {
+    if (info && info.fallback) return;
+    if (pcIsUserEditing()) {
+      if (pcReadyWaiting) return;
+      pcReadyWaiting = true;
+      document.addEventListener('focusout', function pcReadyOnFocusOut() {
+        setTimeout(function () {
+          if (!pcReadyWaiting || pcIsUserEditing()) return;
+          document.removeEventListener('focusout', pcReadyOnFocusOut, true);
+          pcReadyWaiting = false;
+          pcOnReady({ fallback: false });
+        }, 0);
+      }, true);
+      return;
     }
-    if (changed) { try { pcRerender(); } catch (e) {} }
-    return changed;
+    pcCloudReady = true;
+    pcRerender({ autoSelect: true });
   }
 
-  function pcMaybeApplyRemote(remote) {
-    if (pcIsUserEditing()) { pcPendingRemote = remote; return; }
-    pcApplyRemoteState(remote);
-  }
-
-  function pcApplyPendingIfReady() {
-    if (pcPendingRemote && !pcIsUserEditing()) {
-      const r = pcPendingRemote;
-      pcPendingRemote = null;
-      pcApplyRemoteState(r);
+  // sync.js is deferred, so initCloudSync exists only from DOMContentLoaded.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.initCloudSync !== 'function') {
+      // No sync.js on this page load: local-only, nothing to wait for.
+      pcOnReady({ fallback: false });
+      return;
     }
-  }
-
-  async function pcPushNow() {
-    if (!pcSupa) return;
-    const state = pcCollectState();
-    const json = JSON.stringify(state);
-    if (json === pcLastSyncedJson) return;
-    try {
-      const { error } = await pcSupa
-        .from('app_state')
-        .upsert(
-          { key: APP_KEY, data: state, updated_at: new Date().toISOString() },
-          { onConflict: 'key' }
-        );
-      if (!error) pcLastSyncedJson = json;
-    } catch (_) {}
-  }
-
-  function pcSchedulePush() {
-    if (pcSuppressSync) return;
-    clearTimeout(pcPushTimer);
-    pcPushTimer = setTimeout(pcPushNow, 250);
-  }
-
-  // Backup push on unload via fetch keepalive so a fast refresh
-  // doesn't lose the latest change before the debounced push fires.
-  function pcFlushPushOnUnload() {
-    if (!pcSupa) return;
-    const state = pcCollectState();
-    const json = JSON.stringify(state);
-    if (json === pcLastSyncedJson) return;
-    try {
-      fetch(SUPABASE_URL + '/rest/v1/app_state?on_conflict=key', {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify({ key: APP_KEY, data: state, updated_at: new Date().toISOString() }),
-        keepalive: true,
-      }).catch(() => {});
-      pcLastSyncedJson = json;
-    } catch (_) {}
-  }
-
-  // Initial sync: connect Supabase, pull current state, subscribe to
-  // realtime updates so other devices' changes appear instantly.
-  (async function pcInitCloudSync() {
-    if (!window.supabase || !SUPABASE_URL || !SUPABASE_KEY) return;
-    // Skip if the placeholder values are still in place (local-only mode)
-    if (SUPABASE_URL.indexOf('PASTE-') === 0 || SUPABASE_KEY.indexOf('PASTE-') === 0) return;
-    pcSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    try {
-      const { data, error } = await pcSupa
-        .from('app_state').select('data').eq('key', APP_KEY).maybeSingle();
-      if (!error && data && data.data && Object.keys(data.data).length > 0) {
-        pcLastSyncedJson = JSON.stringify(data.data);
-        pcMaybeApplyRemote(data.data);
-      } else if (Object.keys(pcCollectState()).length > 0) {
-        pcSchedulePush();
-      }
-    } catch (_) {}
-    pcSupa.channel('app_state_' + APP_KEY)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'app_state',
-        filter: 'key=eq.' + APP_KEY,
-      }, (payload) => {
-        if (!payload.new || !payload.new.data) return;
-        const incoming = JSON.stringify(payload.new.data);
-        if (incoming === pcLastSyncedJson) return; // echo of our own push
-        pcLastSyncedJson = incoming;
-        pcMaybeApplyRemote(payload.new.data);
-      })
-      .subscribe();
-  })();
-
-  document.addEventListener('focusout', () => {
-    setTimeout(pcApplyPendingIfReady, 0);
-  }, true);
-  window.addEventListener('pagehide', pcFlushPushOnUnload);
-  window.addEventListener('beforeunload', pcFlushPushOnUnload);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) pcFlushPushOnUnload();
+    window.initCloudSync({
+      appKey: APP_KEY,
+      syncedKeys: PC_SYNCED_KEYS,
+      serialize: pcSerialize,
+      deferApplyWhileEditing: true,
+      onApplied: function () { pcRerender(); },
+      onReady: pcOnReady
+    });
   });
 })();
 </script>

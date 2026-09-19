@@ -580,7 +580,7 @@ body::after {
       li.innerHTML='<span class="log-emoji">'+(l.e||'☕')+'</span><div class="log-main"><div class="log-name">'+escapeHtml(l.n)+'<b>'+l.mg+' mg</b></div>'
         +'<div class="log-meta">Peaks '+fmtTime(m.peak)+'<span class="sep">•</span>Half gone '+fmtTime(m.half)+'<span class="sep">•</span>Cleared '+fmtTime(m.cleared)+'</div></div>'
         +'<span class="log-time">'+fmtTime(l.ts)+'</span><button class="log-del" type="button" aria-label="Delete">×</button>';
-      li.querySelector('.log-del').addEventListener('click',()=>{ logs=logs.filter(x=>x.id!==l.id); saveJSON(LOGS_KEY,logs); renderAll(); });
+      li.querySelector('.log-del').addEventListener('click',()=>{ logs=loadJSON(LOGS_KEY,[]).filter(x=>x.id!==l.id); saveJSON(LOGS_KEY,logs); renderAll(); });
       list.appendChild(li);
     });
   }
@@ -588,7 +588,9 @@ body::after {
   function renderAll(){ renderRing(); renderChart(); renderPlan(); renderDaily(); renderLog(); }
 
   /* ============ Logging / search / custom ============ */
-  function logDrink(item){ logs.push({id:'c'+Date.now()+Math.floor(Math.random()*1000), n:item.n, mg:Math.round(item.mg), e:item.e||'☕', ts:Date.now()}); saveJSON(LOGS_KEY,logs); renderAll(); }
+  // Every mutation starts from what is in storage now, so a remote apply that
+  // landed since the last render is never written back stale.
+  function logDrink(item){ logs=loadJSON(LOGS_KEY,[]); logs.push({id:'c'+Date.now()+Math.floor(Math.random()*1000), n:item.n, mg:Math.round(item.mg), e:item.e||'☕', ts:Date.now()}); saveJSON(LOGS_KEY,logs); renderAll(); }
   function allDrinks(){ return DB.concat(custom.map(c=>({n:c.n,mg:c.mg,c:'Custom',e:'➕'}))); }
   function renderResults(q){
     const el=$('results'); const query=(q||'').trim().toLowerCase(); let items=allDrinks();
@@ -601,7 +603,7 @@ body::after {
   }
   function addCustom(){
     const name=$('customName').value.trim(); const mg=parseInt($('customMg').value,10);
-    if(!name||!(mg>=0)) return; custom.push({n:name,mg:mg,e:'➕',c:'Custom'}); saveJSON(CUSTOM_KEY,custom);
+    if(!name||!(mg>=0)) return; custom=loadJSON(CUSTOM_KEY,[]); custom.push({n:name,mg:mg,e:'➕',c:'Custom'}); saveJSON(CUSTOM_KEY,custom);
     logDrink({n:name,mg:mg,e:'➕'}); $('customName').value=''; $('customMg').value=''; renderResults($('search').value);
   }
 
@@ -634,10 +636,13 @@ body::after {
   setInterval(()=>{ if(scrubT==null) renderAll(); }, 60000);
 
   /* ============ Cloud sync ============ */
-  if(window.initCloudSync){
+  // sync.js is deferred, so it only exists once parsing is done: wait for
+  // DOMContentLoaded (calling it here at parse time meant caffeine never synced).
+  document.addEventListener('DOMContentLoaded', function(){
+    if(typeof window.initCloudSync!=='function') return;
     window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY,CUSTOM_KEY],
       onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); custom=loadJSON(CUSTOM_KEY,[]); renderResults($('search').value); renderAll(); } });
-  }
+  });
 })();
 </script>
 </body>

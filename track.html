@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script src="lock.js"></script>
+<script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#E6DBC2">
@@ -401,10 +402,17 @@ body::after {
     { id: 'mindset',    name: 'Mindset',    color: '#34D399', map: {} },
     { id: 'cardio',     name: 'Cardio',     color: '#FF6B6B', map: {} }
   ];
+  // Pure read. The defaults are written only by ensureDefaultProjects(), from
+  // onReady, once the cloud has been merged and still has no projects.
   function getProjects() {
-    let p = loadJSON('toggl:projects', null);
-    if (!p || !Array.isArray(p) || !p.length) { p = DEFAULT_PROJECTS.slice(); saveJSON('toggl:projects', p); }
-    return p;
+    const p = loadJSON('toggl:projects', null);
+    return Array.isArray(p) ? p : [];
+  }
+  function ensureDefaultProjects() {
+    const p = loadJSON('toggl:projects', null);
+    if (Array.isArray(p) && p.length) return false;
+    saveJSON('toggl:projects', DEFAULT_PROJECTS.slice());
+    return true;
   }
   function projById(id) { return getProjects().find(function (p) { return p.id === id; }) || null; }
   function slug(name) {
@@ -731,10 +739,17 @@ body::after {
       if (p.map.d30)   d30Min[p.map.d30]     = (d30Min[p.map.d30] || 0) + min;
     });
 
+    // Merge into the record as it is in storage NOW, and touch only the fields
+    // Track owns (its mapped daily fields and d30 minutes). Everything else in
+    // the record belongs to daily.html and is carried over untouched.
     const dayRec = loadJSON('daily:' + key, {});
     const mirror = loadJSON('toggl:mirror:' + key, { daily: {}, d30: {} });
     mirror.daily = mirror.daily || {}; mirror.d30 = mirror.d30 || {};
+    const hadD30 = !!dayRec.d30;
     dayRec.d30 = dayRec.d30 || {};
+    let changed = false;
+    function setF(obj, f, v) { if (obj[f] !== v) { obj[f] = v; changed = true; } }
+    function delF(obj, f) { if (Object.prototype.hasOwnProperty.call(obj, f)) { delete obj[f]; changed = true; } }
 
     // daily.* fields are stored as strings (matching daily.html inputs)
     Object.keys(Object.assign({}, dailyMin, mirror.daily)).forEach(function (f) {
@@ -744,10 +759,10 @@ body::after {
       const curEmpty = (cur == null || cur === '');
       const ownedByTrack = (prev != null && String(cur) === String(prev));
       if (min > 0) {
-        if (curEmpty || ownedByTrack) dayRec[f] = String(min);
+        if (curEmpty || ownedByTrack) setF(dayRec, f, String(min));
         mirror.daily[f] = min;
       } else {
-        if (ownedByTrack) delete dayRec[f];
+        if (ownedByTrack) delF(dayRec, f);
         delete mirror.daily[f];
       }
     });
@@ -760,22 +775,21 @@ body::after {
       const curEmpty = (cur == null || cur === '' || cur === 0);
       const ownedByTrack = (prev != null && Number(cur) === Number(prev));
       if (min > 0) {
-        if (curEmpty || ownedByTrack) dayRec.d30[k] = min;
+        if (curEmpty || ownedByTrack) setF(dayRec.d30, k, min);
         mirror.d30[k] = min;
       } else {
-        if (ownedByTrack) delete dayRec.d30[k];
+        if (ownedByTrack) delF(dayRec.d30, k);
         delete mirror.d30[k];
       }
     });
 
-    if (Object.keys(dayRec.d30).length === 0) delete dayRec.d30;
+    if (Object.keys(dayRec.d30).length === 0) { delete dayRec.d30; if (hadD30) changed = true; }
 
-    // Persist. daily.html's setDay drops empty records; mirror that rule.
-    const filled = Object.keys(dayRec).some(function (k) {
-      const v = dayRec[k];
-      return v !== '' && v !== false && v != null && !(typeof v === 'object' && Object.keys(v).length === 0);
-    });
-    if (filled) saveJSON('daily:' + key, dayRec); else localStorage.removeItem('daily:' + key);
+    // Persist only when one of Track's fields changed, and never remove the
+    // whole record: removing the key would also delete fields Track does not
+    // own (including ones another device added that have not arrived yet).
+    // A record Track empties stays as {} and daily.html's history skips it.
+    if (changed) saveJSON('daily:' + key, dayRec);
 
     if (Object.keys(mirror.daily).length === 0 && Object.keys(mirror.d30).length === 0) localStorage.removeItem('toggl:mirror:' + key);
     else saveJSON('toggl:mirror:' + key, mirror);
@@ -787,8 +801,20 @@ body::after {
   document.getElementById('mngToggle').addEventListener('click', function () {
     document.getElementById('mngBody').classList.toggle('open');
   });
+  // Rebuilding the list would destroy a rename (contenteditable) or a colour
+  // pick in progress. While one has focus, skip and rebuild once focus leaves.
+  let manageStale = false;
+  function editingInManage() {
+    const a = document.activeElement;
+    return !!(a && document.getElementById('mngList').contains(a) && (a.isContentEditable || a.tagName === 'INPUT'));
+  }
+  document.getElementById('mngList').addEventListener('focusout', function () {
+    if (manageStale) setTimeout(function () { if (!editingInManage()) renderManage(); }, 0);
+  });
   function renderManage() {
     const list = document.getElementById('mngList');
+    if (editingInManage()) { manageStale = true; return; }
+    manageStale = false;
     list.innerHTML = '';
     getProjects().forEach(function (p) {
       const row = document.createElement('div'); row.className = 'mng-row';
@@ -951,8 +977,16 @@ body::after {
 
   document.addEventListener('DOMContentLoaded', function () {
     if (typeof initCloudSync !== 'function') return;
-    // Track's own data.
-    initCloudSync({ appKey: 'track', syncedPrefixes: ['toggl:'], onApplied: renderAll });
+    // Track's own data. The default projects are written in onReady, after the
+    // first merge, and only when the merged toggl:projects is absent or empty.
+    initCloudSync({
+      appKey: 'track', syncedPrefixes: ['toggl:'],
+      onApplied: function () { renderAll(); },
+      onReady: function (info) {
+        if (info && info.fallback) return;
+        if (ensureDefaultProjects()) renderAll();
+      }
+    });
     // Mirror the SAME Supabase row daily.html owns, so auto-fill reaches
     // every device and Track always reads the latest Daily state.
     initCloudSync({ appKey: 'daily', syncedPrefixes: ['daily:', 'd30:'] });

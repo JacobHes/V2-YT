@@ -448,54 +448,102 @@ body::after {
     else { const totalIn = cm / 2.54; $('heightA').value = Math.floor(totalIn / 12); $('heightB').value = Math.round(totalIn % 12); }
   }
 
+  /* ---------- which fields the user has touched since the form was filled ---------- */
+  // Only touched fields are saved, and a remote apply repaints only untouched,
+  // unfocused fields, so neither side overwrites the other with a stale value.
+  const dirty = new Set();   // 'height' | 'weight' | 'age' | 'sex' | 'activity'
+  // True once the first cloud merge has run. Before that, a missing po_water_v1
+  // is not known to be missing, so it is never created from defaultWater().
+  let mergedOnce = false;
+
   /* ---------- load existing profile into the form ---------- */
-  function populate() {
-    const w = loadJSON(WATER_KEY, defaultWater());
+  // onlyClean: repaint only fields the user has not touched and is not in.
+  function populate(onlyClean) {
+    const w = loadJSON(WATER_KEY, null) || defaultWater();
     const p = w.profile || {};
-    setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
-    setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
-    setSex(p.sex === 'f' ? 'f' : 'm');
-    fillHeight(p.heightCm || null);
-    if (p.weightKg) $('weight').value = weightUnit === 'lb' ? Math.round(p.weightKg * 2.20462) : Math.round(p.weightKg);
-    else $('weight').value = '';
-    $('age').value = p.age || '';
-    $('activity').value = (p.activityHrsPerWeek != null ? p.activityHrsPerWeek : '');
+    const active = document.activeElement;
+    const may = (name, els) => !onlyClean || (!dirty.has(name) && !els.some(el => el === active));
+    if (may('weight', [$('weight')])) {
+      setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
+      if (p.weightKg) $('weight').value = weightUnit === 'lb' ? Math.round(p.weightKg * 2.20462) : Math.round(p.weightKg);
+      else $('weight').value = '';
+    }
+    if (may('height', [$('heightA'), $('heightB')])) {
+      setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
+      fillHeight(p.heightCm || null);
+    }
+    if (may('sex', [])) setSex(p.sex === 'f' ? 'f' : 'm');
+    if (may('age', [$('age')])) $('age').value = p.age || '';
+    if (may('activity', [$('activity')])) $('activity').value = (p.activityHrsPerWeek != null ? p.activityHrsPerWeek : '');
   }
 
   /* ---------- save back into po_water_v1 (merge, never overwrite logs) ---------- */
   function save() {
-    const w = loadJSON(WATER_KEY, defaultWater());
-    w.profile = w.profile || {};
-    const cm = getHeightCm();
-    if (cm) { w.profile.heightCm = cm; w.profile.heightUnit = heightUnit; }
-    const wv = parseFloat($('weight').value);
-    if (wv > 0) { w.profile.weightKg = weightUnit === 'lb' ? +(wv / 2.20462).toFixed(1) : wv; w.weightUnit = weightUnit; }
-    const age = parseInt($('age').value, 10); if (age > 0) w.profile.age = age;
-    w.profile.sex = sex;
-    const act = parseFloat($('activity').value); if (act >= 0 && !isNaN(act)) w.profile.activityHrsPerWeek = act;
-    saveJSON(WATER_KEY, w);
+    const cur = loadJSON(WATER_KEY, null);
     const s = $('settingsStatus'); s.textContent = 'Saved ✓';
     setTimeout(() => { s.textContent = ''; }, 1800);
+    if (!dirty.size) return;   // nothing changed, nothing to write
+    // Existing record: edit it in place. Missing record: start from defaults only
+    // if the cloud merge has run and it is still missing; otherwise write just the
+    // fields the user set, so defaults never land on top of the real profile.
+    const w = cur || (mergedOnce ? defaultWater() : {});
+    w.profile = w.profile || {};
+    if (dirty.has('height')) {
+      const cm = getHeightCm();
+      if (cm) { w.profile.heightCm = cm; w.profile.heightUnit = heightUnit; }
+    }
+    if (dirty.has('weight')) {
+      const wv = parseFloat($('weight').value);
+      if (wv > 0) { w.profile.weightKg = weightUnit === 'lb' ? +(wv / 2.20462).toFixed(1) : wv; w.weightUnit = weightUnit; }
+    }
+    if (dirty.has('age')) { const age = parseInt($('age').value, 10); if (age > 0) w.profile.age = age; }
+    if (dirty.has('sex')) w.profile.sex = sex;
+    if (dirty.has('activity')) { const act = parseFloat($('activity').value); if (act >= 0 && !isNaN(act)) w.profile.activityHrsPerWeek = act; }
+    saveJSON(WATER_KEY, w);
+    dirty.clear();
   }
 
   /* ---------- open / close ---------- */
-  function open() { populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
+  function open() { dirty.clear(); populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
   function close() { $('settingsBg').classList.remove('show'); }
   $('settingsOpen').addEventListener('click', open);
   $('settingsClose').addEventListener('click', close);
   $('settingsBg').addEventListener('click', (e) => { if (e.target === $('settingsBg')) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   $('settingsSave').addEventListener('click', save);
+  [['heightA', 'height'], ['heightB', 'height'], ['weight', 'weight'], ['age', 'age'], ['activity', 'activity']]
+    .forEach(([id, name]) => $(id).addEventListener('input', () => dirty.add(name)));
   $('heightUnitSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const cm = getHeightCm(); setHeightUnit(b.dataset.u); fillHeight(cm);
+    const cm = getHeightCm(); setHeightUnit(b.dataset.u); fillHeight(cm); dirty.add('height');
   }));
   $('weightUnitSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     const v = parseFloat($('weight').value);
     const kg = v > 0 ? (weightUnit === 'lb' ? v / 2.20462 : v) : null;
     setWeightUnit(b.dataset.u);
     if (kg) $('weight').value = weightUnit === 'lb' ? Math.round(kg * 2.20462) : Math.round(kg);
+    dirty.add('weight');
   }));
-  $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
+  $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { setSex(b.dataset.s); dirty.add('sex'); }));
+
+  /* ---------- cloud sync ---------- */
+  // po_water_v1 lives in the 'health' row (health.html syncs it too). Without an
+  // instance here, Settings edits never left this device and health.html's
+  // next merge reverted them. sync.js is deferred, so wait for DOMContentLoaded.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
+      appKey: 'health',
+      syncedKeys: [WATER_KEY],
+      onApplied: function () {
+        if ($('settingsBg').classList.contains('show')) populate(true);
+      },
+      onReady: function (info) {
+        if (info && info.fallback) return;
+        mergedOnce = true;
+        if ($('settingsBg').classList.contains('show')) populate(true);
+      }
+    });
+  });
 
   /* ---------- WHOOP ---------- */
   let whStats = null;
