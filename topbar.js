@@ -16,7 +16,7 @@
   const PAGES = [
     { href: 'main.html',     key: 'main',     label: 'Main',          blurb: "Today's arrow, the task list, plan tomorrow" },
     { href: 'daily.html',    key: 'daily',    label: 'Daily tracker', blurb: 'The daily log and the 30-day challenge' },
-    { href: 'track.html',    key: 'track',    label: 'Track',         blurb: 'Time tracking by project' },
+    { href: 'track.html',    key: 'track',    label: 'Timer',         blurb: 'Time tracking by project' },
     { href: 'finance.html',  key: 'finance',  label: 'Finance',       blurb: 'Net worth, subscriptions, spending' },
     { href: 'gym.html',      key: 'fitness',  label: 'Fitness',       blurb: 'Progressive overload log' },
     { href: 'health.html',   key: 'health',   label: 'Supplements',   blurb: 'The daily stack and WHOOP' },
@@ -142,37 +142,6 @@ body.nav-open { overflow: hidden; }
 }
 .nav-item.guide { margin-top: 8px; border-top: 1px solid rgba(233, 226, 208, 0.16); padding-top: 8px; }
 
-/* Bottom tab bar. Four typed labels, no pictures. */
-.bottombar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
-  display: flex; justify-content: space-around; align-items: stretch;
-  padding: 0 0 env(safe-area-inset-bottom);
-  background: var(--lab-wood, #2B2219);
-  border-top: 1px solid var(--lab-wood-edge, #1A140E);
-  box-shadow: 0 1px 0 rgba(233, 226, 208, 0.08) inset;
-  font-family: var(--lab-type, 'American Typewriter', 'Courier New', monospace);
-}
-.bottombar-tab {
-  flex: 1;
-  display: flex; align-items: center; justify-content: center;
-  min-height: 50px; padding: 8px 4px;
-  text-decoration: none;
-  color: var(--lab-chalk-dim, rgba(233,226,208,0.62));
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 0.16em; text-transform: uppercase;
-  box-shadow: inset 0 2px 0 transparent;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s;
-}
-.bottombar-tab.active {
-  color: var(--lab-chalk, #E9E2D0);
-  box-shadow: inset 0 2px 0 var(--lab-chalk, #E9E2D0);
-}
-
-/* Room for the fixed bars. The top value is measured after injection. */
-body.has-topbar { padding-top: var(--topbar-h, 56px) !important; }
-body.has-bottombar { padding-bottom: calc(66px + env(safe-area-inset-bottom)) !important; }
-
 @media (max-width: 480px) {
   .topbar { padding-left: 12px; padding-right: 12px; }
   .topbar-brand-page { display: none; }
@@ -217,15 +186,6 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     }
     return PAGES.find(x => x.key === 'hub');   // "/" and anything unknown
   }
-  // Finance keeps its own internal tab bar at the foot; the top bar still
-  // goes on so the menu is reachable from there.
-  function isFinancePage() { return currentPage().key === 'finance'; }
-  // The bottom tabs map to these pages. Hub and main share the first tab.
-  function bottomTabKey() {
-    const k = currentPage().key;
-    if (k === 'hub') return 'main';
-    return k;
-  }
 
   // -------- HTML --------
   function escapeHtml(s) {
@@ -266,13 +226,6 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
 </nav>`;
   }
 
-  const bottombarHtml = `
-<nav class="bottombar" id="bottombar" role="navigation" aria-label="Main tabs">
-  <a href="index.html" class="bottombar-tab" data-page="main">Main</a>
-  <a href="health.html" class="bottombar-tab" data-page="health">Health</a>
-  <a href="gym.html" class="bottombar-tab" data-page="fitness">Fitness</a>
-  <a href="track.html" class="bottombar-tab" data-page="track">Track</a>
-</nav>`;
 
   // -------- drawer behaviour --------
   function setOpen(open) {
@@ -301,7 +254,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   }
 
   function injectStyleAndHTML() {
-    if (document.getElementById('topbar') || document.getElementById('bottombar')) return;
+    if (document.getElementById('topbar')) return;
 
     const page = currentPage();
 
@@ -318,16 +271,6 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     drawerWrap.innerHTML = drawerHtml(page).trim();
     while (drawerWrap.firstChild) document.body.appendChild(drawerWrap.firstChild);
 
-    if (!isFinancePage()) {
-      const bottomWrap = document.createElement('div');
-      bottomWrap.innerHTML = bottombarHtml.trim();
-      document.body.appendChild(bottomWrap.firstChild);
-      const active = bottomTabKey();
-      document.querySelectorAll('.bottombar-tab').forEach((t) => {
-        t.classList.toggle('active', t.getAttribute('data-page') === active);
-      });
-      document.body.classList.add('has-bottombar');
-    }
 
     wireDrawer();
     reserveTop();
@@ -341,6 +284,12 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     if (!bar) return;
     document.documentElement.style.setProperty('--topbar-h', (bar.offsetHeight + 14) + 'px');
     document.body.classList.add('has-topbar');
+    // The bottom tab bar used to reserve this space. Without it a page can end
+    // flush with the screen edge, so keep a little air (and the home-indicator
+    // inset) on pages that do not already leave some.
+    if (parseFloat(getComputedStyle(document.body).paddingBottom) < 24) {
+      document.body.style.paddingBottom = 'calc(28px + env(safe-area-inset-bottom))';
+    }
   }
 
   // -------- Mobile lockdown helpers --------

@@ -19,7 +19,7 @@ Open any `.html` file directly in your browser — no build step, no install.
 | [finance.html](finance.html) | Finances |
 | [gym.html](gym.html) | Progressive overload gym tracker |
 | [daily.html](daily.html) | Daily log and the 30-day challenge |
-| [track.html](track.html) | Time tracking by project, auto-fills the daily log |
+| [track.html](track.html) | Timer: time tracking by project, auto-fills the daily log |
 | [caffeine.html](caffeine.html) | Caffeine intake and timing |
 | [guide.html](guide.html) | The manual: what each page is for and how the pieces connect |
 | [topbar.js](topbar.js) | Shared top bar with the menu drawer and the bottom tabs — auto-injected into pages that `<script src="topbar.js">` |
