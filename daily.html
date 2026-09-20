@@ -65,8 +65,20 @@ html, body {
 }
 .day-nav:hover:not(:disabled) { color: var(--text-1); background: rgba(255,255,255,0.06); }
 .day-nav:disabled { opacity: 0.25; cursor: not-allowed; }
-.day-label { padding: 0 6px; min-width: 108px; text-align: center; }
-.day-label.is-today { color: var(--good); }
+/* The label is a button. Off today it names the day on screen and takes one
+ * tap back; on today it is inert, because there is nowhere to go back to. */
+.day-label {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; padding: 0 6px; min-width: 108px; text-align: center;
+  align-self: stretch; min-height: 40px;
+  background: transparent; border: 0; color: inherit; cursor: pointer;
+  font-family: inherit; font-size: inherit; font-weight: inherit;
+  letter-spacing: inherit; text-transform: inherit; line-height: 1.15;
+  -webkit-tap-highlight-color: transparent;
+}
+.day-label.is-today { color: var(--good); cursor: default; }
+.day-label-sub { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; }
+.day-label.is-today .day-label-sub { display: none; }
 
 .header {
   display: flex; align-items: center; justify-content: space-between;
@@ -290,20 +302,52 @@ html, body {
 .d30-min:focus { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .d30-min-unit { font-family: var(--font-mono); font-size: 10px; color: var(--text-3); }
 
-.d30-strip { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-top: 16px; }
+/* Six columns on a phone, so each cell has room for its calendar date beside
+ * its challenge day; ten on a desk, where they still read. */
+.d30-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 16px; }
+@media (min-width: 600px) { .d30-strip { grid-template-columns: repeat(10, 1fr); } }
 .d30-cell {
-  aspect-ratio: 1; border-radius: 4px; background: rgba(255,255,255,0.05);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-family: var(--font-mono); color: var(--text-3);
+  border-radius: 4px; background: rgba(255,255,255,0.05);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; padding: 5px 2px; min-height: 46px;
+  font-family: var(--font-mono); color: var(--text-3);
   border: 1px solid transparent; -webkit-tap-highlight-color: transparent;
 }
+.d30-cell-n { font-size: 11px; font-weight: 700; line-height: 1.1; }
+.d30-cell-d { font-size: 10.5px; line-height: 1.1; white-space: nowrap; letter-spacing: 0; }
 .d30-cell.p25  { background: rgba(224,118,88,0.28); color: var(--text-2); }
 .d30-cell.p50  { background: rgba(224,118,88,0.5); color: var(--text-1); }
 .d30-cell.p75  { background: rgba(224,118,88,0.72); color: #fff; }
 .d30-cell.p100 { background: var(--good); color: #0a0a0b; font-weight: 700; }
 .d30-cell.current { border-color: var(--text-1); }
+.d30-cell.is-today { box-shadow: inset 0 -3px 0 var(--text-1); }
 .d30-cell.tappable { cursor: pointer; }
 .d30-cell.future { opacity: 0.45; }
+
+/* The two marks on the strip, named. One is the day on screen, the other is
+ * today, and before this they were a frame nobody had been told about. */
+.d30-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 10.5px; color: var(--text-2); }
+.d30-key-item { display: inline-flex; align-items: center; gap: 7px; }
+.d30-key-item[hidden] { display: none; }
+.d30-key-mark { width: 16px; height: 16px; margin: 2px; flex-shrink: 0; border: 1px solid transparent; }
+.d30-key-mark.k-view { border-color: var(--text-1); outline: 2px solid var(--text-1); outline-offset: 1px; }
+.d30-key-mark.k-today { box-shadow: inset 0 -3px 0 var(--text-1); }
+
+/* The window has ended. Say so, say how it went, offer the next one. */
+.d30-done { display: block; margin-top: 16px; }
+.d30-done[hidden] { display: none; }
+.d30-done-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-bottom: 8px; }
+.d30-done-stamp {
+  display: inline-block; padding: 3px 9px 2px;
+  border: 2px solid currentColor; border-radius: 3px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.2em;
+  text-transform: uppercase; line-height: 1.1; color: var(--bad);
+  transform: rotate(-3deg);
+}
+.d30-done-when { font-size: 12px; font-weight: 700; color: var(--text-1); }
+.d30-done-line { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--text-2); }
+.d30-done-btn { width: 100%; }
+@media (min-width: 600px) { .d30-done-btn { width: auto; } }
 
 /* ===== Social media total ===== */
 .sm-total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
@@ -312,14 +356,68 @@ html, body {
 .sm-cost { display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px; }
 .sm-cost-label { font-size: 10px; letter-spacing: 0.04em; color: var(--text-4); }
 .sm-cost-val { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--warn); font-variant-numeric: tabular-nums; }
+
+/* ===== Lab theme: what lab-daily.css cannot know about =====
+ * These sit after the stylesheet link, so an equal-specificity rule here wins.
+ * Everything below is paper, typewriter ink and one stamp red, per lab-theme.
+ */
+/* The day navigator, off today: the pill is framed in stamp red and the label
+ * reads as a way back rather than as a date that changed by itself. */
+body.lab .day-label { line-height: 1.15; }
+body.lab .day-label:not(.is-today) { color: var(--lab-red); }
+body.lab .day-label:not(.is-today) .day-label-sub { color: var(--lab-ink-dim); }
+body.lab .day-label:not(.is-today):hover { background: var(--lab-red); color: var(--lab-sheet); }
+body.lab .day-label:not(.is-today):hover .day-label-sub { color: var(--lab-sheet); }
+body.lab .day-pill.is-off-today { border-color: var(--lab-red); }
+
+/* The finished counter is long, so the head is allowed a second line. */
+body.lab .d30-head { flex-wrap: wrap; gap: 4px 12px; }
+body.lab .d30-daynum.is-finished { color: var(--lab-ink); }
+
+/* A cell carries two lines now, so it needs more than the 40px floor. */
+body.lab .d30-cell { min-height: 46px; padding: 5px 2px; gap: 1px; }
+body.lab .d30-cell-n,
+body.lab .d30-cell-d { color: inherit; }
+/* Hierarchy by weight, not by colour, because the theme's contrast floor rules
+ * colour out. Both lines were 700, which left 28 of the 30 cells an unlabelled
+ * pair of numbers: "12 / 20" read as plausibly Dec 20 as day 12, the 20th.
+ * The challenge day keeps the bold; the calendar date sits under it in the
+ * body weight, still full ink and still 10.5px, so nothing drops below floor. */
+body.lab .d30-cell-n { font-weight: 700; }
+body.lab .d30-cell-d { font-weight: 400; }
+/* A date not yet reached is still information, so it is read in ink, not pencil. */
+body.lab .d30-cell.future { color: var(--lab-ink-dim); }
+body.lab .d30-cell.is-today { box-shadow: inset 0 -3px 0 var(--lab-ink); }
+body.lab .d30-cell.p75.is-today,
+body.lab .d30-cell.p100.is-today { box-shadow: inset 0 -3px 0 var(--lab-sheet); }
+
+body.lab .d30-key { font-family: var(--lab-type); font-size: 10.5px; letter-spacing: 0.06em; color: var(--lab-ink-dim); }
+body.lab .d30-key-mark { background: var(--lab-sheet); border: 1px solid var(--lab-rule-faint); }
+body.lab .d30-key-mark.k-view { border-color: var(--lab-ink); outline: 2px solid var(--lab-ink); outline-offset: 1px; }
+body.lab .d30-key-mark.k-today { box-shadow: inset 0 -3px 0 var(--lab-ink); }
+
+body.lab .d30-done {
+  border: 1px solid var(--lab-rule);
+  background: var(--lab-sheet-2);
+  padding: 13px 13px 15px;
+}
+body.lab .d30-done-stamp { font-family: var(--lab-display); color: var(--lab-red); mix-blend-mode: multiply; }
+body.lab .d30-done-when {
+  font-family: var(--lab-type); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--lab-ink);
+}
+body.lab .d30-done-line { font-family: var(--lab-type); font-size: 13px; line-height: 1.5; color: var(--lab-ink); }
 </style>
 </head>
 <body class="lab">
 <div class="shell">
 
-  <div class="day-pill">
+  <div class="day-pill" id="dayPill">
     <button class="day-nav" id="dayPrev" type="button" aria-label="Previous day">‹</button>
-    <span class="day-label" id="dayLabel">—</span>
+    <button class="day-label" id="dayLabel" type="button">
+      <span class="day-label-main" id="dayLabelMain">—</span>
+      <span class="day-label-sub">Back to today</span>
+    </button>
     <button class="day-nav" id="dayNext" type="button" aria-label="Next day">›</button>
   </div>
 
@@ -333,6 +431,14 @@ html, body {
     <div class="d30-head">
       <span class="d30-name">DISCIPLINED30</span>
       <span class="d30-daynum" id="d30Day">Day 1 / 30</span>
+    </div>
+    <div class="d30-done" id="d30Done" hidden>
+      <div class="d30-done-head">
+        <span class="d30-done-stamp">Finished</span>
+        <span class="d30-done-when" id="d30DoneWhen"></span>
+      </div>
+      <p class="d30-done-line" id="d30DoneLine"></p>
+      <button type="button" class="lab-btn d30-done-btn" id="d30Restart">Start new 30 days</button>
     </div>
     <div class="d30-top">
       <div class="d30-ring">
@@ -349,6 +455,10 @@ html, body {
     </div>
     <div class="d30-today" id="d30Today"></div>
     <div class="d30-strip" id="d30Strip"></div>
+    <div class="d30-key">
+      <span class="d30-key-item" id="d30KeyView"><span class="d30-key-mark k-view"></span>Day on screen</span>
+      <span class="d30-key-item" id="d30KeyToday"><span class="d30-key-mark k-today"></span>Today</span>
+    </div>
   </div>
 
   <div class="divider"><span>DAILY LOG</span></div>
@@ -553,6 +663,17 @@ html, body {
     return Math.round((new Date(b[0], b[1] - 1, b[2]) - new Date(a[0], a[1] - 1, a[2])) / 86400000);
   }
 
+  // Dates read to a human. The locale is the device's, the same as everywhere
+  // else on this page, so the order matches what the rest of the page prints.
+  function fmtFullDay(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+  function fmtDayMon(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  }
+
   function getDay(key) { return loadJSON(PREFIX + key, {}); }
   function isFilled(obj) {
     return Object.keys(obj).some(k => obj[k] !== '' && obj[k] !== false && obj[k] != null);
@@ -588,15 +709,20 @@ html, body {
   let activeKey = todayKey();
 
   // ---- Day header ----------------------------------------------
+  // Tapping a strip cell moves the whole page to another date. That is wanted,
+  // but it used to happen in silence: the only sign was a date at the top that
+  // had quietly changed. Off today the pill says which day is on screen, says
+  // it in stamp red, and is itself the one tap back.
   function renderDayLabel() {
-    const [y, m, d] = activeKey.split('-').map(Number);
-    const dt = new Date(y, m - 1, d);
     const label = document.getElementById('dayLabel');
     const isToday = activeKey === todayKey();
-    label.textContent = isToday
-      ? 'Today'
-      : dt.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const shown = fmtFullDay(activeKey);
+    document.getElementById('dayLabelMain').textContent = isToday ? 'Today' : shown;
     label.classList.toggle('is-today', isToday);
+    document.getElementById('dayPill').classList.toggle('is-off-today', !isToday);
+    label.setAttribute('aria-label', isToday
+      ? 'Showing today'
+      : 'Showing ' + shown + '. Tap to go back to today.');
     document.getElementById('dayNext').disabled = isToday;
   }
 
@@ -913,18 +1039,28 @@ html, body {
   function renderD30() {
     const active = activeKey;
     const dayNum = d30DayNum(active);
-    document.getElementById('d30Day').textContent =
-      (dayNum >= 1 && dayNum <= 30) ? ('Day ' + dayNum + ' / 30')
-      : (dayNum < 1 ? 'Not started' : 'Complete');
+    const start = d30Start();
+    const end = shiftKey(start, 29);
+    // Whether the challenge is over is judged against today, never against the
+    // day being viewed: reviewing day 3 of a dead window does not revive it.
+    const finished = d30DayNum(todayKey()) > 30;
+    const daynumEl = document.getElementById('d30Day');
+    daynumEl.textContent = finished
+      ? ('Finished, ' + fmtDayMon(start) + ' to ' + fmtDayMon(end))
+      : ((dayNum >= 1 && dayNum <= 30) ? ('Day ' + dayNum + ' / 30')
+        : (dayNum < 1 ? 'Not started' : 'Complete'));
+    daynumEl.classList.toggle('is-finished', finished);
 
     // Aggregate across all 30 days (unreached days count as 0).
-    let totalPct = 0;
+    let totalPct = 0, daysComplete = 0;
     const habitDone = {};
     D30_HABITS.forEach(h => habitDone[h.key] = 0);
     for (let n = 1; n <= 30; n++) {
       const ds = d30DateOfDay(n);
       const data = d30Of(ds);
-      totalPct += d30DayPercent(ds);
+      const pct = d30DayPercent(ds);
+      totalPct += pct;
+      if (pct >= 100) daysComplete++;
       D30_HABITS.forEach(h => { if (d30HabitDone(h, data)) habitDone[h.key]++; });
     }
     const avg = totalPct / 30;
@@ -951,8 +1087,39 @@ html, body {
       bars.appendChild(row);
     });
 
+    renderD30Done(finished, end, avg, daysComplete);
     renderD30Today(active, dayNum);
     renderD30Strip(active);
+  }
+
+  // The finished panel. Invisible for the whole run of a challenge; the moment
+  // today falls past day 30 it states the window, how it went, and the way to
+  // start the next one. It writes nothing until that button is pressed.
+  function renderD30Done(finished, end, avg, daysComplete) {
+    document.getElementById('d30Done').hidden = !finished;
+    // Nothing is marked as today once today is outside the window, so the key
+    // stops naming a mark that is not on the strip.
+    document.getElementById('d30KeyToday').hidden = finished;
+    if (!finished) return;
+    // The counter above already carries the window's dates, so this says the
+    // two things it does not: how long ago it ended and how it went.
+    const ago = daysBetween(end, todayKey());
+    document.getElementById('d30DoneWhen').textContent =
+      'Ended ' + (ago === 1 ? 'yesterday' : ago + ' days ago');
+    document.getElementById('d30DoneLine').textContent =
+      'Average completion ' + Math.round(avg) + '%, with ' + daysComplete +
+      ' of 30 days fully complete.';
+  }
+
+  // The only write to d30:start outside ensureD30Start, and only after the
+  // confirm. It goes through saveJSON, so it is a localStorage.setItem like
+  // every other write and the sync hook stamps it.
+  function d30StartNewWindow() {
+    if (!window.confirm('Start a new 30 days from today? The window that just ended stays in the log.')) return;
+    saveJSON('d30:start', todayKey());
+    if (activeKey !== todayKey()) switchDay(todayKey());
+    else renderD30();
+    flashSaved();
   }
 
   // Rebuilding the rows would destroy a minutes field the user is typing in.
@@ -974,7 +1141,7 @@ html, body {
 
     const head = document.createElement('div'); head.className = 'd30-today-head';
     const lbl = document.createElement('span'); lbl.className = 'd30-today-label';
-    lbl.textContent = (dateStr === todayKey() ? 'Today' : 'Day') + ' · Day ' + dayNum;
+    lbl.textContent = (dateStr === todayKey() ? 'Today' : fmtDayMon(dateStr)) + ' · Day ' + dayNum;
     const pct = document.createElement('span'); pct.className = 'd30-today-pct';
     pct.textContent = done + '/' + D30_HABITS.length + ' · ' + Math.round(done / D30_HABITS.length * 100) + '%';
     head.appendChild(lbl); head.appendChild(pct);
@@ -1031,6 +1198,16 @@ html, body {
     });
   }
 
+  // A cell's own date, month first, as the locale writes it: "SEP 20".
+  function fmtCellDate(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d)
+      .toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      .toUpperCase();
+  }
+
+  // Every cell carries its calendar date as well as its challenge day: a bare
+  // "30" never said which Saturday it was.
   function renderD30Strip(active) {
     const strip = document.getElementById('d30Strip');
     strip.innerHTML = '';
@@ -1045,16 +1222,43 @@ html, body {
       else if (pct >= 50) cls += ' p50';
       else if (pct > 0) cls += ' p25';
       if (ds === active) cls += ' current';
+      // Today and the day on screen are two different facts and get two
+      // different marks: a rule under today, a frame around what is shown.
+      if (ds === today) cls += ' is-today';
       const isFuture = ds > today;
       if (isFuture) cls += ' future';
       else cls += ' tappable';
       cell.className = cls;
-      cell.textContent = n;
+
+      const num = document.createElement('span');
+      num.className = 'd30-cell-n';
+      num.textContent = n;
+      const date = document.createElement('span');
+      date.className = 'd30-cell-d';
+      // The month is printed on the first cell and on every 1st, so a window
+      // that runs into a new month cannot be read as the wrong month.
+      const dom = Number(ds.slice(8, 10));
+      date.textContent = (n === 1 || dom === 1) ? fmtCellDate(ds) : String(dom);
+      cell.appendChild(num);
+      cell.appendChild(date);
+
+      const desc = 'Day ' + n + ', ' + fmtFullDay(ds) + (ds === today ? ', today' : '');
+      cell.title = desc;
       if (!isFuture) {
-        cell.addEventListener('click', () => { switchDay(ds); });
+        cell.setAttribute('role', 'button');
+        cell.setAttribute('aria-label', desc);
+        // Scroll back up with it: the date at the top of the page is what just
+        // changed, and it is no use if it changed off screen.
+        cell.addEventListener('click', () => { switchDay(ds); window.scrollTo(0, 0); });
       }
       strip.appendChild(cell);
     }
+    // The key names two marks, and it may only name the ones that are on the
+    // strip. When the day on screen falls outside the window no cell carries
+    // the frame, which is exactly the state a finished challenge is in, so the
+    // item is hidden the same way the Today item is. A legend pointing at a
+    // mark that is not there teaches the reader to distrust the other one too.
+    document.getElementById('d30KeyView').hidden = !strip.querySelector('.d30-cell.current');
   }
 
   // ---- Social media -------------------------------------------
@@ -1103,6 +1307,11 @@ html, body {
     activeKey = key;
     renderAll(true);
   }
+  document.getElementById('dayLabel').addEventListener('click', () => {
+    if (activeKey === todayKey()) return;
+    switchDay(todayKey());
+  });
+  document.getElementById('d30Restart').addEventListener('click', d30StartNewWindow);
   document.getElementById('dayPrev').addEventListener('click', () => {
     switchDay(shiftKey(activeKey, -1));
   });
