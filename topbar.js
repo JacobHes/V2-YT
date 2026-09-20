@@ -142,6 +142,10 @@ body.nav-open { overflow: hidden; }
 }
 .nav-item.guide { margin-top: 8px; border-top: 1px solid rgba(233, 226, 208, 0.16); padding-top: 8px; }
 
+/* Room for the fixed top bar: reserve exactly its measured height (set by
+   reserveTop as --topbar-h), so no page has to know the bar exists. */
+body.has-topbar { padding-top: var(--topbar-h, 75px) !important; }
+
 @media (max-width: 480px) {
   .topbar { padding-left: 12px; padding-right: 12px; }
   .topbar-brand-page { display: none; }
