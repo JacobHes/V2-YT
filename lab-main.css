@@ -287,11 +287,14 @@ body.lab .gm-row > .gm-text { flex: 1 1 calc(100% - 52px); min-width: 0; }
 body.lab .gm-row > .gm-energy { margin-left: 52px; }
 body.lab .gm-row > .gm-aim-btn,
 body.lab .gm-row > .gm-queue-btn,
+body.lab .gm-row > .gm-later-btn,
 body.lab .gm-row > .goal-delete { opacity: 0.55; color: var(--lab-ink-dim); }
 body.lab .gm-row > .gm-aim-btn.gm-aim-active,
 body.lab .gm-row > .gm-queue-btn.gm-queue-active,
 body.lab .gm-row > .gm-aim-btn:active,
 body.lab .gm-row > .gm-queue-btn:active,
+body.lab .gm-row > .gm-later-btn:active,
+body.lab .gm-row > .gm-later-btn:hover,
 body.lab .gm-row > .goal-delete:active { opacity: 1; }
 body.lab .gm-row > .gm-aim-btn.gm-aim-active { color: var(--lab-red); }
 

@@ -1354,6 +1354,25 @@ body::after {
 .gm-row:hover .goal-delete { opacity: 1; }
 .goal-delete:hover { color: var(--danger); }
 
+.gm-later-btn {
+  border: 0; background: transparent;
+  color: var(--text-tertiary);
+  font-size: 15px; line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: opacity 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.gm-later-btn:hover { opacity: 1; color: var(--text-primary); }
+.gm-undo-btn {
+  border: 0; background: transparent; padding: 0;
+  color: inherit; font: inherit; font-weight: 700;
+  text-decoration: underline; cursor: pointer;
+}
+
 .gm-show-toggle {
   width: 100%;
   margin: 6px 0 0;
@@ -2380,6 +2399,22 @@ body::after {
     });
     li.appendChild(queueBtn);
 
+    // Today only: move this one task to tomorrow.
+    if (!readOnly && !goal.done) {
+      const later = document.createElement('button');
+      later.type = 'button';
+      later.className = 'gm-later-btn';
+      later.textContent = '→';
+      later.title = 'Move to tomorrow';
+      later.setAttribute('aria-label', 'Move to tomorrow');
+      later.addEventListener('click', () => {
+        const moved = moveGoalToTomorrow(goal.id);
+        loadToday(); loadTomorrow();
+        if (moved) showMovedStatus(moved);
+      });
+      li.appendChild(later);
+    }
+
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'goal-delete';
@@ -3318,6 +3353,60 @@ body::after {
     setGoals(todayK, today.filter(g => g.done));
     loadToday(); loadTomorrow();
   });
+
+  // ---------- Move one task to tomorrow ----------
+  // The single-task version of Push remaining: the task keeps its id, leaves
+  // today and lands at the end of tomorrow's list. Returns what Undo needs,
+  // or null when the task is no longer in today or is already done.
+  function moveGoalToTomorrow(id) {
+    const todayK = todayKey(), tomorrowK = tomorrowKey();
+    const today = getGoals(todayK);
+    const idx = today.findIndex(x => x && x.id === id);
+    if (idx < 0 || today[idx].done) return null;
+    const g = today[idx];
+    const tomorrow = getGoals(tomorrowK);
+    const added = !tomorrow.some(x => x && (x.id === g.id || x.text === g.text));
+    if (added) {
+      const copy = Object.assign({}, g, { done: false, carried: false, carriedFrom: getActiveDateString() });
+      delete copy.doneAt; delete copy.firedAt;
+      // One arrow per day: an arrow already aimed for tomorrow keeps its place.
+      if (copy.arrow && tomorrow.some(x => x && x.arrow)) delete copy.arrow;
+      tomorrow.push(copy);
+      setGoals(tomorrowK, tomorrow);
+    }
+    setGoals(todayK, today.filter(x => !(x && x.id === id)));
+    return { task: g, idx: idx, todayK: todayK, tomorrowK: tomorrowK, added: added };
+  }
+  // Put the task back where it was, and take out only the copy this move made.
+  function undoMoveToTomorrow(m) {
+    if (m.added) {
+      const tomorrow = getGoals(m.tomorrowK);
+      const next = tomorrow.filter(x => !(x && x.id === m.task.id));
+      if (next.length !== tomorrow.length) setGoals(m.tomorrowK, next);
+    }
+    const today = getGoals(m.todayK);
+    if (!today.some(x => x && x.id === m.task.id)) {
+      today.splice(Math.min(m.idx, today.length), 0, m.task);
+      setGoals(m.todayK, today);
+    }
+    loadToday(); loadTomorrow();
+  }
+  function showMovedStatus(m) {
+    const el = document.getElementById('polishStatus');
+    showStatus(el, 'Moved to tomorrow. ');
+    const undo = document.createElement('button');
+    undo.type = 'button';
+    undo.className = 'gm-undo-btn';
+    undo.textContent = 'Undo';
+    undo.addEventListener('click', () => {
+      el.textContent = '';
+      undoMoveToTomorrow(m);
+    });
+    el.appendChild(undo);
+    // Longer than a plain status line, so there is time to reach Undo.
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.textContent = ''; }, 8000);
+  }
 
   // ---------- Add + Polish handlers ----------
   function showStatus(el, message, isError) {
