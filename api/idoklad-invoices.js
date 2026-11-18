@@ -10,11 +10,36 @@
 // Auth: OAuth2 client_credentials against identity.idoklad.cz,
 // then GET https://api.idoklad.cz/v3/IssuedInvoices, every page (100 per page).
 // Add ?debug=1 to get the raw first invoice back for field mapping.
+//
+// LOCKED: every request must carry the dashboard password as the
+// x-dash-key header (URI-encoded), matching DASH_PASSWORD in Vercel.
+// No DASH_PASSWORD set means locked for everyone, never open.
 // ============================================================
+import { createHash, timingSafeEqual } from 'node:crypto';
+
+const digest = (s) => createHash('sha256').update(String(s), 'utf8').digest();
+function passwordOk(given, wanted) {
+  // Hash both sides so the comparison is constant-time and length-blind.
+  return timingSafeEqual(digest(given), digest(wanted));
+}
+function headerKey(req) {
+  const raw = String((req.headers && req.headers['x-dash-key']) || '');
+  try { return decodeURIComponent(raw); } catch (e) { return raw; }
+}
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+  const wanted = process.env.DASH_PASSWORD || '';
+  if (!wanted) {
+    return res.status(401).json({ ok: false, error: 'locked_unset',
+      message: 'DASH_PASSWORD is not set on the server, so invoices stay locked.' });
+  }
+  const given = headerKey(req);
+  if (!given || !passwordOk(given, wanted)) {
+    return res.status(401).json({ ok: false, error: 'locked' });
+  }
 
   const id = process.env.IDOKLAD_CLIENT_ID;
   const secret = process.env.IDOKLAD_CLIENT_SECRET;

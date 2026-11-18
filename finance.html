@@ -3543,6 +3543,29 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   // proxy at /api/idoklad-invoices (credentials live in Vercel env).
   // ============================================================
   let _invLoaded = false;
+  // The proxy is locked: it needs the dashboard password as x-dash-key.
+  // Kept in this browser only (dash: is not a synced prefix); Byznys uses
+  // the same key, so unlocking one page unlocks both.
+  const INV_PW_KEY = 'dash:key';
+  function invStoredPw() { try { return localStorage.getItem(INV_PW_KEY) || ''; } catch (e) { return ''; } }
+  function showInvLock(statusEl, note, isError) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<form id="invLockForm" style="display:flex;flex-direction:column;gap:8px">'
+      + '<label for="invLockPw" style="font-size:13px;color:' + (isError ? 'var(--lab-red, #A9322A)' : 'inherit') + '">' + escapeHtml(note) + '</label>'
+      + '<div style="display:flex;gap:8px">'
+      + '<input id="invLockPw" type="password" autocomplete="current-password" required style="flex:1;min-width:0;font-size:16px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-primary);font-family:inherit">'
+      + '<button type="submit" style="background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">Odemknout</button>'
+      + '</div></form>';
+    const form = document.getElementById('invLockForm');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = document.getElementById('invLockPw').value;
+      if (!v) return;
+      try { localStorage.setItem(INV_PW_KEY, v); } catch (err) {}
+      _invLoaded = false;
+      loadInvoices();
+    });
+  }
   function fmtInvDate(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -3568,8 +3591,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     statusEl.style.display = 'block';
     statusEl.textContent = 'Načítám…';
     try {
-      const r = await fetch('/api/idoklad-invoices');
+      const pw = invStoredPw();
+      const r = await fetch('/api/idoklad-invoices', { headers: pw ? { 'x-dash-key': encodeURIComponent(pw) } : {} });
       const data = await r.json();
+      if (data.error === 'locked') {
+        listEl.innerHTML = ''; sumEl.textContent = '';
+        if (pw) { try { localStorage.removeItem(INV_PW_KEY); } catch (e) {} }
+        showInvLock(statusEl, pw ? 'Heslo nesedí, zkus to znovu.' : 'Faktury jsou zamčené. Zadej heslo, na tomhle zařízení se zapamatuje.', !!pw);
+        return;
+      }
+      if (data.error === 'locked_unset') {
+        listEl.innerHTML = ''; sumEl.textContent = '';
+        statusEl.innerHTML = 'Faktury jsou zamčené, ale ve Vercelu ještě není nastavené heslo (proměnná <b>DASH_PASSWORD</b>).';
+        return;
+      }
       if (!data.ok) {
         listEl.innerHTML = ''; sumEl.textContent = '';
         if (data.error === 'not_configured') {

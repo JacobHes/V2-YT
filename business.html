@@ -105,6 +105,13 @@
   .tip-row span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   .foot { margin-top: 22px; text-align: center; }
+
+  /* password gate: the invoice endpoint answers only with the right key */
+  .lock { margin: 0 0 18px; padding: 16px 18px; }
+  .lock-row { display: flex; gap: 10px; margin-top: 10px; }
+  .lock-row input { flex: 1; min-width: 0; font-size: 16px; padding: 8px 2px; background: transparent; color: var(--lab-ink); }
+  .lock-note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--lab-ink-dim); }
+  .lock-note.red { color: var(--lab-red); }
 </style>
 </head>
 <body class="lab">
@@ -120,6 +127,16 @@
 
   <div class="status" id="status" hidden></div>
 
+  <form class="lock lab-sheet" id="lockForm" hidden>
+    <label class="lab-label" for="lockPw">Heslo k fakturám</label>
+    <div class="lock-row">
+      <input class="lab-input" id="lockPw" type="password" autocomplete="current-password" required>
+      <button class="lab-btn lab-btn-primary" type="submit">Odemknout</button>
+    </div>
+    <p class="lock-note" id="lockNote"></p>
+  </form>
+
+  <div id="content" hidden>
   <section class="kpis" aria-label="Souhrn">
     <div class="kpi lab-sheet"><div class="lab-label">Vyfakturováno</div><div class="lab-figure kpi-val" id="kTotal">…</div><div class="kpi-sub" id="kTotalSub"></div></div>
     <div class="kpi lab-sheet"><div class="lab-label">Zaplaceno</div><div class="lab-figure kpi-val" id="kPaid">…</div><div class="kpi-sub" id="kPaidSub"></div></div>
@@ -137,6 +154,7 @@
     <div class="chart" id="chart"></div>
     <details class="table-view"><summary class="lab-label">Tabulka</summary><div class="wrap" id="monthTable"></div></details>
   </section>
+  </div>
 
   <div class="foot lab-label" id="foot"></div>
 </div>
@@ -146,9 +164,11 @@
 (function () {
   'use strict';
   // Reads /api/idoklad-invoices (the iDoklad proxy finance.html's Faktury tab
-  // also uses). Keeps the last answer in this browser only, so the page draws
-  // at once and still shows something offline. No cloud row.
-  const CACHE_KEY = 'biz:cache', YEAR_KEY = 'biz:year';
+  // also uses). The proxy is locked: it answers only when the dashboard
+  // password rides along as x-dash-key. The password and the last answer are
+  // kept in this browser only (dash:, biz: are not synced prefixes), so the
+  // page draws at once and still shows something offline. No cloud row.
+  const CACHE_KEY = 'biz:cache', YEAR_KEY = 'biz:year', PW_KEY = 'dash:key';
   const MONTHS = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -355,6 +375,7 @@
   addEventListener('scroll', hideTip, { passive: true });
 
   function render() {
+    $('content').hidden = !all.length;
     renderChips();
     const list = inPeriod(), months = periodMonths(list);
     renderKpis(list, months);
@@ -391,16 +412,52 @@
     if (d.error === 'auth_failed') return 'iDoklad odmítl přihlášení. Zkontroluj client_id a client_secret ve Vercelu.';
     return 'iDoklad vrátil chybu: ' + esc(String(d.error || 'neznámá')) + (d.status ? ' (' + esc(String(d.status)) + ')' : '') + '.';
   }
+  const storedPw = () => { try { return localStorage.getItem(PW_KEY) || ''; } catch (err) { return ''; } };
+  function showLock(note, isError) {
+    $('lockForm').hidden = false;
+    $('lockNote').textContent = note;
+    $('lockNote').classList.toggle('red', !!isError);
+    setTimeout(() => $('lockPw').focus(), 0);
+  }
+  function hideLock() { $('lockForm').hidden = true; $('lockPw').value = ''; }
+  $('lockForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = $('lockPw').value;
+    if (!v) return;
+    try { localStorage.setItem(PW_KEY, v); } catch (err) {}
+    hideLock();
+    load();
+  });
+
   async function load() {
     $('refresh').disabled = true;
     if (!all.length) setStatus('Načítám faktury z iDokladu…');
     try {
-      const r = await fetch('/api/idoklad-invoices', { cache: 'no-store' });
+      const pw = storedPw();
+      const r = await fetch('/api/idoklad-invoices', { cache: 'no-store', headers: pw ? { 'x-dash-key': encodeURIComponent(pw) } : {} });
       const d = await r.json();
+      if (d.error === 'locked') {
+        setStatus('');
+        if (pw) {
+          // The saved password stopped working: forget it and what it unlocked.
+          try { localStorage.removeItem(PW_KEY); localStorage.removeItem(CACHE_KEY); } catch (err) {}
+          all = []; render(); $('foot').textContent = '';
+          showLock('Heslo nesedí, zkus to znovu.', true);
+        } else {
+          showLock('Faktury jsou zamčené. Zadej heslo, na tomhle zařízení se zapamatuje.', false);
+        }
+        return;
+      }
+      if (d.error === 'locked_unset') {
+        hideLock();
+        setStatus('Faktury jsou zamčené, ale ve Vercelu ještě není nastavené heslo (proměnná <b>DASH_PASSWORD</b>). Po nastavení je potřeba web znovu nasadit.');
+        return;
+      }
       if (!d.ok) { setStatus(errorText(d) + (all.length ? ' Ukazuju poslední načtená data.' : '')); return; }
+      hideLock();
       const at = Date.now(), invoices = d.invoices || [];
       try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at, partial: !!d.partial, invoices })); } catch (err) {}
-      setStatus(d.partial ? 'iDoklad vrátil jen část faktur, zkus Obnovit.' : '');
+      setStatus(d.partial ? 'iDoklad vrátil jen část faktur, zkus Obnovit.' : (invoices.length ? '' : 'V iDokladu zatím nejsou žádné vydané faktury.'));
       apply(invoices, at, d.partial);
     } catch (err) {
       setStatus('Faktury se nepodařilo načíst. Funguje to jen na nasazeném webu.' + (all.length ? ' Ukazuju poslední načtená data.' : ''));
