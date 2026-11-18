@@ -23,7 +23,7 @@ Open any `.html` file directly in your browser — no build step, no install.
 | [caffeine.html](caffeine.html) | Caffeine intake and timing |
 | [guide.html](guide.html) | The manual: what each page is for and how the pieces connect |
 | [topbar.js](topbar.js) | Shared top bar with the menu drawer and the bottom tabs — auto-injected into pages that `<script src="topbar.js">` |
-| lab-theme.css, lab-pages.css, lab-main.css, lab-*.css | The look: a 1940s laboratory document. Tokens, the shared page layer, and one thin file per page |
+| lab-theme.css, lab-pages.css, lab-*.css | The look: a 1940s laboratory document. Tokens, the shared page layer, and one thin file per page |
 
 Each app stores its own state in browser `localStorage`. No accounts, no server.
 

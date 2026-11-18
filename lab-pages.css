@@ -1,6 +1,5 @@
 /* =============================================================
- * Lab theme, shared page layer. Loaded after lab-theme.css by every page
- * except main.html, which has lab-main.css instead.
+ * Lab theme, shared page layer. Loaded after lab-theme.css by every page.
  *
  * The pages were built from two template families. Each family drives its
  * look from a handful of variables, so retuning those under body.lab carries
