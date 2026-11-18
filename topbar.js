@@ -14,7 +14,6 @@
   // Every page, in the order the drawer lists them. `blurb` is the one line
   // that says what the page is for; the manual (guide.html) says the rest.
   const PAGES = [
-    { href: 'main.html',     key: 'main',     label: 'Main',          blurb: "Today's arrow, the task list, plan tomorrow" },
     { href: 'daily.html',    key: 'daily',    label: 'Daily tracker', blurb: 'The daily log and the 30-day challenge' },
     { href: 'track.html',    key: 'track',    label: 'Timer',         blurb: 'Time tracking by project' },
     { href: 'finance.html',  key: 'finance',  label: 'Finance',       blurb: 'Net worth, subscriptions, spending' },
