@@ -17,10 +17,10 @@ Open any `.html` file directly in your browser — no build step, no install.
 | [index.html](index.html) | Goals tracker (Day Ring, Goal Ticker, To Do list) — the home page |
 | [health.html](health.html) | Supplement / daily stack tracker |
 | [finance.html](finance.html) | Finances |
+| [business.html](business.html) | Revenue per client, from iDoklad invoices |
 | [gym.html](gym.html) | Progressive overload gym tracker |
 | [daily.html](daily.html) | Daily log and the 30-day challenge |
 | [track.html](track.html) | Timer: time tracking by project, auto-fills the daily log |
-| [caffeine.html](caffeine.html) | Caffeine intake and timing |
 | [guide.html](guide.html) | The manual: what each page is for and how the pieces connect |
 | [topbar.js](topbar.js) | Shared top bar with the menu drawer and the bottom tabs — auto-injected into pages that `<script src="topbar.js">` |
 | lab-theme.css, lab-pages.css, lab-*.css | The look: a 1940s laboratory document. Tokens, the shared page layer, and one thin file per page |

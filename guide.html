@@ -86,24 +86,72 @@
   <nav class="toc lab-sheet" aria-label="Contents">
     <div class="toc-label lab-label">Contents</div>
     <ol>
-      <li><a href="#day">The day boundary</a></li>
-      <li><a href="#daily">Daily tracker</a></li>
-      <li><a href="#track">Timer</a></li>
-      <li><a href="#finance">Finance</a></li>
       <li><a href="#business">Byznys</a></li>
+      <li><a href="#finance">Finance</a></li>
       <li><a href="#fitness">Fitness</a></li>
       <li><a href="#supplements">Supplements</a></li>
-      <li><a href="#caffeine">Caffeine</a></li>
+      <li><a href="#daily">Daily tracker</a></li>
+      <li><a href="#track">Timer</a></li>
+      <li><a href="#day">The day boundary</a></li>
       <li><a href="#hub">Hub and settings</a></li>
       <li><a href="#data">Where the data lives</a></li>
       <li><a href="#broken">When something looks wrong</a></li>
     </ol>
   </nav>
 
-  <!-- ===== the day ===== -->
-  <section class="sheet lab-sheet" id="day">
-    <div class="sheet-head"><h2>The day boundary</h2></div>
-    <p>Supplements and the top bar treat the day as flipping at <b>06:00</b>, so an entry made at 01:00 still belongs to the day you are finishing. The Daily tracker and Track use the calendar date in Europe/Prague. Between midnight and six the two disagree.</p>
+  <!-- ===== business ===== -->
+  <section class="sheet lab-sheet" id="business">
+    <div class="sheet-head"><h2>Byznys</h2><a class="open" href="business.html">Open</a></div>
+    <p class="purpose">How much each client has earned you, read live from the invoices issued in iDoklad. Nothing to type here: issue the invoice in iDoklad and it shows up on the next load.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>Year chips</b>: one per year that has invoices, plus <b>Vše</b> for everything. The page remembers your choice.</li>
+      <li><b>The four figures</b>: invoiced, paid, still waiting for payment, and the monthly average over the months of the period so far.</li>
+      <li><b>Podle klientů</b>: every client by total, with the bar measured against the top client, their share, invoice count, last invoice and anything unpaid. Tap a client to see their invoices.</li>
+      <li><b>Po měsících</b>: what was invoiced each month. Hover or tap a month to see which clients it came from; <b>Tabulka</b> shows the same as a table.</li>
+    </ul>
+    <p>Everything counts by issue date. Invoices go out at the start of the following month, so an October invoice is mostly September work.</p>
+  </section>
+
+  <!-- ===== finance ===== -->
+  <section class="sheet lab-sheet" id="finance">
+    <div class="sheet-head"><h2>Finance</h2><a class="open" href="finance.html">Open</a></div>
+    <p class="purpose">Net worth, subscriptions, incoming money and outgoing invoices in one place. Log account balances here and watch the trend; the other tabs keep the recurring pieces from slipping through.</p>
+    <h3>What each tab shows</h3>
+    <ul>
+      <li><b>Net worth</b>: total across bank, stocks, crypto and other accounts, a history chart, a category breakdown, and the recent activity log.</li>
+      <li><b>Subs</b>: active subscriptions and monthly burn, split personal and business, with an auto-deduct switch per subscription.</li>
+      <li><b>Orders</b>: money expected to land, with a button to deduct it into an account once it arrives.</li>
+      <li><b>Wishlist</b>: items priced as a percentage of your current net worth.</li>
+      <li><b>Faktury</b>: outgoing invoices pulled from iDoklad.</li>
+    </ul>
+  </section>
+
+  <!-- ===== fitness ===== -->
+  <section class="sheet lab-sheet" id="fitness">
+    <div class="sheet-head"><h2>Fitness</h2><a class="open" href="gym.html">Open</a></div>
+    <p class="purpose">A progressive-overload gym log. Pick push, pull or legs and home or commercial gym, log today's top set for each exercise, and it tells you what to do next time: hold the weight or add to it, based on how the reps went.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>Weight tracker</b>: current bodyweight, a seven-day trend, an estimated composition.</li>
+      <li><b>Progress photos</b>: a grid you can compare side by side or delete from.</li>
+      <li><b>Gym log</b>: pick your split and gym, log weight and reps per exercise as pills, and get a next-session recommendation with your estimated one-rep max, best set and session count.</li>
+      <li><b>Edit exercise</b>: rename, mark it bodyweight, set the starting weight, rep range and increment, or delete it.</li>
+    </ul>
+    <p>Everything lives only on this page; nothing here is read by another page in the dashboard.</p>
+  </section>
+
+  <!-- ===== supplements ===== -->
+  <section class="sheet lab-sheet" id="supplements">
+    <div class="sheet-head"><h2>Supplements</h2><a class="open" href="health.html">Open</a></div>
+    <p class="purpose">Your daily supplement stack. Build the list once with dose, time window and a note, then tick each one off as you take it. A running count shows how many are done, and a missed dose is flagged once its window's cutoff passes untaken. WHOOP recovery, sleep and strain sit here too, once connected.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>WHOOP</b>: a Connect button until it is linked, then a recovery ring, sleep stages and strain, HRV and resting heart rate.</li>
+      <li><b>Daily stack</b>: your items grouped by Morning, Lunch and Evening, each with a switch for taken, a note, and a running-low flag.</li>
+      <li><b>Add to stack</b>: search a built-in catalogue or type your own, with dose and window.</li>
+    </ul>
+    <p>This is also where you connect WHOOP; other pages only read what it reports once connected here.</p>
   </section>
 
   <!-- ===== daily ===== -->
@@ -138,79 +186,16 @@
     </ul>
   </section>
 
-  <!-- ===== finance ===== -->
-  <section class="sheet lab-sheet" id="finance">
-    <div class="sheet-head"><h2>Finance</h2><a class="open" href="finance.html">Open</a></div>
-    <p class="purpose">Net worth, subscriptions, incoming money and outgoing invoices in one place. Log account balances here and watch the trend; the other tabs keep the recurring pieces from slipping through.</p>
-    <h3>What each tab shows</h3>
-    <ul>
-      <li><b>Net worth</b>: total across bank, stocks, crypto and other accounts, a history chart, a category breakdown, and the recent activity log.</li>
-      <li><b>Subs</b>: active subscriptions and monthly burn, split personal and business, with an auto-deduct switch per subscription.</li>
-      <li><b>Orders</b>: money expected to land, with a button to deduct it into an account once it arrives.</li>
-      <li><b>Wishlist</b>: items priced as a percentage of your current net worth.</li>
-      <li><b>Faktury</b>: outgoing invoices pulled from iDoklad.</li>
-    </ul>
-  </section>
-
-  <!-- ===== business ===== -->
-  <section class="sheet lab-sheet" id="business">
-    <div class="sheet-head"><h2>Byznys</h2><a class="open" href="business.html">Open</a></div>
-    <p class="purpose">How much each client has earned you, read live from the invoices issued in iDoklad. Nothing to type here: issue the invoice in iDoklad and it shows up on the next load.</p>
-    <h3>What each part shows</h3>
-    <ul>
-      <li><b>Year chips</b>: one per year that has invoices, plus <b>Vše</b> for everything. The page remembers your choice.</li>
-      <li><b>The four figures</b>: invoiced, paid, still waiting for payment, and the monthly average over the months of the period so far.</li>
-      <li><b>Podle klientů</b>: every client by total, with the bar measured against the top client, their share, invoice count, last invoice and anything unpaid. Tap a client to see their invoices.</li>
-      <li><b>Po měsících</b>: what was invoiced each month. Hover or tap a month to see which clients it came from; <b>Tabulka</b> shows the same as a table.</li>
-    </ul>
-    <p>Everything counts by issue date. Invoices go out at the start of the following month, so an October invoice is mostly September work.</p>
-  </section>
-
-  <!-- ===== fitness ===== -->
-  <section class="sheet lab-sheet" id="fitness">
-    <div class="sheet-head"><h2>Fitness</h2><a class="open" href="gym.html">Open</a></div>
-    <p class="purpose">A progressive-overload gym log. Pick push, pull or legs and home or commercial gym, log today's top set for each exercise, and it tells you what to do next time: hold the weight or add to it, based on how the reps went.</p>
-    <h3>What each part shows</h3>
-    <ul>
-      <li><b>Weight tracker</b>: current bodyweight, a seven-day trend, an estimated composition.</li>
-      <li><b>Progress photos</b>: a grid you can compare side by side or delete from.</li>
-      <li><b>Gym log</b>: pick your split and gym, log weight and reps per exercise as pills, and get a next-session recommendation with your estimated one-rep max, best set and session count.</li>
-      <li><b>Edit exercise</b>: rename, mark it bodyweight, set the starting weight, rep range and increment, or delete it.</li>
-    </ul>
-    <p>Everything lives only on this page; nothing here is read by another page in the dashboard.</p>
-  </section>
-
-  <!-- ===== supplements ===== -->
-  <section class="sheet lab-sheet" id="supplements">
-    <div class="sheet-head"><h2>Supplements</h2><a class="open" href="health.html">Open</a></div>
-    <p class="purpose">Your daily supplement stack. Build the list once with dose, time window and a note, then tick each one off as you take it. A running count shows how many are done, and a missed dose is flagged once its window's cutoff passes untaken. WHOOP recovery, sleep and strain sit here too, once connected.</p>
-    <h3>What each part shows</h3>
-    <ul>
-      <li><b>WHOOP</b>: a Connect button until it is linked, then a recovery ring, sleep stages and strain, HRV and resting heart rate.</li>
-      <li><b>Daily stack</b>: your items grouped by Morning, Lunch and Evening, each with a switch for taken, a note, and a running-low flag.</li>
-      <li><b>Add to stack</b>: search a built-in catalogue or type your own, with dose and window.</li>
-    </ul>
-    <p>This is also where you connect WHOOP; other pages only read what it reports once connected here.</p>
-  </section>
-
-  <!-- ===== caffeine ===== -->
-  <section class="sheet lab-sheet" id="caffeine">
-    <div class="sheet-head"><h2>Caffeine</h2><a class="open" href="caffeine.html">Open</a></div>
-    <p class="purpose">Caffeine logs what you drink and when, and predicts the energy it gives you across the day from a half-life model plus your sleep and time awake. Search a drink or type your own; it lands in today's log and the ring, curve and plan update.</p>
-    <h3>What each part shows</h3>
-    <ul>
-      <li><b>Your day</b>: the energy ring, and a chart of predicted energy from midnight to midnight in three views, Line, Bars, Stack. Hover or drag it to check a specific time. Below it, the plan: peak focus window, predicted crash, and the last coffee that still lets you sleep on time.</li>
-      <li><b>Smart timing</b>: the same three facts as tiles, plus numbered tips.</li>
-      <li><b>Today</b>: milligrams logged against your ceiling, how much is still active in your system, and a bar that turns amber then red as you approach the limit.</li>
-      <li><b>Log a drink</b> and <b>Logged today</b>: search the built-in drink list or add your own name and mg; the log lists today's drinks with when they peak, half-clear and clear.</li>
-    </ul>
-    <p>The ceiling adjusts to your body weight and, when connected, last night's sleep from WHOOP.</p>
+  <!-- ===== the day ===== -->
+  <section class="sheet lab-sheet" id="day">
+    <div class="sheet-head"><h2>The day boundary</h2></div>
+    <p>Supplements and the top bar treat the day as flipping at <b>06:00</b>, so an entry made at 01:00 still belongs to the day you are finishing. The Daily tracker and Track use the calendar date in Europe/Prague. Between midnight and six the two disagree.</p>
   </section>
 
   <!-- ===== hub ===== -->
   <section class="sheet lab-sheet" id="hub">
     <div class="sheet-head"><h2>Hub and settings</h2><a class="open" href="index.html">Open</a></div>
-    <p class="purpose">The front door. Every page as a numbered tile, and behind the Settings button the body profile the other pages read when they need your weight: height, weight, age, sex, active hours a week. The WHOOP box at the foot of that form shows whether the band is connected and, when it is, the latest recovery, sleep and resting heart rate.</p>
+    <p class="purpose">The front door. Every page as a tile, grouped into four areas: <b>Business</b>, <b>Finance</b>, <b>Health</b> and <b>Day</b>, and behind the Settings button the body profile the other pages read when they need your weight: height, weight, age, sex, active hours a week. The WHOOP box at the foot of that form shows whether the band is connected and, when it is, the latest recovery, sleep and resting heart rate.</p>
     <h3>Settings</h3>
     <ul>
       <li><b>Your data</b>: height in cm or feet, weight in kg or lb, age, sex, active hours per week. Save writes the profile once; every page reads it.</li>

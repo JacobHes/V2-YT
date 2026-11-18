@@ -8,7 +8,7 @@
  * thin lab-<page>.css for its own shapes.
  * ============================================================= */
 
-/* ---------- family A: --text-primary, --success ... (index, track, caffeine, health, finance) ---------- */
+/* ---------- family A: --text-primary, --success ... (index, track, health, finance) ---------- */
 /* ---------- family B: --bg, --text-1 ... (daily, gym) ---------- */
 body.lab {
   --text-primary: var(--lab-ink);

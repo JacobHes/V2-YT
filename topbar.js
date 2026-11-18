@@ -11,18 +11,19 @@
 (function () {
   'use strict';
 
-  // Every page, in the order the drawer lists them. `blurb` is the one line
-  // that says what the page is for; the manual (guide.html) says the rest.
+  // Every page, grouped by life area, in the order the drawer lists them.
+  // `area` files a page under a heading; pages without one (the hub and the
+  // manual) close the list. `blurb` is the one line that says what the page
+  // is for; the manual (guide.html) says the rest.
   const PAGES = [
-    { href: 'daily.html',    key: 'daily',    label: 'Daily tracker', blurb: 'The daily log and the 30-day challenge' },
-    { href: 'track.html',    key: 'track',    label: 'Timer',         blurb: 'Time tracking by project' },
-    { href: 'finance.html',  key: 'finance',  label: 'Finance',       blurb: 'Net worth, subscriptions, spending' },
-    { href: 'business.html', key: 'business', label: 'Byznys',        blurb: 'Revenue per client, from iDoklad' },
-    { href: 'gym.html',      key: 'fitness',  label: 'Fitness',       blurb: 'Progressive overload log' },
-    { href: 'health.html',   key: 'health',   label: 'Supplements',   blurb: 'The daily stack and WHOOP' },
-    { href: 'caffeine.html', key: 'caffeine', label: 'Caffeine',      blurb: 'Intake and the crash curve' },
-    { href: 'index.html',    key: 'hub',      label: 'Hub',           blurb: 'Every page as a tile' },
-    { href: 'guide.html',    key: 'guide',    label: 'How this works', blurb: 'What each page is for and how the pieces connect' },
+    { href: 'business.html', key: 'business', area: 'Business', label: 'Byznys',         blurb: 'Revenue per client, from iDoklad' },
+    { href: 'finance.html',  key: 'finance',  area: 'Finance',  label: 'Finance',        blurb: 'Net worth, subscriptions, spending' },
+    { href: 'gym.html',      key: 'fitness',  area: 'Health',   label: 'Fitness',        blurb: 'Progressive overload log' },
+    { href: 'health.html',   key: 'health',   area: 'Health',   label: 'Supplements',    blurb: 'The daily stack and WHOOP' },
+    { href: 'daily.html',    key: 'daily',    area: 'Day',      label: 'Daily tracker',  blurb: 'The daily log and the 30-day challenge' },
+    { href: 'track.html',    key: 'track',    area: 'Day',      label: 'Timer',          blurb: 'Time tracking by project' },
+    { href: 'index.html',    key: 'hub',                        label: 'Hub',            blurb: 'Every page, by area' },
+    { href: 'guide.html',    key: 'guide',                      label: 'How this works', blurb: 'What each page is for and how the pieces connect' },
   ];
 
   // -------- CSS --------
@@ -140,7 +141,15 @@ body.nav-open { overflow: hidden; }
   font-size: 12px; line-height: 1.4;
   color: var(--lab-chalk-dim, rgba(233,226,208,0.62));
 }
-.nav-item.guide { margin-top: 8px; border-top: 1px solid rgba(233, 226, 208, 0.16); padding-top: 8px; }
+.nav-item.sep { margin-top: 8px; border-top: 1px solid rgba(233, 226, 208, 0.16); padding-top: 8px; }
+.nav-area {
+  padding: 16px 22px 4px;
+  font-family: var(--lab-display, Futura, 'Trebuchet MS', sans-serif);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--lab-chalk-dim, rgba(233,226,208,0.62));
+}
+.nav-area:first-child { padding-top: 6px; }
 
 /* Room for the fixed top bar: reserve exactly its measured height (set by
    reserveTop as --topbar-h), so no page has to know the bar exists. */
@@ -211,13 +220,23 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   }
 
   function drawerHtml(page) {
-    const items = PAGES.map(p => `
-    <li class="nav-item${p.key === page.key ? ' active' : ''}${p.key === 'guide' ? ' guide' : ''}">
+    // An area heading before the first page of each area; a rule before the
+    // first page that has no area.
+    let lastArea = null, ruled = false;
+    const items = PAGES.map(p => {
+      const head = p.area && p.area !== lastArea ? `
+    <li class="nav-area">${escapeHtml(p.area)}</li>` : '';
+      const sep = !p.area && !ruled;
+      if (sep) ruled = true;
+      lastArea = p.area || null;
+      return head + `
+    <li class="nav-item${p.key === page.key ? ' active' : ''}${sep ? ' sep' : ''}">
       <a href="${p.href}"${p.key === page.key ? ' aria-current="page"' : ''}>
         <span class="nav-item-label">${escapeHtml(p.label)}</span>
         <span class="nav-item-blurb">${escapeHtml(p.blurb)}</span>
       </a>
-    </li>`).join('');
+    </li>`;
+    }).join('');
     return `
 <div class="nav-backdrop" id="navBackdrop"></div>
 <nav class="nav-drawer" id="navDrawer" aria-label="Pages" aria-hidden="true">

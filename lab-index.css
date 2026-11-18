@@ -61,6 +61,16 @@ body.lab .gear-btn {
 body.lab .gear-btn:hover { background: var(--lab-ink); color: var(--lab-sheet); }
 body.lab .gear-btn:active { transform: none; }
 
+/* ---------- areas: a heading on a double rule above each group ---------- */
+body.lab .area-title {
+  padding-bottom: 7px;
+  border-bottom: 3px double var(--lab-rule);
+  font-family: var(--lab-display);
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  color: var(--lab-ink);
+}
+
 /* ---------- tiles: every one a sheet ---------- */
 body.lab .tile {
   --accent: var(--lab-ink);

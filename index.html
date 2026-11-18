@@ -128,6 +128,23 @@ body::after {
 }
 .tile:hover .tile-arrow { transform: translateX(4px); }
 
+/* ===== Areas: the hub in four life areas, two by two ===== */
+.areas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 18px; }
+.area { min-width: 0; }
+.area .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.area-title {
+  margin: 0 0 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.bento-extra { margin-top: 24px; }
+/* Below ~1000px a two-tile area is too narrow for a long title such as
+ * SUPPLEMENTS, so the areas stack and each keeps its two tiles side by side. */
+@media (max-width: 1000px) {
+  .areas { grid-template-columns: 1fr; }
+  .bento-extra { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ===== Responsive: collapse the bento on small screens ===== */
 @media (max-width: 720px) {
   .bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 150px; }
@@ -136,7 +153,7 @@ body::after {
 }
 @media (max-width: 440px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
-  .bento { grid-template-columns: 1fr; grid-auto-rows: 132px; }
+  .bento, .area .bento { grid-template-columns: 1fr; grid-auto-rows: 132px; }
   .tile.big, .tile.wide { grid-column: span 1; }
 }
 
@@ -217,103 +234,105 @@ body::after {
     <button class="gear-btn" id="settingsOpen" type="button">Settings</button>
   </div>
 
-  <div class="bento">
+  <!-- The hub in four life areas, two by two. -->
+  <div class="areas">
 
-    <!-- Big tile -->
-    <a class="tile big" href="business.html">
-      <div class="tile-top">
-        <span class="tile-num">·01</span>
+    <section class="area" aria-labelledby="area-business">
+      <h2 class="area-title" id="area-business">Business</h2>
+      <div class="bento">
+        <a class="tile wide" href="business.html">
+          <div class="tile-top">
+            <span class="tile-num">·01</span>
+          </div>
+          <div class="tile-spacer"></div>
+          <h2 class="tile-title">Byznys</h2>
+          <div class="tile-foot">
+            <span class="tile-sub">Revenue per client</span>
+            <span class="tile-arrow">→</span>
+          </div>
+        </a>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Byznys</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Revenue per client</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+    </section>
 
-    <!-- Wide tile -->
-    <a class="tile wide" href="gym.html">
-      <div class="tile-top">
-        <span class="tile-num">·02</span>
+    <section class="area" aria-labelledby="area-finance">
+      <h2 class="area-title" id="area-finance">Finance</h2>
+      <div class="bento">
+        <a class="tile wide" href="finance.html">
+          <div class="tile-top">
+            <span class="tile-num">·02</span>
+          </div>
+          <div class="tile-spacer"></div>
+          <h2 class="tile-title">Finance</h2>
+          <div class="tile-foot">
+            <span class="tile-sub">Net worth &amp; spending</span>
+            <span class="tile-arrow">→</span>
+          </div>
+        </a>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Fitness</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Workouts, splits, sessions</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+    </section>
 
-    <!-- Small tile -->
-    <a class="tile" href="health.html">
-      <div class="tile-top">
-        <span class="tile-num">·03</span>
+    <section class="area" aria-labelledby="area-health">
+      <h2 class="area-title" id="area-health">Health</h2>
+      <div class="bento">
+        <a class="tile" href="gym.html">
+          <div class="tile-top">
+            <span class="tile-num">·03</span>
+          </div>
+          <div class="tile-spacer"></div>
+          <h2 class="tile-title">Fitness</h2>
+          <div class="tile-foot">
+            <span class="tile-sub">Workouts, splits, sessions</span>
+            <span class="tile-arrow">→</span>
+          </div>
+        </a>
+        <a class="tile" href="health.html">
+          <div class="tile-top">
+            <span class="tile-num">·04</span>
+          </div>
+          <div class="tile-spacer"></div>
+          <h2 class="tile-title">Supplements</h2>
+          <div class="tile-foot">
+            <span class="tile-sub">Daily stack &amp; WHOOP</span>
+            <span class="tile-arrow">→</span>
+          </div>
+        </a>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Health</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Supplements & vitals</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+    </section>
 
-    <!-- Wide tile -->
-    <a class="tile wide" href="finance.html">
-      <div class="tile-top">
-        <span class="tile-num">·04</span>
+    <section class="area" aria-labelledby="area-day">
+      <h2 class="area-title" id="area-day">Day</h2>
+      <div class="bento">
+        <a class="tile" href="daily.html">
+          <div class="tile-top">
+            <span class="tile-num">·05</span>
+          </div>
+          <div class="tile-spacer"></div>
+          <h2 class="tile-title">Daily Tracker</h2>
+          <div class="tile-foot">
+            <span class="tile-sub">Cash, sleep &amp; constraints</span>
+            <span class="tile-arrow">→</span>
+          </div>
+        </a>
+        <a class="tile" href="track.html">
+          <div class="tile-top">
+            <span class="tile-num">·06</span>
+          </div>
+          <div class="tile-spacer"></div>
+          <h2 class="tile-title">Timer</h2>
+          <div class="tile-foot">
+            <span class="tile-sub">Time-track projects → Daily</span>
+            <span class="tile-arrow">→</span>
+          </div>
+        </a>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Finance</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Net worth & spending</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+    </section>
 
-    <!-- Small tile -->
-    <a class="tile" href="caffeine.html">
-      <div class="tile-top">
-        <span class="tile-num">·05</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Caffeine</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Intake & timing</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+  </div>
 
-    <!-- Wide tile -->
-    <a class="tile wide" href="daily.html">
-      <div class="tile-top">
-        <span class="tile-num">·06</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Daily Tracker</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Cash, sleep & constraints</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Wide tile -->
-    <a class="tile wide" href="track.html">
+  <div class="bento bento-extra">
+    <a class="tile" href="guide.html">
       <div class="tile-top">
         <span class="tile-num">·07</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Timer</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Time-track projects → Daily</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Wide tile -->
-    <a class="tile wide" href="guide.html">
-      <div class="tile-top">
-        <span class="tile-num">·08</span>
       </div>
       <div class="tile-spacer"></div>
       <h2 class="tile-title">How this works</h2>
@@ -322,7 +341,6 @@ body::after {
         <span class="tile-arrow">→</span>
       </div>
     </a>
-
   </div>
 </div>
 
