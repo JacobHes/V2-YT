@@ -8,7 +8,7 @@
 //   IDOKLAD_CLIENT_SECRET   your iDoklad API client secret  (secret!)
 //
 // Auth: OAuth2 client_credentials against identity.idoklad.cz,
-// then GET https://api.idoklad.cz/v3/IssuedInvoices.
+// then GET https://api.idoklad.cz/v3/IssuedInvoices, every page (100 per page).
 // Add ?debug=1 to get the raw first invoice back for field mapping.
 // ============================================================
 export default async function handler(req, res) {
@@ -42,22 +42,43 @@ export default async function handler(req, res) {
     const token = (await tokenRes.json()).access_token;
     if (!token) return res.status(200).json({ ok: false, error: 'no_token' });
 
-    // 2) Issued invoices — try newest-first, fall back to unsorted.
+    // 2) Issued invoices, every page. Newest first when the API accepts the
+    //    sort; unsorted otherwise (the list is re-sorted below either way).
     const base = 'https://api.idoklad.cz/v3/IssuedInvoices';
     const authHeaders = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' };
-    let invRes = await fetch(base + '?pagesize=25&sort=DateOfIssue~desc', { headers: authHeaders });
-    if (!invRes.ok) invRes = await fetch(base, { headers: authHeaders });
-    if (!invRes.ok) {
-      const detail = (await invRes.text()).slice(0, 400);
-      return res.status(200).json({ ok: false, error: 'fetch_failed', status: invRes.status, detail });
+    const pickList = (d) => Array.isArray(d) ? d
+      : (d && Array.isArray(d.Data)) ? d.Data
+      : (d && Array.isArray(d.data)) ? d.data
+      : (d && Array.isArray(d.Items)) ? d.Items
+      : (d && d.Data && Array.isArray(d.Data.Items)) ? d.Data.Items
+      : [];
+    const PAGE_SIZE = 100, MAX_PAGES = 30;
+    let sort = '&sort=DateOfIssue~desc';
+    let list = [], data = null, pages = 0;
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      let invRes = await fetch(base + '?page=' + page + '&pagesize=' + PAGE_SIZE + sort, { headers: authHeaders });
+      if (!invRes.ok && page === 1 && sort) {
+        sort = '';
+        invRes = await fetch(base + '?page=1&pagesize=' + PAGE_SIZE, { headers: authHeaders });
+      }
+      if (!invRes.ok) {
+        if (page === 1) {
+          const detail = (await invRes.text()).slice(0, 400);
+          return res.status(200).json({ ok: false, error: 'fetch_failed', status: invRes.status, detail });
+        }
+        // A later page failing: return what we have, flagged as partial.
+        data = data || {};
+        data.__partial = true;
+        break;
+      }
+      const pageData = await invRes.json();
+      if (!data) data = pageData;
+      const items = pickList(pageData);
+      list = list.concat(items);
+      pages = page;
+      const totalPages = pageData && pageData.Data && pageData.Data.TotalPages;
+      if (items.length < PAGE_SIZE || (totalPages && page >= totalPages)) break;
     }
-    const data = await invRes.json();
-    let list = [];
-    if (Array.isArray(data)) list = data;
-    else if (data && Array.isArray(data.Data)) list = data.Data;
-    else if (data && Array.isArray(data.data)) list = data.data;
-    else if (data && Array.isArray(data.Items)) list = data.Items;
-    else if (data && data.Data && Array.isArray(data.Data.Items)) list = data.Data.Items;
 
     if (req.query && req.query.debug) {
       return res.status(200).json({
@@ -65,6 +86,7 @@ export default async function handler(req, res) {
         topType: Array.isArray(data) ? 'array' : typeof data,
         topKeys: (data && typeof data === 'object' && !Array.isArray(data)) ? Object.keys(data) : null,
         listLen: list.length,
+        pages: pages,
         sample: list[0] || null,
         rawSnippet: JSON.stringify(data).slice(0, 1000)
       });
@@ -91,6 +113,7 @@ export default async function handler(req, res) {
              : (prices.TotalWithVatHc != null ? prices.TotalWithVatHc
              : (iv.TotalWithVat != null ? iv.TotalWithVat : null)),
         totalHc: prices.TotalWithVatHc != null ? prices.TotalWithVatHc : null,
+        paidHc: prices.TotalPaidHc != null ? prices.TotalPaidHc : null,
         currencyId: iv.CurrencyId != null ? iv.CurrencyId : null,
         // PaymentStatus: 0 unpaid, 1 paid, 2 partially, 3 overpaid (iDoklad v3)
         paymentStatus: iv.PaymentStatus != null ? iv.PaymentStatus : null
@@ -99,7 +122,7 @@ export default async function handler(req, res) {
     // Newest first, regardless of what the API returned.
     invoices.sort((a, b) => String(b.issued || '').localeCompare(String(a.issued || '')));
 
-    return res.status(200).json({ ok: true, count: invoices.length, invoices });
+    return res.status(200).json({ ok: true, count: invoices.length, pages, partial: !!(data && data.__partial), invoices });
   } catch (e) {
     return res.status(200).json({ ok: false, error: 'exception', message: String(e && e.message || e).slice(0, 300) });
   }

@@ -90,6 +90,7 @@
       <li><a href="#daily">Daily tracker</a></li>
       <li><a href="#track">Timer</a></li>
       <li><a href="#finance">Finance</a></li>
+      <li><a href="#business">Byznys</a></li>
       <li><a href="#fitness">Fitness</a></li>
       <li><a href="#supplements">Supplements</a></li>
       <li><a href="#caffeine">Caffeine</a></li>
@@ -149,6 +150,20 @@
       <li><b>Wishlist</b>: items priced as a percentage of your current net worth.</li>
       <li><b>Faktury</b>: outgoing invoices pulled from iDoklad.</li>
     </ul>
+  </section>
+
+  <!-- ===== business ===== -->
+  <section class="sheet lab-sheet" id="business">
+    <div class="sheet-head"><h2>Byznys</h2><a class="open" href="business.html">Open</a></div>
+    <p class="purpose">How much each client has earned you, read live from the invoices issued in iDoklad. Nothing to type here: issue the invoice in iDoklad and it shows up on the next load.</p>
+    <h3>What each part shows</h3>
+    <ul>
+      <li><b>Year chips</b>: one per year that has invoices, plus <b>Vše</b> for everything. The page remembers your choice.</li>
+      <li><b>The four figures</b>: invoiced, paid, still waiting for payment, and the monthly average over the months of the period so far.</li>
+      <li><b>Podle klientů</b>: every client by total, with the bar measured against the top client, their share, invoice count, last invoice and anything unpaid. Tap a client to see their invoices.</li>
+      <li><b>Po měsících</b>: what was invoiced each month. Hover or tap a month to see which clients it came from; <b>Tabulka</b> shows the same as a table.</li>
+    </ul>
+    <p>Everything counts by issue date. Invoices go out at the start of the following month, so an October invoice is mostly September work.</p>
   </section>
 
   <!-- ===== fitness ===== -->
@@ -211,6 +226,7 @@
       <li><b>Local first.</b> The page always reads and writes locally. If the cloud is unreachable the page still works; it just stops syncing until it is back.</li>
       <li><b>Merge, not overwrite.</b> On load a page pulls the cloud row, merges it with local, then uploads. Deletions are remembered so a delete on one device is not undone by another.</li>
       <li><b>One row per page.</b> Daily, Track, Finance, Supplements each own a row. Track also writes into Daily's row, which is how tracked minutes appear in the daily log without retyping.</li>
+      <li><b>Byznys has no row.</b> It reads iDoklad through the site and keeps the last answer in the browser, so it opens instantly and still shows the last figures offline.</li>
       <li><b>The site itself</b> is static files on Vercel, deployed from the GitHub repository on every push to main.</li>
     </ul>
   </section>

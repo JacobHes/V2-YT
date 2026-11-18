@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6DBC2">
+<title>Byznys · Dashboard</title>
+<script src="topbar.js" defer></script>
+<link rel="stylesheet" href="lab-theme.css">
+<link rel="stylesheet" href="lab-pages.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { min-height: 100vh; padding: 28px 20px 60px; }
+  .page { max-width: 860px; margin: 0 auto; }
+
+  .biz-title {
+    display: flex; align-items: center; gap: 14px;
+    margin: 0 0 6px;
+    font-family: var(--lab-display); font-size: clamp(20px, 5vw, 26px); font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--lab-ink);
+    white-space: nowrap;
+  }
+  .biz-title::before, .biz-title::after { content: ''; flex: 1; height: 1px; background: var(--lab-rule); }
+  .biz-lede { margin: 0 0 20px; text-align: center; font-size: 13px; line-height: 1.6; color: var(--lab-ink-dim); }
+
+  /* period filter: one row above everything it filters */
+  .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 16px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .chip {
+    min-height: 38px; padding: 7px 14px;
+    border: 1px solid var(--lab-ink); border-radius: 2px; background: transparent; color: var(--lab-ink);
+    font-family: var(--lab-type); font-size: 12px; letter-spacing: 0.1em; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .chip.on { background: var(--lab-ink); color: var(--lab-sheet); }
+  .lab-btn:disabled { opacity: 0.5; cursor: default; }
+  .status { margin: 0 0 16px; padding: 10px 12px; border: 1px dashed var(--lab-rule); font-size: 13px; line-height: 1.55; color: var(--lab-ink); }
+
+  /* headline figures */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 18px; }
+  .kpi { padding: 14px 14px 12px; min-width: 0; }
+  .kpi-val { font-size: clamp(17px, 3.1vw, 24px); margin: 8px 0 4px; white-space: nowrap; }
+  .kpi-val.is-red { color: var(--lab-red); }
+  .kpi-sub { font-size: 11.5px; line-height: 1.4; color: var(--lab-ink-dim); }
+  @media (max-width: 700px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+
+  .sheet { margin: 0 0 18px; padding: 16px 18px 14px; }
+  .lab-sheet-head h2 { margin: 0; }
+  .head-meta { margin-left: auto; }
+
+  /* by client: one bar per client, length relative to the top client */
+  .client { border-bottom: 1px solid var(--lab-rule-faint); }
+  .client:last-child { border-bottom: 0; }
+  .client-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; align-items: baseline;
+    width: 100%; padding: 12px 0; margin: 0;
+    background: none; border: 0; text-align: left; color: var(--lab-ink); font: inherit; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .c-name { font-size: 15px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+  .client-row:hover .c-name, .client.open .c-name { text-decoration: underline; text-underline-offset: 3px; }
+  .c-amt { font-size: 16px; text-align: right; white-space: nowrap; }
+  .c-bar { grid-column: 1 / -1; height: 8px; }
+  .c-bar span { display: block; height: 100%; background: var(--acc-mover); border-radius: 0 4px 4px 0; }
+  .c-meta { grid-column: 1 / -1; font-size: 12px; line-height: 1.45; color: var(--lab-ink-dim); }
+  .red { color: var(--lab-red); }
+  .inv-list { padding: 0 0 12px; }
+  .inv {
+    display: grid; grid-template-columns: 88px 1fr auto; gap: 10px; align-items: baseline;
+    padding: 7px 0; border-top: 1px dashed var(--lab-rule-faint); font-size: 13px; line-height: 1.4;
+  }
+  .inv-date { color: var(--lab-ink-dim); font-variant-numeric: tabular-nums; }
+  .inv-num { color: var(--lab-ink-dim); font-size: 11.5px; white-space: nowrap; }
+  .inv-amt { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .empty-line { margin: 6px 0; font-size: 13px; color: var(--lab-ink-dim); }
+
+  /* by month */
+  .chart { width: 100%; overflow: hidden; touch-action: pan-y; }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .chart .grid { stroke: var(--lab-rule-faint); stroke-width: 1; }
+  .chart .grid.base { stroke: var(--lab-rule); }
+  .chart .ax { font-family: var(--lab-type); font-size: 10.5px; fill: var(--lab-ink-dim); }
+  .chart .val { font-family: var(--lab-display); font-size: 11px; font-weight: 700; fill: var(--lab-ink); }
+  .chart .bar { fill: var(--acc-mover); }
+  .chart .hit { fill: transparent; }
+  .chart .hit.on { fill: rgba(33, 28, 22, 0.06); }
+  .table-view { margin-top: 10px; }
+  .table-view summary { cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 0; font-size: 13px; }
+  th { text-align: left; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lab-ink-dim); font-weight: 700; padding: 4px 8px 6px 0; border-bottom: 3px double var(--lab-rule); }
+  td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--lab-rule-faint); }
+  tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .wrap { overflow-x: auto; }
+
+  .tip {
+    position: fixed; z-index: 80; min-width: 190px; max-width: 290px; padding: 10px 12px;
+    background: var(--lab-sheet); border: 1px solid var(--lab-ink); box-shadow: 3px 3px 0 var(--lab-rule-faint);
+    font-size: 12.5px; color: var(--lab-ink); pointer-events: none;
+  }
+  .tip-h { font-family: var(--lab-type); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lab-ink-dim); }
+  .tip-total { margin: 3px 0 6px; font-family: var(--lab-display); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tip-row { display: flex; justify-content: space-between; gap: 14px; padding: 2px 0; }
+  .tip-row span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .foot { margin-top: 22px; text-align: center; }
+</style>
+</head>
+<body class="lab">
+<div class="page">
+
+  <h1 class="biz-title">Byznys</h1>
+  <p class="biz-lede">Kolik ti vydělal který klient, podle faktur vydaných v iDokladu.<br>Počítá se podle data vystavení, takže faktura z října je většinou za práci v září.</p>
+
+  <div class="filters" role="toolbar" aria-label="Období">
+    <div class="chips" id="yearChips"></div>
+    <button class="lab-btn" id="refresh" type="button">Obnovit</button>
+  </div>
+
+  <div class="status" id="status" hidden></div>
+
+  <section class="kpis" aria-label="Souhrn">
+    <div class="kpi lab-sheet"><div class="lab-label">Vyfakturováno</div><div class="lab-figure kpi-val" id="kTotal">…</div><div class="kpi-sub" id="kTotalSub"></div></div>
+    <div class="kpi lab-sheet"><div class="lab-label">Zaplaceno</div><div class="lab-figure kpi-val" id="kPaid">…</div><div class="kpi-sub" id="kPaidSub"></div></div>
+    <div class="kpi lab-sheet"><div class="lab-label">Čeká na platbu</div><div class="lab-figure kpi-val" id="kOpen">…</div><div class="kpi-sub" id="kOpenSub"></div></div>
+    <div class="kpi lab-sheet"><div class="lab-label">Průměr za měsíc</div><div class="lab-figure kpi-val" id="kAvg">…</div><div class="kpi-sub" id="kAvgSub"></div></div>
+  </section>
+
+  <section class="sheet lab-sheet">
+    <div class="lab-sheet-head"><h2 class="lab-heading">Podle klientů</h2><span class="lab-label head-meta" id="clientMeta"></span></div>
+    <div id="clients"></div>
+  </section>
+
+  <section class="sheet lab-sheet">
+    <div class="lab-sheet-head"><h2 class="lab-heading">Po měsících</h2><span class="lab-label head-meta" id="monthMeta"></span></div>
+    <div class="chart" id="chart"></div>
+    <details class="table-view"><summary class="lab-label">Tabulka</summary><div class="wrap" id="monthTable"></div></details>
+  </section>
+
+  <div class="foot lab-label" id="foot"></div>
+</div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script>
+(function () {
+  'use strict';
+  // Reads /api/idoklad-invoices (the iDoklad proxy finance.html's Faktury tab
+  // also uses). Keeps the last answer in this browser only, so the page draws
+  // at once and still shows something offline. No cloud row.
+  const CACHE_KEY = 'biz:cache', YEAR_KEY = 'biz:year';
+  const MONTHS = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const kc = (n) => Math.round(n || 0).toLocaleString('cs-CZ') + ' Kč';
+  const pct = (x) => (x * 100).toLocaleString('cs-CZ', { maximumFractionDigits: 1 }) + ' %';
+  const plural = (n, one, few, many) => (n === 1 ? one : (n >= 2 && n <= 4 ? few : many));
+  const faktur = (n) => n + plural(n, ' faktura', ' faktury', ' faktur');
+  const sum = (list, k) => list.reduce((a, i) => a + i[k], 0);
+  const fmtDate = (iso) => {
+    if (!iso) return '–';
+    const d = new Date(String(iso).slice(0, 10) + 'T12:00:00');
+    return isNaN(d) ? String(iso) : d.toLocaleDateString('cs-CZ');
+  };
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const nowYm = () => { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1); };
+  const addMonth = (key, n) => {
+    let [y, m] = key.split('-').map(Number); m += n;
+    while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; }
+    return y + '-' + pad2(m);
+  };
+  const monthRange = (from, to) => { const out = []; for (let k = from; k <= to && out.length < 240; k = addMonth(k, 1)) out.push(k); return out; };
+  const monthLong = (key) => { const [y, m] = key.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' }); };
+
+  // One invoice in CZK: what was billed and what has come in.
+  function norm(iv) {
+    const amount = Number(iv.totalHc != null ? iv.totalHc : (iv.total != null ? iv.total : 0)) || 0;
+    let paid = iv.paidHc != null ? (Number(iv.paidHc) || 0) : ((iv.paymentStatus === 1 || iv.paymentStatus === 3) ? amount : 0);
+    paid = Math.min(paid, amount);
+    const name = iv.partner || 'Bez odběratele';
+    const issued = String(iv.issued || '');
+    return Object.assign({}, iv, {
+      amount, paid, open: Math.max(0, amount - paid), name,
+      month: issued.slice(0, 7), year: issued.slice(0, 4),
+      clientKey: iv.partnerId != null ? 'p' + iv.partnerId : 'n' + name
+    });
+  }
+
+  let all = [];
+  let year = null;
+  let openClient = null;
+  let lastBars = [];
+
+  const years = () => [...new Set(all.map((i) => i.year).filter(Boolean))].sort().reverse();
+  function pickYear(wanted) {
+    const ys = years(), cy = String(new Date().getFullYear());
+    if (wanted && (wanted === 'all' ? ys.length > 1 : ys.includes(wanted))) return wanted;
+    return ys.includes(cy) ? cy : (ys[0] || 'all');
+  }
+  const inPeriod = () => (year === 'all' ? all : all.filter((i) => i.year === year));
+  // The months a period covers: a past year is all twelve, the current year
+  // runs to this month, "all" runs from the first invoice to this month.
+  function periodMonths(list) {
+    const now = nowYm();
+    const latest = list.reduce((a, i) => (i.month > a ? i.month : a), '');
+    if (year === 'all') {
+      if (!list.length) return [];
+      const first = list.reduce((a, i) => (i.month && i.month < a ? i.month : a), list[0].month);
+      return monthRange(first, latest > now ? latest : now);
+    }
+    let to = year + '-12';
+    if (now.slice(0, 4) === year) to = latest > now ? latest : now;
+    return monthRange(year + '-01', to);
+  }
+
+  function renderChips() {
+    const ys = years();
+    const opts = ys.map((y) => ({ v: y, t: y })).concat(ys.length > 1 ? [{ v: 'all', t: 'Vše' }] : []);
+    $('yearChips').innerHTML = opts.map((o) =>
+      '<button type="button" class="chip' + (o.v === year ? ' on' : '') + '" data-y="' + o.v + '" aria-pressed="' + (o.v === year) + '">' + o.t + '</button>'
+    ).join('');
+  }
+
+  function renderKpis(list, months) {
+    const total = sum(list, 'amount'), paid = sum(list, 'paid'), open = sum(list, 'open');
+    const openN = list.filter((i) => i.open > 0).length, n = months.length || 1;
+    $('kTotal').textContent = kc(total);
+    $('kTotalSub').textContent = faktur(list.length);
+    $('kPaid').textContent = kc(paid);
+    $('kPaidSub').textContent = total ? pct(paid / total) + ' z vyfakturovaného' : '';
+    $('kOpen').textContent = kc(open);
+    $('kOpen').classList.toggle('is-red', open > 0);
+    $('kOpenSub').textContent = openN ? faktur(openN) : 'vše zaplaceno';
+    $('kAvg').textContent = kc(total / n);
+    $('kAvgSub').textContent = 'za ' + n + plural(n, ' měsíc', ' měsíce', ' měsíců');
+  }
+
+  function groupClients(list) {
+    const m = new Map();
+    list.forEach((i) => {
+      let c = m.get(i.clientKey);
+      if (!c) { c = { key: i.clientKey, name: i.name, total: 0, open: 0, invoices: [], last: '' }; m.set(i.clientKey, c); }
+      c.total += i.amount; c.open += i.open; c.invoices.push(i);
+      if ((i.issued || '') > c.last) { c.last = i.issued || ''; c.name = i.name; }
+    });
+    return [...m.values()].sort((a, b) => b.total - a.total);
+  }
+  function invRow(i) {
+    const st = i.open <= 0 ? '' : '<br><span class="red">' + (i.paid > 0 ? 'částečně' : 'nezaplaceno') + '</span>';
+    return '<div class="inv"><span class="inv-date">' + fmtDate(i.issued) + '</span>'
+      + '<span>' + esc(i.description || '') + (i.number ? ' <span class="inv-num">' + esc(i.number) + '</span>' : '') + '</span>'
+      + '<span class="inv-amt">' + kc(i.amount) + st + '</span></div>';
+  }
+  function renderClients(list) {
+    const cs = groupClients(list), total = sum(list, 'amount'), max = cs.length ? cs[0].total : 0;
+    $('clientMeta').textContent = cs.length ? cs.length + plural(cs.length, ' klient', ' klienti', ' klientů') : '';
+    if (!cs.length) { $('clients').innerHTML = '<p class="empty-line">V tomhle období žádné faktury.</p>'; return; }
+    $('clients').innerHTML = cs.map((c) => {
+      const isOpen = openClient === c.key;
+      const w = max > 0 ? Math.max(1.5, (c.total / max) * 100) : 0;
+      return '<div class="client' + (isOpen ? ' open' : '') + '">'
+        + '<button type="button" class="client-row" data-c="' + esc(c.key) + '" aria-expanded="' + isOpen + '">'
+        + '<span class="c-name">' + esc(c.name) + '</span>'
+        + '<span class="c-amt lab-figure">' + kc(c.total) + '</span>'
+        + '<span class="c-bar" aria-hidden="true"><span style="width:' + w.toFixed(2) + '%"></span></span>'
+        + '<span class="c-meta">' + pct(total ? c.total / total : 0) + ' · ' + faktur(c.invoices.length) + ' · poslední ' + fmtDate(c.last)
+        + (c.open > 0 ? ' · <b class="red">nezaplaceno ' + kc(c.open) + '</b>' : '') + '</span>'
+        + '</button>'
+        + (isOpen ? '<div class="inv-list">' + c.invoices.map(invRow).join('') + '</div>' : '')
+        + '</div>';
+    }).join('');
+  }
+
+  function niceStep(x) {
+    if (!(x > 0)) return 1;
+    const p = Math.pow(10, Math.floor(Math.log10(x))), f = x / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+  }
+  function shortKc(v) {
+    if (v >= 1e6) return (v / 1e6).toLocaleString('cs-CZ', { maximumFractionDigits: 1 }) + ' mil.';
+    if (v >= 1e3) return Math.round(v / 1e3).toLocaleString('cs-CZ') + ' tis.';
+    return Math.round(v).toLocaleString('cs-CZ');
+  }
+  function renderChart(list, months) {
+    const el = $('chart');
+    const byM = new Map(months.map((k) => [k, { key: k, total: 0, n: 0, clients: new Map() }]));
+    list.forEach((i) => {
+      const b = byM.get(i.month); if (!b) return;
+      b.total += i.amount; b.n++;
+      b.clients.set(i.name, (b.clients.get(i.name) || 0) + i.amount);
+    });
+    const bars = lastBars = [...byM.values()];
+    const best = bars.reduce((bi, b, i, a) => (b.total > a[bi].total ? i : bi), 0);
+    $('monthMeta').textContent = bars.length && bars[best].total > 0 ? 'nejvíc ' + monthLong(bars[best].key) : '';
+    if (!bars.length) { el.innerHTML = '<p class="empty-line">Žádná data.</p>'; $('monthTable').innerHTML = ''; return; }
+
+    const W = Math.max(280, Math.round(el.clientWidth || 600)), H = 230;
+    const padL = 50, padR = 6, padT = 22, padB = 26, iw = W - padL - padR, ih = H - padT - padB;
+    const maxV = Math.max(1, ...bars.map((b) => b.total));
+    const step = niceStep(maxV / 4), top = Math.ceil(maxV / step) * step;
+    const slot = iw / bars.length, bw = Math.max(2, Math.min(40, slot - Math.max(2, slot * 0.3)));
+    const y = (v) => padT + ih - (v / top) * ih, base = padT + ih;
+    const every = bars.length > 14 ? Math.ceil(bars.length / 12) : 1;
+    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Vyfakturováno po měsících">';
+    for (let v = 0; v <= top + 1e-6; v += step) {
+      const yy = y(v).toFixed(1);
+      s += '<line class="grid' + (v === 0 ? ' base' : '') + '" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy + '" y2="' + yy + '"/>'
+        + '<text class="ax" x="' + (padL - 6) + '" y="' + (+yy + 3.5).toFixed(1) + '" text-anchor="end">' + (v === 0 ? '0' : shortKc(v)) + '</text>';
+    }
+    bars.forEach((b, i) => {
+      const cx = padL + slot * i + slot / 2, x = cx - bw / 2;
+      if (b.total > 0) {
+        const yt = y(b.total), r = Math.min(4, bw / 2, base - yt);
+        s += '<path class="bar" d="M' + x.toFixed(1) + ',' + base + ' V' + (yt + r).toFixed(1)
+          + ' Q' + x.toFixed(1) + ',' + yt.toFixed(1) + ' ' + (x + r).toFixed(1) + ',' + yt.toFixed(1)
+          + ' H' + (x + bw - r).toFixed(1) + ' Q' + (x + bw).toFixed(1) + ',' + yt.toFixed(1) + ' ' + (x + bw).toFixed(1) + ',' + (yt + r).toFixed(1)
+          + ' V' + base + ' Z"/>';
+      }
+      const parts = b.key.split('-');
+      if (i % every === 0) {
+        const lbl = MONTHS[+parts[1] - 1] + (year === 'all' && (parts[1] === '01' || i === 0) ? ' ' + parts[0].slice(2) : '');
+        s += '<text class="ax" x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + lbl + '</text>';
+      }
+      if (i === best && b.total > 0) s += '<text class="val" x="' + cx.toFixed(1) + '" y="' + (y(b.total) - 6).toFixed(1) + '" text-anchor="middle">' + shortKc(b.total) + '</text>';
+      s += '<rect class="hit" data-i="' + i + '" x="' + (padL + slot * i).toFixed(1) + '" y="' + padT + '" width="' + slot.toFixed(1) + '" height="' + ih + '"/>';
+    });
+    el.innerHTML = s + '</svg>';
+    $('monthTable').innerHTML = '<table><tr><th>Měsíc</th><th class="num">Vyfakturováno</th><th class="num">Faktur</th></tr>'
+      + bars.map((b) => '<tr><td>' + monthLong(b.key) + '</td><td class="num">' + kc(b.total) + '</td><td class="num">' + b.n + '</td></tr>').join('')
+      + '</table>';
+  }
+
+  // hover / tap: the month total and who it came from
+  const tip = $('tip');
+  function highlight(i) { $('chart').querySelectorAll('.hit').forEach((h) => h.classList.toggle('on', +h.dataset.i === i)); }
+  function showTip(i, e) {
+    const b = lastBars[i]; if (!b) return;
+    const rows = [...b.clients.entries()].sort((a, c) => c[1] - a[1]);
+    tip.innerHTML = '<div class="tip-h">' + monthLong(b.key) + '</div><div class="tip-total">' + kc(b.total) + '</div>'
+      + (rows.length ? rows.map((r) => '<div class="tip-row"><span>' + esc(r[0]) + '</span><span>' + kc(r[1]) + '</span></div>').join('')
+        : '<div class="tip-row"><span>Žádná faktura</span></div>');
+    tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    let x = e.clientX + 14, yy = e.clientY + 14;
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+    if (yy + r.height > innerHeight - 8) yy = e.clientY - r.height - 14;
+    tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, yy) + 'px';
+    highlight(i);
+  }
+  function hideTip() { tip.hidden = true; highlight(-1); }
+  $('chart').addEventListener('pointermove', (e) => { const h = e.target.closest('.hit'); if (h) showTip(+h.dataset.i, e); else hideTip(); });
+  $('chart').addEventListener('pointerdown', (e) => { const h = e.target.closest('.hit'); if (h) showTip(+h.dataset.i, e); });
+  $('chart').addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') hideTip(); });
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#chart')) hideTip(); });
+  addEventListener('scroll', hideTip, { passive: true });
+
+  function render() {
+    renderChips();
+    const list = inPeriod(), months = periodMonths(list);
+    renderKpis(list, months);
+    renderClients(list);
+    renderChart(list, months);
+  }
+
+  $('yearChips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-y]'); if (!b) return;
+    year = b.dataset.y; openClient = null;
+    try { localStorage.setItem(YEAR_KEY, year); } catch (err) {}
+    render();
+  });
+  $('clients').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-c]'); if (!b) return;
+    openClient = openClient === b.dataset.c ? null : b.dataset.c;
+    renderClients(inPeriod());
+  });
+  let rz = null;
+  addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (all.length) renderChart(inPeriod(), periodMonths(inPeriod())); }, 150); });
+
+  // ---------- data ----------
+  function setStatus(html) { const el = $('status'); el.hidden = !html; el.innerHTML = html || ''; }
+  function apply(invoices, at, partial) {
+    all = invoices.map(norm).sort((a, b) => String(b.issued || '').localeCompare(String(a.issued || '')));
+    let saved = null; try { saved = localStorage.getItem(YEAR_KEY); } catch (err) {}
+    year = pickYear(year || saved);
+    render();
+    $('foot').textContent = 'iDoklad · ' + faktur(all.length) + (partial ? ' (neúplné)' : '') + ' · načteno '
+      + new Date(at).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  function errorText(d) {
+    if (d.error === 'not_configured') return 'iDoklad není napojený. Ve Vercelu chybí proměnné <b>IDOKLAD_CLIENT_ID</b> a <b>IDOKLAD_CLIENT_SECRET</b>.';
+    if (d.error === 'auth_failed') return 'iDoklad odmítl přihlášení. Zkontroluj client_id a client_secret ve Vercelu.';
+    return 'iDoklad vrátil chybu: ' + esc(String(d.error || 'neznámá')) + (d.status ? ' (' + esc(String(d.status)) + ')' : '') + '.';
+  }
+  async function load() {
+    $('refresh').disabled = true;
+    if (!all.length) setStatus('Načítám faktury z iDokladu…');
+    try {
+      const r = await fetch('/api/idoklad-invoices', { cache: 'no-store' });
+      const d = await r.json();
+      if (!d.ok) { setStatus(errorText(d) + (all.length ? ' Ukazuju poslední načtená data.' : '')); return; }
+      const at = Date.now(), invoices = d.invoices || [];
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at, partial: !!d.partial, invoices })); } catch (err) {}
+      setStatus(d.partial ? 'iDoklad vrátil jen část faktur, zkus Obnovit.' : '');
+      apply(invoices, at, d.partial);
+    } catch (err) {
+      setStatus('Faktury se nepodařilo načíst. Funguje to jen na nasazeném webu.' + (all.length ? ' Ukazuju poslední načtená data.' : ''));
+    } finally {
+      $('refresh').disabled = false;
+    }
+  }
+  $('refresh').addEventListener('click', load);
+
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (c && Array.isArray(c.invoices)) apply(c.invoices, c.at || Date.now(), c.partial);
+  } catch (err) {}
+  load();
+})();
+</script>
+</body>
+</html>

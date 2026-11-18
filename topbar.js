@@ -17,6 +17,7 @@
     { href: 'daily.html',    key: 'daily',    label: 'Daily tracker', blurb: 'The daily log and the 30-day challenge' },
     { href: 'track.html',    key: 'track',    label: 'Timer',         blurb: 'Time tracking by project' },
     { href: 'finance.html',  key: 'finance',  label: 'Finance',       blurb: 'Net worth, subscriptions, spending' },
+    { href: 'business.html', key: 'business', label: 'Byznys',        blurb: 'Revenue per client, from iDoklad' },
     { href: 'gym.html',      key: 'fitness',  label: 'Fitness',       blurb: 'Progressive overload log' },
     { href: 'health.html',   key: 'health',   label: 'Supplements',   blurb: 'The daily stack and WHOOP' },
     { href: 'caffeine.html', key: 'caffeine', label: 'Caffeine',      blurb: 'Intake and the crash curve' },
