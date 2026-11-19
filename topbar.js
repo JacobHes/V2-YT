@@ -19,7 +19,7 @@
     { href: 'business.html', key: 'business', area: 'Business', label: 'Byznys',         blurb: 'Revenue per client, from iDoklad' },
     { href: 'finance.html',  key: 'finance',  area: 'Finance',  label: 'Finance',        blurb: 'Net worth, subscriptions, spending' },
     { href: 'gym.html',      key: 'fitness',  area: 'Health',   label: 'Fitness',        blurb: 'Progressive overload log' },
-    { href: 'health.html',   key: 'health',   area: 'Health',   label: 'Supplements',    blurb: 'The daily stack and WHOOP' },
+    { href: 'health.html',   key: 'health',   area: 'Health',   label: 'Supplements',    blurb: 'The daily supplement stack' },
     { href: 'daily.html',    key: 'daily',    area: 'Day',      label: 'Daily tracker',  blurb: 'The daily log and the 30-day challenge' },
     { href: 'track.html',    key: 'track',    area: 'Day',      label: 'Timer',          blurb: 'Time tracking by project' },
     { href: 'index.html',    key: 'hub',                        label: 'Hub',            blurb: 'Every page, by area' },
